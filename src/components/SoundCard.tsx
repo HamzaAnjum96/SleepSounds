@@ -4,11 +4,14 @@ const SOUND_ICONS: Record<string, string> = {
   rain:          'water_drop',
   ocean:         'waves',
   wind:          'air',
-  forest:        'park',
+  forest:        'forest',
+  thunder:       'thunderstorm',
+  stream:        'stream',
+  night:         'bedtime',
   fireplace:     'local_fire_department',
   'white-noise': 'graphic_eq',
   'brown-noise': 'noise_aware',
-  night:         'bedtime',
+  space:         'public',
 };
 
 interface SoundCardProps {
@@ -36,19 +39,24 @@ export default function SoundCard({ sound, enabled, volume, onToggle, onVolumeCh
       tabIndex={0}
       aria-pressed={enabled}
       onClick={onToggle}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); }
+      }}
     >
       <div className="card-top">
         <span className="material-symbols-rounded card-icon">{icon}</span>
-        <div className="card-dot" />
+        {enabled ? (
+          <div className="eq-bars">
+            <span /><span /><span />
+          </div>
+        ) : (
+          <div className="card-dot" />
+        )}
       </div>
 
       <div className="card-name">{sound.name}</div>
 
-      <div
-        className="card-vol"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="card-vol" onClick={(e) => e.stopPropagation()}>
         <span className="material-symbols-rounded">volume_down</span>
         <input
           type="range"

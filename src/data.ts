@@ -1,98 +1,153 @@
 import type { Sound } from './types';
 
-// Generate white or brown noise as a looping WAV blob URL
-function noiseUrl(type: 'white' | 'brown'): string {
-  const sampleRate = 22050;
-  const seconds = 15;
-  const numSamples = sampleRate * seconds;
-  const pcm = new Int16Array(numSamples);
+// ── WAV generation helpers ─────────────────────────────────────────────────
 
-  if (type === 'white') {
-    for (let i = 0; i < numSamples; i++) {
-      pcm[i] = ((Math.random() * 2 - 1) * 0.5) * 32767;
-    }
-  } else {
-    // Pink-ish brown noise (Paul Kellett's method)
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-    for (let i = 0; i < numSamples; i++) {
-      const w = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + w * 0.0555179;
-      b1 = 0.99332 * b1 + w * 0.0750759;
-      b2 = 0.96900 * b2 + w * 0.1538520;
-      b3 = 0.86650 * b3 + w * 0.3104856;
-      b4 = 0.55000 * b4 + w * 0.5329522;
-      b5 = -0.7616 * b5 - w * 0.0168980;
-      const out = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
-      b6 = w * 0.115926;
-      pcm[i] = Math.min(1, Math.max(-1, out)) * 16383;
-    }
-  }
+const SR = 22050;
+const SECS = 20;
+const N = SR * SECS;
 
-  const dataSize = pcm.byteLength;
-  const wav = new ArrayBuffer(44 + dataSize);
-  const v = new DataView(wav);
-  const str = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  const u32 = (o: number, n: number) => v.setUint32(o, n, true);
-  const u16 = (o: number, n: number) => v.setUint16(o, n, true);
-
-  str(0, 'RIFF'); u32(4, 36 + dataSize); str(8, 'WAVE');
-  str(12, 'fmt '); u32(16, 16); u16(20, 1); u16(22, 1);
-  u32(24, sampleRate); u32(28, sampleRate * 2); u16(32, 2); u16(34, 16);
-  str(36, 'data'); u32(40, dataSize);
-  new Int16Array(wav, 44).set(pcm);
-
-  return URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
+function makeWav(i16: Int16Array, sr: number): string {
+  const dataLen = i16.byteLength;
+  const buf = new ArrayBuffer(44 + dataLen);
+  const v = new DataView(buf);
+  const s = (o: number, t: string) =>
+    [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  s(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); s(8, 'WAVE');
+  s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  s(36, 'data'); v.setUint32(40, dataLen, true);
+  new Int16Array(buf, 44).set(i16);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
 }
 
+function gen(f32: Float32Array, gain = 0.7): string {
+  let max = 0;
+  for (let i = 0; i < f32.length; i++) max = Math.max(max, Math.abs(f32[i]));
+  const scale = max > 0 ? (gain * 32767) / max : 32767;
+  const i16 = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++)
+    i16[i] = Math.max(-32767, Math.min(32767, f32[i] * scale));
+  return makeWav(i16, SR);
+}
+
+function lp1(buf: Float32Array, fc: number): void {
+  const a = Math.exp((-2 * Math.PI * fc) / SR);
+  let y = 0;
+  for (let i = 0; i < buf.length; i++) { y = a * y + (1 - a) * buf[i]; buf[i] = y; }
+}
+
+function hp1(buf: Float32Array, fc: number): void {
+  const a = Math.exp((-2 * Math.PI * fc) / SR);
+  let x0 = 0, y0 = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const x1 = buf[i]; y0 = a * (y0 + x1 - x0); x0 = x1; buf[i] = y0;
+  }
+}
+
+function whiteNoise(): Float32Array {
+  const buf = new Float32Array(N);
+  for (let i = 0; i < N; i++) buf[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function brownNoise(): Float32Array {
+  const buf = new Float32Array(N);
+  let last = 0;
+  for (let i = 0; i < N; i++) {
+    last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+    buf[i] = last;
+  }
+  return buf;
+}
+
+function pinkNoise(): Float32Array {
+  const buf = new Float32Array(N);
+  let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+  for (let i = 0; i < N; i++) {
+    const w = Math.random() * 2 - 1;
+    b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+    b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+    b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+    buf[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11;
+    b6=w*0.115926;
+  }
+  return buf;
+}
+
+// ── Sound generators ───────────────────────────────────────────────────────
+
+function genForest(): string {
+  const buf = pinkNoise();
+  lp1(buf, 1800);
+  return gen(buf, 0.55);
+}
+
+function genStream(): string {
+  const buf = whiteNoise();
+  hp1(buf, 350);
+  lp1(buf, 3500);
+  for (let i = 0; i < N; i++)
+    buf[i] *= 0.82 + 0.18 * Math.sin((2 * Math.PI * 0.28 * i) / SR);
+  return gen(buf, 0.55);
+}
+
+function genThunder(): string {
+  const rumble = brownNoise();
+  lp1(rumble, 100); lp1(rumble, 100); lp1(rumble, 80);
+
+  const cracks = new Float32Array(N);
+  let pos = SR;
+  while (pos < N - SR) {
+    const len = Math.floor(SR * (0.3 + Math.random() * 1.2));
+    for (let i = 0; i < len && pos + i < N; i++) {
+      cracks[pos + i] = (Math.random() * 2 - 1) * Math.exp(-i / (SR * 0.25));
+    }
+    pos += Math.floor(SR * (2.5 + Math.random() * 4));
+  }
+  lp1(cracks, 500);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = rumble[i] * 0.65 + cracks[i] * 0.35;
+  return gen(mix, 0.72);
+}
+
+function genSpace(): string {
+  const buf = brownNoise();
+  lp1(buf, 80); lp1(buf, 60); lp1(buf, 50);
+  for (let i = 0; i < N; i++)
+    buf[i] *= 0.7 + 0.3 * Math.sin((2 * Math.PI * 0.05 * i) / SR);
+  return gen(buf, 0.6);
+}
+
+function genWhite(): string {
+  const buf = whiteNoise();
+  for (let i = 0; i < N; i++) buf[i] *= 0.5;
+  return gen(buf, 0.65);
+}
+
+function genBrown(): string {
+  const buf = brownNoise();
+  return gen(buf, 0.65);
+}
+
+// ── Sound library ──────────────────────────────────────────────────────────
+
 export const SOUND_LIBRARY: Sound[] = [
-  {
-    id: 'rain',
-    name: 'Rain',
-    category: 'Nature',
-    url: 'https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3',
-  },
-  {
-    id: 'ocean',
-    name: 'Ocean',
-    category: 'Nature',
-    url: 'https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3',
-  },
-  {
-    id: 'wind',
-    name: 'Wind',
-    category: 'Nature',
-    url: 'https://assets.mixkit.co/active_storage/sfx/1166/1166-preview.mp3',
-  },
-  {
-    id: 'forest',
-    name: 'Forest',
-    category: 'Nature',
-    url: 'https://assets.mixkit.co/active_storage/sfx/2480/2480-preview.mp3',
-  },
-  {
-    id: 'fireplace',
-    name: 'Fireplace',
-    category: 'Cozy',
-    url: 'https://assets.mixkit.co/active_storage/sfx/2535/2535-preview.mp3',
-  },
-  {
-    id: 'white-noise',
-    name: 'White Noise',
-    category: 'Noise',
-    url: noiseUrl('white'),
-  },
-  {
-    id: 'brown-noise',
-    name: 'Brown Noise',
-    category: 'Noise',
-    url: noiseUrl('brown'),
-  },
-  {
-    id: 'night',
-    name: 'Night',
-    category: 'Nature',
-    url: 'https://assets.mixkit.co/active_storage/sfx/2348/2348-preview.mp3',
-  },
+  { id: 'rain',        name: 'Rain',        category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3' },
+  { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3' },
+  { id: 'wind',        name: 'Wind',        category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/1166/1166-preview.mp3' },
+  { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
+  { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
+  { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
+  { id: 'night',       name: 'Night',       category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/2348/2348-preview.mp3' },
+  { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: 'https://assets.mixkit.co/active_storage/sfx/2535/2535-preview.mp3' },
+  { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
+  { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
+  { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
 ];
+
+export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
+export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v1';
