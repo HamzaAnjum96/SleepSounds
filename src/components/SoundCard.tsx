@@ -1,5 +1,15 @@
 import type { Sound } from '../types';
-import VolumeSlider from './VolumeSlider';
+
+const SOUND_ICONS: Record<string, string> = {
+  rain:          'water_drop',
+  ocean:         'waves',
+  wind:          'air',
+  forest:        'park',
+  fireplace:     'local_fire_department',
+  'white-noise': 'graphic_eq',
+  'brown-noise': 'noise_aware',
+  night:         'bedtime',
+};
 
 interface SoundCardProps {
   sound: Sound;
@@ -9,28 +19,46 @@ interface SoundCardProps {
   onVolumeChange: (value: number) => void;
 }
 
-const SoundCard = ({ sound, enabled, volume, onToggle, onVolumeChange }: SoundCardProps) => {
-  return (
-    <article className="rounded-2xl border border-white/10 bg-cardBlue/75 p-4 shadow-card transition duration-300 hover:border-accent/50">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-white">{sound.name}</h3>
-          <p className="text-xs text-slate-400">{sound.category}</p>
-        </div>
-        <button
-          className={`h-9 min-w-[64px] rounded-full px-3 text-xs font-semibold transition ${
-            enabled ? 'bg-accent text-deepBlue' : 'bg-white/10 text-slate-100'
-          }`}
-          type="button"
-          onClick={onToggle}
-          aria-pressed={enabled}
-        >
-          {enabled ? 'On' : 'Off'}
-        </button>
-      </div>
-      <VolumeSlider value={volume} onChange={onVolumeChange} label="Volume" />
-    </article>
-  );
-};
+function sliderBg(value: number) {
+  const pct = value * 100;
+  return {
+    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`,
+  };
+}
 
-export default SoundCard;
+export default function SoundCard({ sound, enabled, volume, onToggle, onVolumeChange }: SoundCardProps) {
+  const icon = SOUND_ICONS[sound.id] ?? 'music_note';
+
+  return (
+    <button
+      type="button"
+      className={`sound-card${enabled ? ' active' : ''}`}
+      onClick={onToggle}
+      aria-pressed={enabled}
+    >
+      <div className="card-top">
+        <span className="material-symbols-rounded card-icon">{icon}</span>
+        <div className="card-dot" />
+      </div>
+
+      <div className="card-name">{sound.name}</div>
+
+      <div
+        className="card-vol"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="material-symbols-rounded">volume_down</span>
+        <input
+          type="range"
+          className="drift-slider"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          style={sliderBg(volume)}
+          onChange={(e) => onVolumeChange(Number(e.target.value))}
+        />
+      </div>
+    </button>
+  );
+}
