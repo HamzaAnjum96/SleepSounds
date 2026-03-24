@@ -30,11 +30,13 @@ export default function SoundCard({ sound, enabled, volume, onToggle, onVolumeCh
   const icon = SOUND_ICONS[sound.id] ?? 'music_note';
 
   return (
-    <button
-      type="button"
+    <div
       className={`sound-card${enabled ? ' active' : ''}`}
-      onClick={onToggle}
+      role="button"
+      tabIndex={0}
       aria-pressed={enabled}
+      onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
     >
       <div className="card-top">
         <span className="material-symbols-rounded card-icon">{icon}</span>
@@ -59,6 +61,6 @@ export default function SoundCard({ sound, enabled, volume, onToggle, onVolumeCh
           onChange={(e) => onVolumeChange(Number(e.target.value))}
         />
       </div>
-    </button>
+    </div>
   );
 }

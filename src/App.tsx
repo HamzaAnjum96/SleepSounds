@@ -172,7 +172,11 @@ export default function App() {
           ))}
         </div>
 
-        <div className="app-footer">rest well</div>
+        <div className="app-footer">
+          {activeSounds.length > 0
+            ? activeSounds.map((s) => s.name).join(' · ')
+            : 'rest well'}
+        </div>
       </div>
     </>
   );
