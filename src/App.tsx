@@ -5,7 +5,14 @@ import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
 
-const TIMER_OPTIONS = [15, 30, 60] as const;
+const TIMER_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
+
+function timerLabel(m: number) {
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem ? `${h}h${rem}` : `${h}h`;
+}
 
 function sliderBg(value: number, max = 1) {
   const pct = (value / max) * 100;
@@ -165,19 +172,44 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
         </header>
 
         <div className="master">
-          <button
-            type="button"
-            className={`play-btn${isPlaying ? ' playing' : ''}`}
-            onClick={handleMasterToggle}
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
-            <span className="material-symbols-rounded">
-              {isPlaying ? 'pause' : 'play_arrow'}
-            </span>
-          </button>
+          {/* Row 1: play + timer chips */}
+          <div className="master-top">
+            <button
+              type="button"
+              className={`play-btn${isPlaying ? ' playing' : ''}`}
+              onClick={handleMasterToggle}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+            >
+              <span className="material-symbols-rounded">
+                {isPlaying ? 'pause' : 'play_arrow'}
+              </span>
+            </button>
 
-          <div className="master-body">
-            <div className="master-label">master volume</div>
+            <div className="timers">
+              <div className="timer-chips">
+                {TIMER_OPTIONS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`timer-btn${activeTimer === m ? ' active' : ''}`}
+                    onClick={() => handleTimerClick(m)}
+                  >
+                    {timerLabel(m)}
+                  </button>
+                ))}
+              </div>
+              {secondsLeft !== null && (
+                <div className="timer-countdown">{formatCountdown(secondsLeft)}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: volume — full width */}
+          <div className="vol-section">
+            <div className="vol-header">
+              <span className="master-label">master volume</span>
+              <span className="vol-pct">{Math.round(masterVolume * 100)}%</span>
+            </div>
             <div className="vol-row">
               <span className="material-symbols-rounded">volume_mute</span>
               <input
@@ -191,26 +223,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                 onChange={(e) => setMasterVolume(Number(e.target.value))}
               />
               <span className="material-symbols-rounded">volume_up</span>
-              <span className="vol-pct">{Math.round(masterVolume * 100)}%</span>
             </div>
-          </div>
-
-          <div className="timers">
-            <div className="timer-chips">
-              {TIMER_OPTIONS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className={`timer-btn${activeTimer === m ? ' active' : ''}`}
-                  onClick={() => handleTimerClick(m)}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
-            {secondsLeft !== null && (
-              <div className="timer-countdown">{formatCountdown(secondsLeft)}</div>
-            )}
           </div>
         </div>
 
