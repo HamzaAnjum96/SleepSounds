@@ -496,6 +496,36 @@ header {
   flex-shrink: 0;
 }
 
+/* ── Built-in Preset Chips ───────────────────────────────────────── */
+
+.builtin-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.builtin-preset-btn {
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+}
+.builtin-preset-btn:hover {
+  border-color: rgba(123,167,232,0.35);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
 /* ── Presets ─────────────────────────────────────────────────────── */
 
 .preset-save-row {

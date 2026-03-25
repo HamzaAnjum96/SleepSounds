@@ -42,7 +42,13 @@ export default function SoundCard({ sound, enabled, volume, onToggle, onVolumeCh
     >
       <div className="card-top">
         <span className="material-symbols-rounded card-icon">{icon}</span>
-        <div className="card-dot" />
+        {enabled ? (
+          <div className="eq-bars">
+            <span /><span /><span />
+          </div>
+        ) : (
+          <div className="card-dot" />
+        )}
       </div>
 
       <div className="card-name">{sound.name}</div>

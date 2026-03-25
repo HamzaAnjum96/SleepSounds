@@ -1,4 +1,4 @@
-import type { Sound } from './types';
+import type { Preset, Sound, SoundState } from './types';
 
 // ── WAV generation helpers ─────────────────────────────────────────────────
 
@@ -168,3 +168,21 @@ export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v1';
+
+// ── Built-in presets ───────────────────────────────────────────────────────
+
+function builtinState(active: Array<[string, number]>): Record<string, SoundState> {
+  const result: Record<string, SoundState> = {};
+  for (const s of SOUND_LIBRARY) result[s.id] = { enabled: false, volume: 0.5 };
+  for (const [id, vol] of active) result[id] = { enabled: true, volume: vol };
+  return result;
+}
+
+export const BUILTIN_PRESETS: Preset[] = [
+  { id: 'builtin-fan',          name: 'Fan',          createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.8]]) },
+  { id: 'builtin-rain',         name: 'Rain',         createdAt: '', masterVolume: 0.8, state: builtinState([['rain', 0.75]]) },
+  { id: 'builtin-rainy-forest', name: 'Rainy Forest', createdAt: '', masterVolume: 0.8, state: builtinState([['rain', 0.55], ['forest', 0.65], ['thunder', 0.3]]) },
+  { id: 'builtin-ocean-night',  name: 'Ocean Night',  createdAt: '', masterVolume: 0.8, state: builtinState([['ocean', 0.65], ['night', 0.55]]) },
+  { id: 'builtin-cozy-fire',    name: 'Cozy Fire',    createdAt: '', masterVolume: 0.8, state: builtinState([['fireplace', 0.7], ['brown-noise', 0.25]]) },
+  { id: 'builtin-deep-space',   name: 'Deep Space',   createdAt: '', masterVolume: 0.8, state: builtinState([['space', 0.75], ['brown-noise', 0.3]]) },
+];

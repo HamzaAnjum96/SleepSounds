@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SoundCard from './components/SoundCard';
-import { CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
+import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
@@ -61,10 +61,11 @@ export default function App() {
     setPresetName('');
   };
 
-  const handleLoadPreset = (id: string) => {
-    const preset = presets.find((p) => p.id === id);
+  const handleLoadPreset = (id: string, builtinSearch = false) => {
+    const pool = builtinSearch ? BUILTIN_PRESETS : presets;
+    const preset = pool.find((p) => p.id === id);
     if (!preset) return;
-    restoreMixerState(preset.state, preset.masterVolume);
+    restoreMixerState(preset.state, preset.masterVolume, isPlaying);
     setIsPaused(false);
   };
 
@@ -244,6 +245,19 @@ export default function App() {
 
         <div className="section-header" style={{ marginTop: '6px' }}>
           <span className="section-label">presets</span>
+        </div>
+
+        <div className="builtin-presets">
+          {BUILTIN_PRESETS.map((bp) => (
+            <button
+              key={bp.id}
+              type="button"
+              className="builtin-preset-btn"
+              onClick={() => handleLoadPreset(bp.id, true)}
+            >
+              {bp.name}
+            </button>
+          ))}
         </div>
 
         <div className="preset-save-row">

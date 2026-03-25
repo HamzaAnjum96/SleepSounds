@@ -117,10 +117,23 @@ export const useAudioMixer = (sounds: Sound[]) => {
     });
   }, [soundState]);
 
-  const restoreMixerState = useCallback((nextState: Record<string, SoundState>, nextMasterVolume: number) => {
+  const restoreMixerState = useCallback(async (
+    nextState: Record<string, SoundState>,
+    nextMasterVolume: number,
+    shouldPlay = false,
+  ) => {
     stopAll();
     setSoundState(nextState);
     setMasterVolume(nextMasterVolume);
+    if (shouldPlay) {
+      for (const [soundId, state] of Object.entries(nextState)) {
+        if (!state.enabled) continue;
+        const audio = audioMapRef.current[soundId];
+        if (!audio) continue;
+        audio.volume = Math.min(1, Math.max(0, state.volume * nextMasterVolume));
+        try { await audio.play(); } catch { /* ignore autoplay constraints */ }
+      }
+    }
   }, [stopAll]);
 
   const activeSounds = useMemo(
