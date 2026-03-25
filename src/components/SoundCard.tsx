@@ -9,6 +9,10 @@ const SOUND_ICONS: Record<string, string> = {
   'white-noise': 'graphic_eq',
   'brown-noise': 'noise_aware',
   night:         'bedtime',
+  thunder:       'thunderstorm',
+  stream:        'stream',
+  space:         'public',
+  fan:           'mode_fan',
 };
 
 interface SoundCardProps {
