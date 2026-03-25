@@ -77,6 +77,22 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     if (activeSounds.length === 0) setIsPaused(false);
   }, [activeSounds.length]);
 
+  // Media Session API — powers the Android lock-screen / notification player
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'drift',
+      artist: activeSounds.length > 0
+        ? activeSounds.map((s) => s.name).join(' · ')
+        : 'sleep sounds',
+      album: 'sleep sounds',
+      artwork: [{ src: '/artwork-512.svg', sizes: '512x512', type: 'image/svg+xml' }],
+    });
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    navigator.mediaSession.setActionHandler('play', () => { playAllActive(); setIsPaused(false); });
+    navigator.mediaSession.setActionHandler('pause', () => { pauseAll(); setIsPaused(true); });
+  }, [isPlaying, activeSounds, playAllActive, pauseAll]);
+
   const handleMasterToggle = useCallback(async () => {
     if (isPlaying) {
       pauseAll();
