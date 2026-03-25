@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
@@ -77,52 +77,22 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     if (activeSounds.length === 0) setIsPaused(false);
   }, [activeSounds.length]);
 
-  // Generate PNG artwork via canvas once (better cross-platform than SVG)
-  const [artworkUrl, setArtworkUrl] = useState('');
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = '#080c14';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.fillStyle = '#dfc98a';
-    ctx.beginPath(); ctx.arc(275, 220, 130, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#080c14';
-    ctx.beginPath(); ctx.arc(340, 175, 112, 0, Math.PI * 2); ctx.fill();
-    const stars: [number, number, number][] = [
-      [80,80,0.45],[160,40,0.32],[420,380,0.40],[60,340,0.30],
-      [450,100,0.38],[390,60,0.28],[120,420,0.35],[300,440,0.25],[470,250,0.30],
-    ];
-    stars.forEach(([x, y, a]) => {
-      ctx.fillStyle = `rgba(255,255,255,${a})`;
-      ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
-    });
-    canvas.toBlob((blob) => {
-      if (blob) setArtworkUrl(URL.createObjectURL(blob));
-    }, 'image/png');
-  }, []);
-
   // Media Session API — powers lock-screen / notification player on Android & iOS
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
-    const artwork = artworkUrl
-      ? [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }]
-      : [{ src: '/artwork-512.svg', sizes: '512x512', type: 'image/svg+xml' }];
     navigator.mediaSession.metadata = new MediaMetadata({
       title: 'drift',
       artist: activeSounds.length > 0
         ? activeSounds.map((s) => s.name).join(' · ')
         : 'sleep sounds',
       album: 'sleep sounds',
-      artwork,
+      artwork: [{ src: '/icon-512.png', sizes: '512x512', type: 'image/png' }],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
     navigator.mediaSession.setActionHandler('play', () => { playAllActive(); setIsPaused(false); });
     navigator.mediaSession.setActionHandler('pause', () => { pauseAll(); setIsPaused(true); });
     navigator.mediaSession.setActionHandler('stop', () => { stopAll(); setIsPaused(false); });
-  }, [isPlaying, activeSounds, artworkUrl, playAllActive, pauseAll, stopAll]);
+  }, [isPlaying, activeSounds, playAllActive, pauseAll, stopAll]);
 
   const handleMasterToggle = useCallback(async () => {
     if (isPlaying) {
@@ -140,47 +110,36 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     await toggleSound(soundId);
   }, [soundState, isPaused, toggleSound]);
 
-  // Sleep timer
+  // Sleep timer — counts down playing-time only (pauses when audio pauses)
   const [activeTimer, setActiveTimer] = useState<number | null>(null);
-  const [timerEndAt, setTimerEndAt] = useState<number | null>(null);
-  const [now, setNow] = useState(Date.now());
-  const tickRef = useRef<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
+  // Tick only while playing
   useEffect(() => {
-    if (!timerEndAt) {
-      if (tickRef.current !== null) clearInterval(tickRef.current);
-      return;
-    }
-    tickRef.current = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      if (tickRef.current !== null) clearInterval(tickRef.current);
-    };
-  }, [timerEndAt]);
+    if (!isPlaying || secondsLeft === null) return;
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => (s !== null && s > 1 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isPlaying, secondsLeft !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Stop when timer hits zero
   useEffect(() => {
-    if (!timerEndAt) return;
-    if (Date.now() >= timerEndAt) {
+    if (secondsLeft === 0) {
       stopAll();
       setIsPaused(false);
       setActiveTimer(null);
-      setTimerEndAt(null);
+      setSecondsLeft(null);
     }
-  }, [now, timerEndAt, stopAll]);
-
-  const secondsLeft = useMemo(() => {
-    if (!timerEndAt) return 0;
-    return Math.max(0, Math.floor((timerEndAt - now) / 1000));
-  }, [timerEndAt, now]);
+  }, [secondsLeft, stopAll]);
 
   const handleTimerClick = (minutes: number) => {
     if (activeTimer === minutes) {
       setActiveTimer(null);
-      setTimerEndAt(null);
+      setSecondsLeft(null);
     } else {
-      const endAt = Date.now() + minutes * 60 * 1000;
-      setNow(Date.now());
       setActiveTimer(minutes);
-      setTimerEndAt(endAt);
+      setSecondsLeft(minutes * 60);
     }
   };
 
@@ -249,7 +208,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                 </button>
               ))}
             </div>
-            {timerEndAt && (
+            {secondsLeft !== null && (
               <div className="timer-countdown">{formatCountdown(secondsLeft)}</div>
             )}
           </div>
