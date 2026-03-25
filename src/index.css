@@ -466,6 +466,19 @@ header {
   flex-shrink: 0;
 }
 
+.card-loader {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(123,167,232,0.24);
+  border-top-color: var(--accent);
+  box-shadow: 0 0 10px rgba(123,167,232,0.16);
+  animation: cardSpin 0.8s linear infinite;
+}
+@keyframes cardSpin {
+  to { transform: rotate(360deg); }
+}
+
 .card-dot {
   position: absolute;
   top: 50%; left: 50%;

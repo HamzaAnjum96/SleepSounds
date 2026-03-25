@@ -26,6 +26,7 @@ interface SoundCardProps {
   sound: Sound;
   enabled: boolean;
   playing: boolean;
+  loading?: boolean;
   volume: number;
   cardIndex?: number;
   onToggle: () => void;
@@ -39,7 +40,7 @@ function sliderBg(value: number) {
   };
 }
 
-export default function SoundCard({ sound, enabled, playing, volume, cardIndex, onToggle, onVolumeChange }: SoundCardProps) {
+export default function SoundCard({ sound, enabled, playing, loading = false, volume, cardIndex, onToggle, onVolumeChange }: SoundCardProps) {
   const icon = SOUND_ICONS[sound.id] ?? 'music_note';
 
   return (
@@ -53,10 +54,16 @@ export default function SoundCard({ sound, enabled, playing, volume, cardIndex, 
       <div className="card-top">
         <span className="material-symbols-rounded card-icon">{icon}</span>
         <div className="card-indicator">
-          <div className={`card-dot${enabled ? ' active' : ''}`} />
-          <div className="eq-bars">
-            <span /><span /><span />
-          </div>
+          {loading ? (
+            <div className="card-loader" aria-hidden="true" />
+          ) : (
+            <>
+              <div className={`card-dot${enabled ? ' active' : ''}`} />
+              <div className="eq-bars">
+                <span /><span /><span />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
