@@ -244,7 +244,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       <div className="app" onScroll={handleAppScroll}>
         <header>
           <div className="wordmark">drift</div>
-          <div className="tagline">sleep sounds</div>
+          <div className="tagline">sleep sounds<sup style={{fontSize:'0.6em', verticalAlign:'super', marginLeft:'0.3em', opacity:0.7}}>v2.2</sup></div>
         </header>
 
         <div className="master">
