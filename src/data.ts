@@ -2,9 +2,11 @@ import type { Preset, Sound, SoundState } from './types';
 
 // ── WAV generation helpers ─────────────────────────────────────────────────
 
-const SR = 22050;
-const SECS = 30;
+const SR = 24000;
+const SECS = 32;
 const N = SR * SECS;
+const EDGE_FADE_S = 0.02;
+const LOOP_BLEND_S = 1.2;
 
 function makeWav(i16: Int16Array, sr: number): string {
   const dataLen = i16.byteLength;
@@ -22,6 +24,7 @@ function makeWav(i16: Int16Array, sr: number): string {
 }
 
 function gen(f32: Float32Array, gain = 0.7): string {
+  normalizeForLoop(f32);
   let max = 0;
   for (let i = 0; i < f32.length; i++) max = Math.max(max, Math.abs(f32[i]));
   const scale = max > 0 ? (gain * 32767) / max : 32767;
@@ -29,6 +32,13 @@ function gen(f32: Float32Array, gain = 0.7): string {
   for (let i = 0; i < f32.length; i++)
     i16[i] = Math.max(-32767, Math.min(32767, f32[i] * scale));
   return makeWav(i16, SR);
+}
+
+function normalizeForLoop(buf: Float32Array): void {
+  removeDc(buf);
+  applyLoopBlend(buf, Math.floor(SR * LOOP_BLEND_S));
+  applyEdgeFade(buf, Math.floor(SR * EDGE_FADE_S));
+  softClip(buf, 1.45);
 }
 
 function lp1(buf: Float32Array, fc: number): void {
@@ -43,6 +53,63 @@ function hp1(buf: Float32Array, fc: number): void {
   for (let i = 0; i < buf.length; i++) {
     const x1 = buf[i]; y0 = a * (y0 + x1 - x0); x0 = x1; buf[i] = y0;
   }
+}
+
+function removeDc(buf: Float32Array): void {
+  let sum = 0;
+  for (let i = 0; i < buf.length; i++) sum += buf[i];
+  const dc = sum / buf.length;
+  for (let i = 0; i < buf.length; i++) buf[i] -= dc;
+}
+
+function applyEdgeFade(buf: Float32Array, fadeSamples: number): void {
+  const n = Math.max(1, Math.min(fadeSamples, Math.floor(buf.length / 2)));
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    const w = 0.5 - 0.5 * Math.cos(Math.PI * t);
+    buf[i] *= w;
+    buf[buf.length - 1 - i] *= w;
+  }
+}
+
+function applyLoopBlend(buf: Float32Array, blendSamples: number): void {
+  const n = Math.max(1, Math.min(blendSamples, Math.floor(buf.length / 3)));
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    const a = Math.sqrt(1 - t);
+    const b = Math.sqrt(t);
+    const s = buf[i];
+    const e = buf[buf.length - n + i];
+    const blended = s * a + e * b;
+    buf[i] = blended;
+    buf[buf.length - n + i] = blended;
+  }
+}
+
+function softClip(buf: Float32Array, drive: number): void {
+  const inv = 1 / Math.tanh(drive);
+  for (let i = 0; i < buf.length; i++) {
+    buf[i] = Math.tanh(buf[i] * drive) * inv;
+  }
+}
+
+function smoothRandomLfo(min: number, max: number, minHoldS: number, maxHoldS: number): Float32Array {
+  const out = new Float32Array(N);
+  let idx = 0;
+  let prev = min + Math.random() * (max - min);
+  while (idx < N) {
+    const hold = Math.floor((minHoldS + Math.random() * (maxHoldS - minHoldS)) * SR);
+    const seg = Math.max(1, Math.min(hold, N - idx));
+    const next = min + Math.random() * (max - min);
+    for (let i = 0; i < seg; i++) {
+      const t = i / seg;
+      const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
+      out[idx + i] = prev + (next - prev) * eased;
+    }
+    prev = next;
+    idx += seg;
+  }
+  return out;
 }
 
 function whiteNoise(): Float32Array {
@@ -93,11 +160,12 @@ function genStream(): string {
   const buf = whiteNoise();
   hp1(buf, 420);
   lp1(buf, 4500); lp1(buf, 3200);
+  const drift = smoothRandomLfo(0.7, 1.05, 1.2, 3.8);
   for (let i = 0; i < N; i++) {
     const g1 = 0.76 + 0.24 * Math.sin((2 * Math.PI * 0.30 * i) / SR);
     const g2 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 1.3  * i) / SR + 0.8);
     const g3 = 0.93 + 0.07 * Math.sin((2 * Math.PI * 3.1  * i) / SR + 1.5);
-    buf[i] *= g1 * g2 * g3;
+    buf[i] *= g1 * g2 * g3 * drift[i];
   }
   return gen(buf, 0.60);
 }
@@ -153,21 +221,27 @@ function genFireplace(): string {
   const base = brownNoise();
   lp1(base, 400); lp1(base, 300);
 
-  // Random crackles and pops
+  // Random crackles with shaped transients (softer attack than digital clicks)
   const crackles = new Float32Array(N);
   let pos = Math.floor(SR * 0.08);
   while (pos < N) {
-    const len = Math.floor(SR * (0.015 + Math.random() * 0.07));
-    const amp = 0.4 + Math.random() * 0.6;
+    const len = Math.floor(SR * (0.02 + Math.random() * 0.09));
+    const amp = 0.15 + Math.random() * 0.45;
+    const attack = Math.max(4, Math.floor(len * 0.22));
     for (let i = 0; i < len && pos + i < N; i++) {
-      crackles[pos + i] = (Math.random() * 2 - 1) * amp * Math.exp(-i / (SR * 0.012));
+      const rise = i < attack ? (i / attack) : 1;
+      const decay = Math.exp(-(i - attack) / (SR * 0.015));
+      const env = i < attack ? rise : decay;
+      crackles[pos + i] += (Math.random() * 2 - 1) * amp * env;
     }
-    pos += Math.floor(SR * (0.04 + Math.random() * 0.25));
+    pos += Math.floor(SR * (0.05 + Math.random() * 0.22));
   }
-  lp1(crackles, 4000);
+  hp1(crackles, 500);
+  lp1(crackles, 3000);
 
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = base[i] * 0.55 + crackles[i] * 0.45;
+  const drift = smoothRandomLfo(0.82, 1.16, 0.7, 2.2);
+  for (let i = 0; i < N; i++) mix[i] = base[i] * 0.58 + crackles[i] * 0.42 * drift[i];
   return gen(mix, 0.68);
 }
 
@@ -307,16 +381,32 @@ function genDryer(): string {
 }
 
 function genTrain(): string {
-  // Train: steady mechanical drone with clackety-clack track joints
+  // Train: steady mechanical drone with rounded rail-joint pulses
   const drone = pinkNoise();
   hp1(drone, 90); lp1(drone, 620); lp1(drone, 480);
+  const pulses = new Float32Array(N);
+  const pulseShape = (phase: number) => Math.sin(phase * Math.PI) ** 1.8;
+  let next = Math.floor(SR * 0.2);
+  while (next < N) {
+    const baseHz = 3.4 + Math.random() * 0.9;
+    const interval = Math.floor(SR / baseHz);
+    const lenA = Math.floor(SR * (0.018 + Math.random() * 0.020));
+    const lenB = Math.floor(SR * (0.012 + Math.random() * 0.015));
+    const offsetB = Math.floor(SR * (0.045 + Math.random() * 0.02));
+    for (let i = 0; i < lenA && next + i < N; i++) {
+      pulses[next + i] += pulseShape(i / lenA) * (0.22 + Math.random() * 0.16);
+    }
+    for (let i = 0; i < lenB && next + offsetB + i < N; i++) {
+      pulses[next + offsetB + i] += pulseShape(i / lenB) * (0.13 + Math.random() * 0.11);
+    }
+    next += interval;
+  }
+  hp1(pulses, 180);
+  lp1(pulses, 1800);
   const mix = new Float32Array(N);
+  const sway = smoothRandomLfo(0.88, 1.12, 1.5, 4.5);
   for (let i = 0; i < N; i++) {
-    const t = i / SR;
-    // Two clicks per beat at ~3.8 Hz (paired rail joints)
-    const c1 = ((t * 3.8) % 1 < 0.06) ? Math.sin(((t * 3.8) % 1) / 0.06 * Math.PI) * 0.45 : 0;
-    const c2 = (((t * 3.8) + 0.15) % 1 < 0.05) ? Math.sin((((t * 3.8) + 0.15) % 1) / 0.05 * Math.PI) * 0.35 : 0;
-    mix[i] = drone[i] * 0.68 + (Math.random() * 2 - 1) * (c1 + c2) * 0.32;
+    mix[i] = drone[i] * 0.72 * sway[i] + pulses[i] * 0.28;
   }
   return gen(mix, 0.65);
 }
@@ -373,11 +463,12 @@ function genWind(): string {
   const buf = pinkNoise();
   hp1(buf, 90);
   lp1(buf, 1400); lp1(buf, 900);
+  const drift = smoothRandomLfo(0.84, 1.14, 1.8, 5.2);
   for (let i = 0; i < N; i++) {
     const g1 = 0.48 + 0.52 * Math.abs(Math.sin((2 * Math.PI * 0.038 * i) / SR));
     const g2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.11 * i) / SR + 1.3);
     const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
-    buf[i] *= g1 * g2 * g3;
+    buf[i] *= g1 * g2 * g3 * drift[i];
   }
   return gen(buf, 0.68);
 }

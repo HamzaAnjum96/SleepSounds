@@ -15,5 +15,5 @@ export interface Preset {
   name: string;
   createdAt: string;
   state: Record<string, SoundState>;
-  masterVolume: number;
+  masterVolume?: number;
 }
