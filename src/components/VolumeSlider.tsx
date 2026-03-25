@@ -9,7 +9,7 @@ const VolumeSlider = ({ value, onChange, label }: VolumeSliderProps) => {
     <label className="block">
       {label ? <span className="mb-2 block text-xs font-medium text-slate-300">{label}</span> : null}
       <input
-        className="slider"
+        className="drift-slider"
         type="range"
         min={0}
         max={1}

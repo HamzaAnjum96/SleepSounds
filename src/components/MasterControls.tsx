@@ -36,7 +36,10 @@ const MasterControls = ({
         </button>
       </div>
 
-      <VolumeSlider value={masterVolume} onChange={onMasterVolumeChange} label="Master volume" />
+      <div className="flex w-full items-center gap-3">
+        <span className="shrink-0 text-xs font-medium text-slate-300">Master volume</span>
+        <VolumeSlider value={masterVolume} onChange={onMasterVolumeChange} />
+      </div>
     </section>
   );
 };
