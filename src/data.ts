@@ -171,7 +171,7 @@ function genStream(): string {
 }
 
 function genThunder(): string {
-  // Continuous deep rolling rumble — two filtered brown-noise layers blended
+  // Rolling thunder with occasional distant lightning crack / bolt moments
   const r1 = brownNoise();
   lp1(r1, 90); lp1(r1, 70); lp1(r1, 55); lp1(r1, 40);
 
@@ -180,11 +180,35 @@ function genThunder(): string {
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    // Slow undulating intensity — ominous ebb and flow over ~8–14 second cycles
     const env1 = 0.55 + 0.45 * Math.abs(Math.sin((2 * Math.PI * 0.072 * i) / SR));
     const env2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.041 * i) / SR + 1.8);
     mix[i] = (r1[i] * 0.58 + r2[i] * 0.42) * env1 * env2;
   }
+
+  const bolts = new Float32Array(N);
+  let pos = Math.floor(SR * (2.5 + Math.random() * 2));
+  while (pos < N) {
+    const crackLen = Math.floor(SR * (0.012 + Math.random() * 0.04));
+    const crackAmp = 0.26 + Math.random() * 0.30;
+    for (let i = 0; i < crackLen && pos + i < N; i++) {
+      const t = i / Math.max(1, crackLen - 1);
+      const env = Math.exp(-8 * t);
+      bolts[pos + i] += (Math.random() * 2 - 1) * crackAmp * env;
+    }
+
+    const tailStart = pos + Math.floor(SR * (0.02 + Math.random() * 0.08));
+    const tailLen = Math.floor(SR * (0.35 + Math.random() * 0.8));
+    const tailFreq = 58 + Math.random() * 40;
+    for (let i = 0; i < tailLen && tailStart + i < N; i++) {
+      const p = i / tailLen;
+      const env = Math.exp(-3.2 * p);
+      bolts[tailStart + i] += Math.sin(2 * Math.PI * tailFreq * (i / SR)) * env * (0.12 + Math.random() * 0.12);
+    }
+    pos += Math.floor(SR * (4.8 + Math.random() * 7.5));
+  }
+  hp1(bolts, 220);
+  lp1(bolts, 3200);
+  for (let i = 0; i < N; i++) mix[i] += bolts[i] * 0.50;
   return gen(mix, 0.78);
 }
 
@@ -292,44 +316,41 @@ function genNight(): string {
 }
 
 function genBirdsong(): string {
-  // Dawn chorus: layered chirps with vibrato + pitch drift.
-  // Intentionally no noise bed to keep it clean and avoid hiss.
+  // More natural dawn chorus: event-based chirps with random timing/pitch drift
   const buf = new Float32Array(N);
-  const driftA = smoothRandomLfo(-0.06, 0.06, 0.6, 1.7);
-  const driftB = smoothRandomLfo(-0.08, 0.08, 0.8, 2.4);
-  // [fundamental Hz, chirpsPerSec, phaseOffset, amplitude]
-  const birds = [
-    [2050, 2.0, 0.00, 0.16],
-    [3250, 0.8, 0.21, 0.12],
-    [1760, 1.3, 0.47, 0.11],
-    [2580, 2.7, 0.63, 0.09],
-    [1480, 0.6, 0.79, 0.08],
+  const groups = [
+    { minF: 1500, maxF: 2300, minGap: 0.18, maxGap: 0.72, amp: 0.13 },
+    { minF: 2300, maxF: 3600, minGap: 0.22, maxGap: 1.1, amp: 0.10 },
+    { minF: 1200, maxF: 1800, minGap: 0.45, maxGap: 1.8, amp: 0.08 },
   ] as const;
-  for (const [freq, rate, phase0, amp] of birds) {
-    for (let i = 0; i < N; i++) {
-      const t = i / SR;
-      const cycle = (t * rate + phase0) % 1;
-      if (cycle < 0.09) {
-        const p = cycle / 0.09;
-        const env = Math.sin(p * Math.PI) ** 0.8;
-        const chirpBend = 1 + 0.12 * p - 0.05 * p * p;
-        const vibrato = 1 + 0.014 * Math.sin(2 * Math.PI * (9.5 + 1.5 * phase0) * t);
-        const randomDrift = 1 + (phase0 < 0.5 ? driftA[i] : driftB[i]);
-        const f = freq * chirpBend * vibrato * randomDrift;
-        buf[i] += env * amp * (
-          0.50 * Math.sin(2 * Math.PI * f * t) +
-          0.25 * Math.sin(2 * Math.PI * 2.03 * f * t + 0.2) +
-          0.14 * Math.sin(2 * Math.PI * 2.98 * f * t + 0.6) +
-          0.07 * Math.sin(2 * Math.PI * 4.12 * f * t + 1.1)
+
+  for (const g of groups) {
+    let pos = Math.floor(SR * Math.random() * 0.5);
+    while (pos < N) {
+      const len = Math.floor(SR * (0.03 + Math.random() * 0.07));
+      const f0 = g.minF + Math.random() * (g.maxF - g.minF);
+      const bend = 0.86 + Math.random() * 0.32;
+      const vibRate = 7 + Math.random() * 7;
+      const vibDepth = 0.006 + Math.random() * 0.014;
+      const phase = Math.random() * Math.PI * 2;
+      for (let i = 0; i < len && pos + i < N; i++) {
+        const t = i / SR;
+        const p = i / len;
+        const env = Math.sin(p * Math.PI) ** 0.85;
+        const f = f0 * (1 + (bend - 1) * p) * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t + phase));
+        buf[pos + i] += env * g.amp * (
+          0.64 * Math.sin(2 * Math.PI * f * t + phase) +
+          0.23 * Math.sin(2 * Math.PI * 2.02 * f * t + phase * 0.7) +
+          0.09 * (Math.random() * 2 - 1)
         );
       }
+      pos += Math.floor(SR * (g.minGap + Math.random() * (g.maxGap - g.minGap)));
     }
   }
-  // Mild saturation + filtering softens digital edge while keeping no hiss bed.
   softClip(buf, 1.8);
-  hp1(buf, 900);
-  lp1(buf, 5400);
-  return gen(buf, 0.48);
+  hp1(buf, 700);
+  lp1(buf, 5200);
+  return gen(buf, 0.50);
 }
 
 function genCafe(): string {
@@ -435,24 +456,31 @@ function genWaterfall(): string {
 }
 
 function genFrogs(): string {
-  // Frog chorus: pulsed croaks with independent timing and gentle room ambience
+  // Frog chorus: staggered croaks with irregular timing to avoid robotic looping
   const croaks = new Float32Array(N);
   const frogs = [
-    [170, 0.62, 0.0, 0.35],
-    [210, 0.78, 0.3, 0.25],
-    [145, 0.55, 0.6, 0.22],
+    { fMin: 135, fMax: 185, minGap: 0.7, maxGap: 1.8, amp: 0.30 },
+    { fMin: 170, fMax: 240, minGap: 0.5, maxGap: 1.5, amp: 0.24 },
+    { fMin: 120, fMax: 165, minGap: 1.0, maxGap: 2.2, amp: 0.21 },
   ] as const;
-  for (const [freq, rate, phase, amp] of frogs) {
-    for (let i = 0; i < N; i++) {
-      const t = i / SR;
-      const cyc = (t * rate + phase) % 1;
-      if (cyc < 0.26) {
-        const p = cyc / 0.26;
-        const env = Math.sin(p * Math.PI) ** 1.2;
-        const wobble = 1 + 0.03 * Math.sin(2 * Math.PI * 4.5 * t + phase * 3);
-        const f = freq * (1 - 0.14 * p) * wobble;
-        croaks[i] += Math.sin(2 * Math.PI * f * t) * env * amp;
+  for (const frog of frogs) {
+    let pos = Math.floor(SR * Math.random() * 1.2);
+    while (pos < N) {
+      const len = Math.floor(SR * (0.13 + Math.random() * 0.21));
+      const freq = frog.fMin + Math.random() * (frog.fMax - frog.fMin);
+      const wobbleRate = 3.2 + Math.random() * 2.4;
+      for (let i = 0; i < len && pos + i < N; i++) {
+        const t = i / SR;
+        const p = i / len;
+        const env = Math.sin(p * Math.PI) ** 1.35;
+        const wobble = 1 + 0.022 * Math.sin(2 * Math.PI * wobbleRate * t);
+        const f = freq * (1 - 0.18 * p) * wobble;
+        croaks[pos + i] += (
+          Math.sin(2 * Math.PI * f * t) * 0.70 +
+          Math.sin(2 * Math.PI * 2.0 * f * t + 0.7) * 0.18
+        ) * env * frog.amp;
       }
+      pos += Math.floor(SR * (frog.minGap + Math.random() * (frog.maxGap - frog.minGap)));
     }
   }
   const amb = pinkNoise();
@@ -570,7 +598,7 @@ function genHeartbeat(): string {
 }
 
 function genCatPurr(): string {
-  // Cat purr: low voiced rumble with gentle throaty modulation
+  // Cat purr: low rumble with slight cycle irregularity and breath texture
   const base = brownNoise();
   lp1(base, 180); lp1(base, 145);
 
@@ -579,9 +607,10 @@ function genCatPurr(): string {
   lp1(rasp, 600);
 
   const mix = new Float32Array(N);
+  const drift = smoothRandomLfo(0.92, 1.08, 0.4, 1.4);
   for (let i = 0; i < N; i++) {
-    const p1 = 0.74 + 0.26 * Math.sin((2 * Math.PI * 24 * i) / SR);
-    const p2 = 0.85 + 0.15 * Math.sin((2 * Math.PI * 29 * i) / SR + 1.2);
+    const p1 = 0.74 + 0.26 * Math.sin((2 * Math.PI * (23.5 * drift[i]) * i) / SR);
+    const p2 = 0.85 + 0.15 * Math.sin((2 * Math.PI * (28.2 * drift[i]) * i) / SR + 1.2);
     const breath = 0.9 + 0.1 * Math.sin((2 * Math.PI * 0.22 * i) / SR);
     mix[i] = (base[i] * 0.68 * p1 + rasp[i] * 0.32 * p2) * breath;
   }
@@ -663,7 +692,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
   { id: 'waterfall',   name: 'Waterfall',   category: 'Nature', url: genWaterfall() },
   { id: 'tent-rain',   name: 'Tent Rain',   category: 'Nature', url: genTentRain() },
-  { id: 'night',       name: 'Night',       category: 'Nature', url: genNight() },
+  { id: 'night',       name: 'Night Insects', category: 'Nature', url: genNight() },
   { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
   { id: 'frogs',       name: 'Frogs',       category: 'Nature', url: genFrogs() },
   { id: 'underwater',  name: 'Underwater',  category: 'Nature', url: genUnderwater() },
