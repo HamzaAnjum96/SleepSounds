@@ -69,11 +69,7 @@ export default function App() {
     setIsPaused(false);
   };
 
-  const handleDeletePreset = (id: string) => {
-    persistPresets(presets.filter((p) => p.id !== id));
-  };
-
-  const isPlaying = activeSounds.length > 0 && !isPaused;
+const isPlaying = activeSounds.length > 0 && !isPaused;
 
   useEffect(() => {
     if (activeSounds.length === 0) setIsPaused(false);
@@ -225,37 +221,35 @@ export default function App() {
               {bp.name}
             </button>
           ))}
+          {presets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className="builtin-preset-btn saved"
+              onClick={() => handleLoadPreset(preset.id)}
+            >
+              {preset.name}
+            </button>
+          ))}
         </div>
 
-        <div className="preset-save-row">
-          <input
-            className="preset-input"
-            placeholder="name this mix…"
-            value={presetName}
-            maxLength={40}
-            onChange={(e) => setPresetName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
-          />
-          <button
-            type="button"
-            className="preset-save-btn"
-            disabled={!presetName.trim()}
-            onClick={handleSavePreset}
-          >save</button>
-        </div>
-
-        {presets.length > 0 && (
-          <ul className="preset-list">
-            {presets.map((preset) => (
-              <li key={preset.id} className="preset-item">
-                <span className="preset-name">{preset.name}</span>
-                <div className="preset-actions">
-                  <button type="button" className="preset-load-btn" onClick={() => handleLoadPreset(preset.id)}>load</button>
-                  <button type="button" className="preset-del-btn" onClick={() => handleDeletePreset(preset.id)}>×</button>
-                </div>
-              </li>
-            ))}
-          </ul>
+        {activeSounds.length > 0 && (
+          <div className="preset-save-row">
+            <input
+              className="preset-input"
+              placeholder="name this mix…"
+              value={presetName}
+              maxLength={40}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
+            />
+            <button
+              type="button"
+              className="preset-save-btn"
+              disabled={!presetName.trim()}
+              onClick={handleSavePreset}
+            >save</button>
+          </div>
         )}
 
         <div className="section-header" style={{ marginTop: '6px' }}>

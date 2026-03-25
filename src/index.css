@@ -525,6 +525,14 @@ header {
   color: var(--accent);
   background: var(--accent-glow);
 }
+.builtin-preset-btn.saved {
+  border-color: rgba(184,154,106,0.22);
+  color: var(--warm);
+}
+.builtin-preset-btn.saved:hover {
+  border-color: rgba(184,154,106,0.45);
+  background: var(--warm-glow);
+}
 
 /* ── Presets ─────────────────────────────────────────────────────── */
 
