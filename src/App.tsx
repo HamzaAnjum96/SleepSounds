@@ -202,9 +202,9 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                   </button>
                 ))}
               </div>
-              {secondsLeft !== null && (
-                <div className="timer-countdown">{formatCountdown(secondsLeft)}</div>
-              )}
+              <div className="timer-countdown">
+                {secondsLeft !== null ? formatCountdown(secondsLeft) : ''}
+              </div>
             </div>
           </div>
 
@@ -271,7 +271,6 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
               placeholder="name this mix…"
               value={presetName}
               maxLength={40}
-              autoFocus
               onChange={(e) => setPresetName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSavePreset();

@@ -170,6 +170,28 @@ function genFan(): string {
   return gen(mix, 0.65);
 }
 
+function genNight(): string {
+  // Crickets: rhythmic bursts of high-freq noise (~3.8 chirps/sec)
+  const chirps = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const phase = ((i / SR) * 3.8) % 1;
+    // Two-pulse chirp pattern (each pulse ~15% of cycle)
+    const p1 = phase < 0.15 ? Math.sin((phase / 0.15) * Math.PI) : 0;
+    const p2 = phase >= 0.22 && phase < 0.37 ? Math.sin(((phase - 0.22) / 0.15) * Math.PI) : 0;
+    chirps[i] = (Math.random() * 2 - 1) * (p1 + p2 * 0.8);
+  }
+  hp1(chirps, 2600);
+  lp1(chirps, 5500);
+
+  // Soft background ambience
+  const amb = pinkNoise();
+  lp1(amb, 500);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = chirps[i] * 0.82 + amb[i] * 0.1;
+  return gen(mix, 0.58);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -179,7 +201,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
   { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
-  { id: 'night',       name: 'Night',       category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/2348/2348-preview.mp3' },
+  { id: 'night',       name: 'Night',       category: 'Nature', url: genNight() },
   { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
