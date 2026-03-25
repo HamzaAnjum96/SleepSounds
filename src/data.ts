@@ -131,6 +131,22 @@ function genBrown(): string {
   return gen(buf, 0.65);
 }
 
+function genFan(): string {
+  const airflow = pinkNoise();
+  hp1(airflow, 200);
+  lp1(airflow, 2200);
+
+  const hum = brownNoise();
+  lp1(hum, 120); lp1(hum, 120);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const flutter = 0.88 + 0.12 * Math.sin((2 * Math.PI * 18 * i) / SR);
+    mix[i] = airflow[i] * 0.75 * flutter + hum[i] * 0.25;
+  }
+  return gen(mix, 0.65);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -145,6 +161,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
   { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
+  { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
 ];
 
 export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
