@@ -77,21 +77,52 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     if (activeSounds.length === 0) setIsPaused(false);
   }, [activeSounds.length]);
 
-  // Media Session API — powers the Android lock-screen / notification player
+  // Generate PNG artwork via canvas once (better cross-platform than SVG)
+  const [artworkUrl, setArtworkUrl] = useState('');
+  useEffect(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = '#dfc98a';
+    ctx.beginPath(); ctx.arc(275, 220, 130, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#080c14';
+    ctx.beginPath(); ctx.arc(340, 175, 112, 0, Math.PI * 2); ctx.fill();
+    const stars: [number, number, number][] = [
+      [80,80,0.45],[160,40,0.32],[420,380,0.40],[60,340,0.30],
+      [450,100,0.38],[390,60,0.28],[120,420,0.35],[300,440,0.25],[470,250,0.30],
+    ];
+    stars.forEach(([x, y, a]) => {
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+    });
+    canvas.toBlob((blob) => {
+      if (blob) setArtworkUrl(URL.createObjectURL(blob));
+    }, 'image/png');
+  }, []);
+
+  // Media Session API — powers lock-screen / notification player on Android & iOS
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
+    const artwork = artworkUrl
+      ? [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }]
+      : [{ src: '/artwork-512.svg', sizes: '512x512', type: 'image/svg+xml' }];
     navigator.mediaSession.metadata = new MediaMetadata({
       title: 'drift',
       artist: activeSounds.length > 0
         ? activeSounds.map((s) => s.name).join(' · ')
         : 'sleep sounds',
       album: 'sleep sounds',
-      artwork: [{ src: '/artwork-512.svg', sizes: '512x512', type: 'image/svg+xml' }],
+      artwork,
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
     navigator.mediaSession.setActionHandler('play', () => { playAllActive(); setIsPaused(false); });
     navigator.mediaSession.setActionHandler('pause', () => { pauseAll(); setIsPaused(true); });
-  }, [isPlaying, activeSounds, playAllActive, pauseAll]);
+    navigator.mediaSession.setActionHandler('stop', () => { stopAll(); setIsPaused(false); });
+  }, [isPlaying, activeSounds, artworkUrl, playAllActive, pauseAll, stopAll]);
 
   const handleMasterToggle = useCallback(async () => {
     if (isPlaying) {
