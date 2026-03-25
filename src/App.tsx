@@ -43,6 +43,7 @@ export default function App() {
     catch { return []; }
   });
   const [presetName, setPresetName] = useState('');
+  const [savingPreset, setSavingPreset] = useState(false);
 
   const persistPresets = (next: Preset[]) => {
     setPresets(next);
@@ -59,6 +60,7 @@ export default function App() {
       masterVolume,
     }]);
     setPresetName('');
+    setSavingPreset(false);
   };
 
   const handleLoadPreset = (id: string, builtinSearch = false) => {
@@ -231,17 +233,27 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
               {preset.name}
             </button>
           ))}
+          <button
+            type="button"
+            className="builtin-preset-btn preset-add-btn"
+            onClick={() => setSavingPreset((v) => !v)}
+            aria-label="Save current mix"
+          >+</button>
         </div>
 
-        {activeSounds.length > 0 && (
+        {savingPreset && (
           <div className="preset-save-row">
             <input
               className="preset-input"
               placeholder="name this mix…"
               value={presetName}
               maxLength={40}
+              autoFocus
               onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSavePreset();
+                if (e.key === 'Escape') { setSavingPreset(false); setPresetName(''); }
+              }}
             />
             <button
               type="button"

@@ -525,6 +525,18 @@ header {
   color: var(--accent);
   background: var(--accent-glow);
 }
+.preset-add-btn {
+  border-style: dashed;
+  color: var(--text-dim) !important;
+  font-size: 14px;
+  padding: 3px 9px;
+}
+.preset-add-btn:hover {
+  border-color: rgba(255,255,255,0.2) !important;
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+}
+
 .builtin-preset-btn.saved {
   border-color: rgba(184,154,106,0.22);
   color: var(--warm);
