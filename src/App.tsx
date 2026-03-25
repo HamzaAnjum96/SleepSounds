@@ -93,7 +93,11 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
         ? activeSounds.map((s) => s.name).join(' · ')
         : 'sleep sounds',
       album: 'sleep sounds',
-      artwork: [{ src: '/icon-512.png', sizes: '512x512', type: 'image/png' }],
+      artwork: [
+        { src: '/icon-192.png',  sizes: '192x192',   type: 'image/png' },
+        { src: '/icon-512.png',  sizes: '512x512',   type: 'image/png' },
+        { src: '/icon-1024.png', sizes: '1024x1024', type: 'image/png' },
+      ],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
     navigator.mediaSession.setActionHandler('play', () => { playAllActive(); setIsPaused(false); });
