@@ -6,9 +6,9 @@ Sleep Mixer is a mobile-first ambient sound blending web app designed for relaxa
 
 - Premium dark blue, minimal UI optimized for one-handed mobile use.
 - Mix multiple calming sounds simultaneously, fully generated in-app (no external audio APIs/files), including:
-  - Nature: Rain, Tent Rain, Ocean, Wind, Forest, Thunder, Stream, Waterfall, Night, Birdsong, Frogs, Underwater
-  - Cozy: Fireplace, Café, Shower, Cat Purr
-  - Noise/Transport: White/Pink/Brown Noise, Deep Space, Heartbeat, Fan, Airplane, Dryer, Train, Boat Cabin
+  - Nature: Rain, Tent Rain, Rain on Tin Roof, Ocean, Wind, Forest, Thunder, Stream, Waterfall, Night Insects, Birdsong, Frogs, Underwater
+  - Cozy: Fireplace, Café, Shower
+  - Noise/Transport: White/Pink/Brown Noise, Deep Space, Heartbeat, Fan, Airplane, Dryer, Train
 - Per-sound controls:
   - On/off toggle
   - Individual volume slider
@@ -85,5 +85,5 @@ npm run preview
 
 ## Notes
 
-- All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime.
+- All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime (mono 16-bit PCM).
 - No backend is required.
