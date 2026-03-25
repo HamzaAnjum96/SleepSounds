@@ -50,6 +50,7 @@ function buildMediaArtwork(size: number): string {
 export default function App() {
   const {
     soundState,
+    loadingState,
     masterVolume,
     setMasterVolume,
     toggleSound,
@@ -389,6 +390,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
               sound={sound}
               enabled={soundState[sound.id]?.enabled ?? false}
               playing={(soundState[sound.id]?.enabled ?? false) && !isPaused}
+              loading={loadingState[sound.id] ?? false}
               volume={soundState[sound.id]?.volume ?? 0.5}
               cardIndex={i}
               onToggle={() => handleSoundToggle(sound.id)}

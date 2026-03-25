@@ -140,6 +140,12 @@ class CrossfadeAudio {
 
 export const useAudioMixer = (sounds: Sound[]) => {
   const [soundState, setSoundState] = useState<Record<string, SoundState>>(() => createInitialState(sounds));
+  const [loadingState, setLoadingState] = useState<Record<string, boolean>>(() =>
+    sounds.reduce<Record<string, boolean>>((acc, sound) => {
+      acc[sound.id] = false;
+      return acc;
+    }, {}),
+  );
   const [masterVolume, setMasterVolume] = useState(0.8);
   const audioMapRef    = useRef<Record<string, CrossfadeAudio>>({});
   const fadeTimersRef  = useRef<Record<string, ReturnType<typeof setInterval>>>({});
@@ -219,6 +225,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         clearFade(soundId);
         const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume));
         try {
+          setLoadingState((prev) => ({ ...prev, [soundId]: true }));
           cfa.volume = 0;
           await cfa.play();
           doFadeIn(soundId, targetVol);
@@ -227,9 +234,12 @@ export const useAudioMixer = (sounds: Sound[]) => {
             ...prev,
             [soundId]: { ...prev[soundId], enabled: false },
           }));
+        } finally {
+          setLoadingState((prev) => ({ ...prev, [soundId]: false }));
         }
       } else {
         clearFade(soundId);
+        setLoadingState((prev) => ({ ...prev, [soundId]: false }));
         doFadeOut(soundId, () => cfa.stop());
       }
     },
@@ -250,6 +260,11 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const pauseAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
     Object.values(audioMapRef.current).forEach((cfa) => cfa.pause());
+    setLoadingState((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const key of Object.keys(prev)) next[key] = false;
+      return next;
+    });
   }, [clearFade]);
 
   const playAllActive = useCallback(async () => {
@@ -258,6 +273,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
       const cfa = audioMapRef.current[soundId];
       if (!cfa) continue;
       clearFade(soundId);
+      setLoadingState((prev) => ({ ...prev, [soundId]: true }));
       const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume));
       cfa.volume = 0;
       try {
@@ -265,6 +281,8 @@ export const useAudioMixer = (sounds: Sound[]) => {
         doFadeIn(soundId, targetVol);
       } catch {
         // ignore transient autoplay failures
+      } finally {
+        setLoadingState((prev) => ({ ...prev, [soundId]: false }));
       }
     }
   }, [clearFade, doFadeIn, masterVolume, soundState]);
@@ -281,6 +299,11 @@ export const useAudioMixer = (sounds: Sound[]) => {
         else next[id] = s;
       }
       return changed ? next : prev;
+    });
+    setLoadingState((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const key of Object.keys(prev)) next[key] = false;
+      return next;
     });
   }, [clearFade]);
 
@@ -305,6 +328,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
           .map(async ([soundId, state]) => {
             const cfa = audioMapRef.current[soundId];
             if (!cfa) return;
+            setLoadingState((prev) => ({ ...prev, [soundId]: true }));
             const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster));
             cfa.volume = 0;
             try {
@@ -312,6 +336,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
               if (fadeTimersRef.current[soundId] != null) return; // toggled off during await
               doFadeIn(soundId, targetVol);
             } catch { /* ignore autoplay constraints */ }
+            finally {
+              setLoadingState((prev) => ({ ...prev, [soundId]: false }));
+            }
           }),
       );
     }
@@ -324,6 +351,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
   return {
     soundState,
+    loadingState,
     masterVolume,
     setMasterVolume,
     toggleSound,

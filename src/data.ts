@@ -149,18 +149,34 @@ function pinkNoise(): Float32Array {
 // ── Sound generators ───────────────────────────────────────────────────────
 
 function genForest(): string {
-  // Rustling leaves with gentle breeze variation
+  // Forest canopy: leafy broadband bed + twig flicks + distant bird-like highs
   const buf = pinkNoise();
-  lp1(buf, 2400);
+  hp1(buf, 120);
+  lp1(buf, 2200);
   for (let i = 0; i < N; i++) {
     const breeze = 0.70 + 0.30 * Math.abs(Math.sin((2 * Math.PI * 0.044 * i) / SR + 0.4));
     buf[i] *= breeze;
   }
-  return gen(buf, 0.58);
+  const twigs = new Float32Array(N);
+  let twigPos = Math.floor(SR * 0.2);
+  while (twigPos < N) {
+    const len = Math.floor(SR * rand(0.004, 0.018));
+    for (let i = 0; i < len && twigPos + i < N; i++) {
+      const env = Math.exp(-7.5 * (i / len));
+      twigs[twigPos + i] += (Math.random() * 2 - 1) * env * rand(0.04, 0.14);
+    }
+    twigPos += Math.floor(SR * rand(0.11, 0.55));
+  }
+  hp1(twigs, 1400);
+  lp1(twigs, 5400);
+
+  const canopy = new Float32Array(N);
+  for (let i = 0; i < N; i++) canopy[i] = buf[i] * 0.86 + twigs[i] * 0.14;
+  return gen(canopy, 0.58);
 }
 
 function genStream(): string {
-  // Babbling brook: bright bandpassed noise with multi-rate gurgle variation
+  // Babbling brook: bright flow + small bubble clicks + irregular current drift
   const buf = whiteNoise();
   hp1(buf, 420);
   lp1(buf, 4500); lp1(buf, 3200);
@@ -171,7 +187,24 @@ function genStream(): string {
     const g3 = 0.93 + 0.07 * Math.sin((2 * Math.PI * 3.1  * i) / SR + 1.5);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
-  return gen(buf, 0.60);
+  const bubbles = new Float32Array(N);
+  let pos = Math.floor(SR * 0.05);
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.003, 0.015));
+    const f = rand(500, 1200);
+    const amp = rand(0.04, 0.13);
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const p = i / Math.max(1, len - 1);
+      const env = Math.exp(-7 * p);
+      bubbles[pos + i] += Math.sin(2 * Math.PI * f * (i / SR)) * env * amp;
+    }
+    pos += Math.floor(SR * rand(0.02, 0.09));
+  }
+  hp1(bubbles, 350);
+  lp1(bubbles, 2200);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.86 + bubbles[i] * 0.14;
+  return gen(mix, 0.60);
 }
 
 function genThunder(): string {
@@ -644,54 +677,86 @@ function genHeartbeat(): string {
 }
 
 function genUnderwater(): string {
-  // Deep underwater: heavily low-passed brown noise with slow bubbly modulation
+  // Deep underwater: low pressure rumble + soft bubble streams
   const depth = brownNoise();
   lp1(depth, 140); lp1(depth, 110); lp1(depth, 85);
+  hp1(depth, 20);
+  const bubbles = new Float32Array(N);
+  let pos = Math.floor(SR * 0.35);
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.018, 0.07));
+    const f0 = rand(120, 260);
+    const f1 = f0 * rand(1.2, 1.8);
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const p = i / len;
+      const env = Math.sin(Math.min(1, p) * Math.PI) ** 1.8;
+      const f = f0 + (f1 - f0) * p;
+      bubbles[pos + i] += Math.sin(2 * Math.PI * f * (i / SR)) * env * rand(0.03, 0.09);
+    }
+    pos += Math.floor(SR * rand(0.45, 1.45));
+  }
+  hp1(bubbles, 70);
+  lp1(bubbles, 700);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const b1 = 0.68 + 0.32 * Math.sin((2 * Math.PI * 0.28 * i) / SR);
     const b2 = 0.84 + 0.16 * Math.sin((2 * Math.PI * 0.71 * i) / SR + 0.9);
-    mix[i] = depth[i] * b1 * b2;
+    mix[i] = depth[i] * b1 * b2 * 0.86 + bubbles[i] * 0.14;
   }
   return gen(mix, 0.60);
 }
 
 function genRain(): string {
-  // Rain: dense pink noise bandpassed, gentle slow-swell intensity variation
+  // Rain: diffuse rain bed + discrete droplets and occasional heavier taps
   const buf = pinkNoise();
-  hp1(buf, 280);      // cut sub-bass rumble
-  lp1(buf, 4800);     // soften ultrasound
-  lp1(buf, 3600);
-  // Gentle rainfall intensity swell (~0.06 Hz = 16-second cycle)
+  hp1(buf, 320);
+  lp1(buf, 4400);
+  lp1(buf, 3200);
   for (let i = 0; i < N; i++) {
-    const swell = 0.87 + 0.13 * Math.sin((2 * Math.PI * 0.062 * i) / SR + 0.5);
+    const swell = 0.84 + 0.16 * Math.sin((2 * Math.PI * 0.062 * i) / SR + 0.5);
     buf[i] *= swell;
   }
-  return gen(buf, 0.72);
+  const droplets = new Float32Array(N);
+  let pos = Math.floor(SR * 0.04);
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.0025, 0.011));
+    const amp = rand(0.03, 0.11);
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const t = i / Math.max(1, len - 1);
+      droplets[pos + i] += (Math.random() * 2 - 1) * Math.exp(-8 * t) * amp;
+    }
+    pos += Math.floor(SR * rand(0.008, 0.045));
+  }
+  hp1(droplets, 1800);
+  lp1(droplets, 7000);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.90 + droplets[i] * 0.10;
+  return gen(mix, 0.72);
 }
 
 function genOcean(): string {
-  // Ocean: brown-noise base with slow wave-swell modulation + pink surf layer
+  // Ocean shoreline: undertow body + cresting surf that blooms on each wave
   const base = brownNoise();
-  lp1(base, 550); lp1(base, 420);
+  lp1(base, 480); lp1(base, 360);
 
   const surf = pinkNoise();
   hp1(surf, 220);
-  lp1(surf, 2200);
+  lp1(surf, 2000);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    // ~0.085 Hz = 11.8-second wave cycle
     const phase = (2 * Math.PI * 0.085 * i) / SR;
-    const waveEnv = 0.28 + 0.72 * Math.pow(0.5 + 0.5 * Math.sin(phase - Math.PI / 2), 1.6);
-    const surfEnv = 0.15 + 0.85 * Math.pow(Math.max(0, Math.sin(phase - Math.PI / 2)), 2);
-    mix[i] = base[i] * waveEnv * 0.62 + surf[i] * surfEnv * 0.38;
+    const crest = Math.max(0, Math.sin(phase - Math.PI / 2));
+    const waveEnv = 0.24 + 0.76 * Math.pow(0.5 + 0.5 * Math.sin(phase - Math.PI / 2), 1.7);
+    const surfEnv = 0.08 + 0.92 * Math.pow(crest, 2.4);
+    const washback = 0.68 + 0.32 * Math.sin((2 * Math.PI * 0.17 * i) / SR + 0.7);
+    mix[i] = base[i] * waveEnv * 0.62 * washback + surf[i] * surfEnv * 0.38;
   }
   return gen(mix, 0.72);
 }
 
 function genWind(): string {
-  // Wind: pink noise heavily low-passed, multi-rate gust envelope
+  // Wind: broad gust bed with subtle whistling harmonics through gaps
   const buf = pinkNoise();
   hp1(buf, 90);
   lp1(buf, 1400); lp1(buf, 900);
@@ -702,7 +767,22 @@ function genWind(): string {
     const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
-  return gen(buf, 0.68);
+  const whistle = new Float32Array(N);
+  const baseFreqLfo = smoothRandomLfo(420, 860, 1.0, 3.6);
+  for (let i = 0; i < N; i++) {
+    const t = i / SR;
+    const env = Math.max(0, Math.sin((2 * Math.PI * 0.11 * i) / SR + 1.2)) ** 2;
+    const f = baseFreqLfo[i];
+    whistle[i] = (
+      Math.sin(2 * Math.PI * f * t) * 0.75 +
+      Math.sin(2 * Math.PI * 2.03 * f * t + 0.5) * 0.25
+    ) * env * 0.08;
+  }
+  hp1(whistle, 300);
+  lp1(whistle, 2200);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.9 + whistle[i] * 0.1;
+  return gen(mix, 0.68);
 }
 
 // ── Sound library ──────────────────────────────────────────────────────────
