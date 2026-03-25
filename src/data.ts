@@ -418,99 +418,57 @@ function genNight(): string {
     buf[i] += katydid[i] * gate * katyEnv[i];
   }
 
-  // Dark ambient bed — very low, warm, like still air at night
-  const amb = brownNoise();
-  lp1(amb, 250); lp1(amb, 180);
-
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.82 + amb[i] * 0.18;
-  return gen(mix, 0.52);
+  return gen(buf, 0.52);
 }
 
 function genBirdsong(): string {
-  // Birdsong: two-layer syllables (tonal + breathy) through vocal-tract formants
-  // with motif-level repetition-with-variation for natural phrasing.
+  // Event-based motifs: gliding tones + harmonics + noisy onset/offset texture
   const buf = new Float32Array(N);
-
   const species = [
-    { minF: 1700, maxF: 2600, formants: [1.0, 2.1, 3.3], formantQ: 4.5, minGap: 0.5, maxGap: 1.8, amp: 0.11, motifMin: 2, motifMax: 5, breathRatio: 0.35 },
-    { minF: 2500, maxF: 4200, formants: [1.0, 1.85, 2.7], formantQ: 3.8, minGap: 0.6, maxGap: 2.2, amp: 0.09, motifMin: 1, motifMax: 3, breathRatio: 0.25 },
-    { minF: 1200, maxF: 1900, formants: [1.0, 2.3, 3.6], formantQ: 5.2, minGap: 1.0, maxGap: 3.0, amp: 0.08, motifMin: 2, motifMax: 4, breathRatio: 0.40 },
-    { minF: 3200, maxF: 5000, formants: [1.0, 1.6, 2.4], formantQ: 3.2, minGap: 0.3, maxGap: 1.2, amp: 0.07, motifMin: 3, motifMax: 7, breathRatio: 0.20 },
-  ];
+    { minF: 1700, maxF: 2600, minGap: 0.35, maxGap: 1.4, amp: 0.10, motifMin: 2, motifMax: 5 },
+    { minF: 2400, maxF: 3900, minGap: 0.45, maxGap: 1.8, amp: 0.09, motifMin: 1, motifMax: 3 },
+    { minF: 1200, maxF: 1900, minGap: 0.8,  maxGap: 2.4, amp: 0.08, motifMin: 2, motifMax: 4 },
+    { minF: 3100, maxF: 5200, minGap: 0.3,  maxGap: 1.2, amp: 0.07, motifMin: 3, motifMax: 6 },
+  ] as const;
 
-  const activityLfo = smoothRandomLfo(0.2, 1.0, 5.0, 15.0);
-
-  for (const sp of species) {
-    let pos = Math.floor(SR * rand(0.3, 1.5));
+  for (const g of species) {
+    let pos = Math.floor(SR * Math.random() * 0.5);
     while (pos < N) {
-      // Skip some phrases when activity is low
-      const act = activityLfo[Math.min(pos, N - 1)];
-      if (act < 0.35 && chance(0.5)) {
-        pos += Math.floor(SR * rand(2.0, 5.0));
-        continue;
-      }
-
-      // Generate a motif template, then repeat with variation
-      const motifCount = Math.floor(rand(sp.motifMin, sp.motifMax + 1));
-      const motifBaseF = rand(sp.minF, sp.maxF);
-      const motifGlideDir = chance(0.5) ? 1 : -1;
-
+      const motifCount = Math.floor(rand(g.motifMin, g.motifMax + 1));
       for (let m = 0; m < motifCount && pos < N; m++) {
-        const len = Math.floor(SR * rand(0.035, 0.14));
-        // Each note in motif varies slightly from the template
-        const f0 = motifBaseF * rand(0.92, 1.08);
-        const glideAmount = rand(0.06, 0.22) * motifGlideDir;
-        const f1 = f0 * (1 + glideAmount);
-        const vibRate = rand(5, 14);
-        const vibDepth = rand(0.003, 0.015);
+        const len = Math.floor(SR * rand(0.04, 0.11));
+        const f0 = rand(g.minF, g.maxF);
+        const f1 = f0 * rand(0.82, 1.18);
+        const vibRate = rand(6, 11);
+        const vibDepth = rand(0.004, 0.014);
+        // Per-note tremolo rate so each syllable has different "flutter"
+        const tremuloRate = rand(11, 26);
         const phase = rand(0, Math.PI * 2);
-
         for (let i = 0; i < len && pos + i < N; i++) {
           const t = i / SR;
           const p = i / len;
-
-          // Tonal envelope: smooth bell with slight AM tremolo
-          const toneEnv = (Math.sin(p * Math.PI) ** 1.1) * (0.88 + 0.12 * Math.sin(2 * Math.PI * rand(14, 22) * t));
-
-          // Breathy/noisy envelope: strong at onset and offset, weak in middle
-          // This mimics the airflow noise in real bird syrinx
-          const breathEnv = Math.max(
-            Math.exp(-12 * p),                      // onset breath
-            Math.exp(-10 * (1 - p)) * 0.6            // offset breath
-          );
-
+          const env = (Math.sin(p * Math.PI) ** 0.9) * (0.85 + 0.15 * Math.sin(2 * Math.PI * tremuloRate * t));
           const glide = f0 + (f1 - f0) * p;
           const f = glide * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t + phase));
-
-          // Tonal component through formant filter ratios
-          let tonal = 0;
-          for (let fi = 0; fi < sp.formants.length; fi++) {
-            const formantF = f * sp.formants[fi] * rand(0.98, 1.02);
-            const harmAmp = 1.0 / (1 + fi * 0.8);
-            tonal += Math.sin(2 * Math.PI * formantF * t + phase * (fi + 1) * 0.4) * harmAmp;
-          }
-          tonal *= 0.4; // normalize
-
-          // Breathy component: filtered noise shaped by the same pitch
-          const breath = (Math.random() * 2 - 1);
-
-          const sample = tonal * toneEnv * (1 - sp.breathRatio) + breath * breathEnv * sp.breathRatio;
-          buf[pos + i] += sample * sp.amp * act;
+          // Noisy texture at both onset AND offset (breathy attack + airy tail)
+          const noisyEdge = (Math.random() * 2 - 1) * (Math.exp(-6 * p) * 0.14 + Math.exp(-6 * (1 - p)) * 0.08);
+          buf[pos + i] += env * g.amp * (
+            0.70 * Math.sin(2 * Math.PI * f * t + phase) +
+            0.18 * Math.sin(2 * Math.PI * 2.04 * f * t + phase * 0.63) +
+            0.06 * Math.sin(2 * Math.PI * 2.97 * f * t + phase * 1.4) +
+            noisyEdge
+          );
         }
-        // Intra-motif gap (short)
-        pos += len + Math.floor(SR * rand(0.02, 0.12));
+        pos += Math.floor(SR * rand(0.03, 0.18));
       }
-      // Inter-motif gap
-      pos += Math.floor(SR * rand(sp.minGap, sp.maxGap));
+      pos += Math.floor(SR * (g.minGap + Math.random() * (g.maxGap - g.minGap)));
     }
   }
-
-  // Shape through vocal tract resonances
-  hp1(buf, 800);
-  lp1(buf, 7500);
-  // Gentle saturation (lower drive than before to reduce aliasing)
-  softClip(buf, 0.9);
+  bp2(buf, 1800, 1.6);
+  bp2(buf, 3200, 2.4);
+  softClip(buf, 0.85); // reduced from 1.35 — less aliasing harshness
+  hp1(buf, 900);
+  lp1(buf, 6000);
   return gen(buf, 0.54);
 }
 
@@ -554,130 +512,84 @@ function genPink(): string {
 }
 
 function genDryer(): string {
-  // Dryer: continuous drum rotation hum + irregular fabric tumble thuds
-  // The key difference from the old version: thuds are NOT periodic.
-  // Real dryers have irregular timing as clothes bunch, fall, and shift.
+  // Tumbling dryer: low mechanical hum with soft, jittered thumps
+  const hum = pinkNoise();
+  hp1(hum, 65); lp1(hum, 280); lp1(hum, 210);
 
-  // Motor/drum hum: steady low-frequency drone with slight vibration
-  const motorNoise = brownNoise();
-  lp1(motorNoise, 120); lp1(motorNoise, 95);
-  hp1(motorNoise, 30);
-
-  // Airflow: warm mid-frequency continuous sound
-  const airflow = pinkNoise();
-  hp1(airflow, 100);
-  lp1(airflow, 380); lp1(airflow, 280);
-
-  // Drum rotation modulation: slow, smooth ~0.7 Hz wobble (not a sharp thump)
-  const drumRate = rand(0.65, 0.80); // rotation speed in Hz
-
-  // Fabric tumble thuds: irregularly timed, soft, muffled impacts
-  const tumbles = new Float32Array(N);
-  let pos = Math.floor(SR * rand(0.3, 0.8));
+  // Event-based thumps with timing jitter — breaks the train-like metronomic feel
+  const thumps = new Float32Array(N);
+  const baseInterval = 1 / 0.85; // ~1.18s base drum rotation period
+  let pos = Math.floor(SR * rand(0.1, 0.5));
   while (pos < N) {
-    // Each tumble is a soft, muffled thud (low-passed noise burst)
-    const thudLen = Math.floor(SR * rand(0.03, 0.09));
-    const thudAmp = rand(0.06, 0.22);
-    const thudF = rand(50, 110); // low resonant frequency of drum body
-    for (let i = 0; i < thudLen && pos + i < N; i++) {
-      const p = i / thudLen;
-      // Soft attack (fabric, not metal) with gradual decay
-      const env = (Math.sin(p * Math.PI) ** 1.4) * Math.exp(-1.5 * p);
-      tumbles[pos + i] += Math.sin(2 * Math.PI * thudF * (i / SR)) * env * thudAmp;
-      // Add some fabric rustle
-      tumbles[pos + i] += (Math.random() * 2 - 1) * env * thudAmp * 0.3;
+    const thumpLen = Math.floor(SR * rand(0.04, 0.10));
+    const amp = rand(0.18, 0.38);
+    const f = rand(52, 88); // low drum resonance
+    for (let i = 0; i < thumpLen && pos + i < N; i++) {
+      const p = i / thumpLen;
+      // Soft fabric-against-drum envelope — no sharp transient
+      const env = Math.sin(p * Math.PI) ** 1.6;
+      thumps[pos + i] += Math.sin(2 * Math.PI * f * (i / SR)) * env * amp;
     }
-    // Irregular gaps — sometimes clothes fall quickly, sometimes long pause
-    const gap = chance(0.3)
-      ? rand(0.15, 0.45)   // quick succession
-      : rand(0.6, 1.8);    // longer pause
-    pos += thudLen + Math.floor(SR * gap);
+    // Jitter: ±20% timing variation so it never locks in as a train rhythm
+    const jitter = rand(0.80, 1.20);
+    pos += Math.floor(SR * baseInterval * jitter);
   }
-  lp1(tumbles, 250); lp1(tumbles, 200);
-  hp1(tumbles, 28);
+  lp1(thumps, 200); lp1(thumps, 160);
 
   const mix = new Float32Array(N);
-  const motorDrift = smoothRandomLfo(0.94, 1.06, 2.0, 6.0);
+  const motorDrift = smoothRandomLfo(0.92, 1.08, 1.5, 5.0);
   for (let i = 0; i < N; i++) {
-    // Gentle drum rotation wobble (continuous, not percussive)
-    const drumWobble = 0.90 + 0.10 * Math.sin(2 * Math.PI * drumRate * (i / SR));
-    mix[i] = motorNoise[i] * 0.35 * motorDrift[i]
-           + airflow[i] * 0.38 * drumWobble
-           + tumbles[i] * 0.27;
+    mix[i] = hum[i] * 0.72 * motorDrift[i] + thumps[i] * 0.28;
   }
   return gen(mix, 0.65);
 }
 
 function genTrain(): string {
-  // Train cabin: broadband drone through cabin-mode resonators + soft rail-joint thuds
-  // The key insight is that real train sounds are cabin resonance, not clicks.
-  // Rail joints excite the cabin structure, which rings — you hear the ring, not the click.
+  // Train cabin: filtered drone + rail-joint pulses + subtle rattles
+  const drone = pinkNoise();
+  hp1(drone, 70); lp1(drone, 680); lp1(drone, 480);
 
-  // Cabin drone: noise shaped by multiple cabin resonances (structural modes)
-  const cabinNoise = pinkNoise();
-  const cabinModes = [
-    { freq: 85, q: 3.5 },   // body resonance
-    { freq: 165, q: 2.8 },  // floor mode
-    { freq: 340, q: 2.2 },  // wall panel
-    { freq: 520, q: 1.8 },  // window/frame
-  ];
-  // Apply each cabin mode as a parallel resonator and sum
-  const cabin = new Float32Array(N);
-  for (const mode of cabinModes) {
-    const layer = new Float32Array(N);
-    for (let i = 0; i < N; i++) layer[i] = cabinNoise[i];
-    bp2(layer, mode.freq, mode.q);
-    for (let i = 0; i < N; i++) cabin[i] += layer[i] * 0.25;
-  }
-  hp1(cabin, 40);
-  lp1(cabin, 650);
-
-  // Rail joint thuds: soft, rounded impacts (NOT sharp pulses)
-  // These are felt more than heard — low-frequency thumps with long attack
-  const thuds = new Float32Array(N);
-  let next = Math.floor(SR * 0.3);
+  const pulses = new Float32Array(N);
+  // Softer pulse shape — higher exponent = rounder, less click
+  const pulseShape = (phase: number) => Math.sin(phase * Math.PI) ** 3.8;
+  let next = Math.floor(SR * 0.2);
   while (next < N) {
-    const interval = Math.floor(SR * rand(0.48, 0.78));
-    // Primary thud — soft attack, medium decay
-    const lenA = Math.floor(SR * rand(0.04, 0.08));
-    const thudAmp = rand(0.12, 0.28);
-    const thudF = rand(55, 90);
-    for (let i = 0; i < lenA && next + i < N; i++) {
-      const p = i / lenA;
-      // Rounded envelope: slow rise, gradual fall — no click
-      const env = Math.sin(p * Math.PI) ** 1.8;
-      thuds[next + i] += Math.sin(2 * Math.PI * thudF * (i / SR)) * env * thudAmp;
-    }
-    // Secondary thud (other bogie) — delayed, quieter
+    // Tighter interval variance so rhythm feels consistent, not randomly clicky
+    const interval = Math.floor(SR * rand(0.50, 0.68));
+    const lenA = Math.floor(SR * rand(0.025, 0.045)); // slightly longer = softer
+    const lenB = Math.floor(SR * rand(0.016, 0.032));
     const offsetB = Math.floor(SR * rand(0.06, 0.14));
-    const lenB = Math.floor(SR * rand(0.03, 0.06));
+    for (let i = 0; i < lenA && next + i < N; i++) {
+      pulses[next + i] += pulseShape(i / lenA) * rand(0.18, 0.36); // quieter
+    }
     for (let i = 0; i < lenB && next + offsetB + i < N; i++) {
-      const p = i / lenB;
-      const env = Math.sin(p * Math.PI) ** 2.0;
-      thuds[next + offsetB + i] += Math.sin(2 * Math.PI * thudF * 1.12 * (i / SR)) * env * thudAmp * 0.6;
+      pulses[next + offsetB + i] += pulseShape(i / lenB) * rand(0.10, 0.24);
     }
     next += interval;
   }
-  lp1(thuds, 180); lp1(thuds, 140);
+  // Only the low resonator — removing the 1240Hz bp which caused clicking
+  bp2(pulses, 420, 1.2);
+  lp1(pulses, 520); // hard cap on pulse frequency content
 
-  // Continuous wheel rumble: low-frequency modulated drone
-  const rumble = brownNoise();
-  lp1(rumble, 200); lp1(rumble, 160);
-  hp1(rumble, 25);
-
-  // Gentle high-frequency air/ventilation hiss
-  const airHiss = pinkNoise();
-  hp1(airHiss, 600);
-  lp1(airHiss, 2200); lp1(airHiss, 1600);
+  const rattles = new Float32Array(N);
+  let rPos = Math.floor(SR * 0.15);
+  while (rPos < N) {
+    const len = Math.floor(SR * rand(0.006, 0.03));
+    for (let i = 0; i < len && rPos + i < N; i++) {
+      const env = Math.exp(-5 * (i / len));
+      rattles[rPos + i] += (Math.random() * 2 - 1) * env * rand(0.03, 0.09);
+    }
+    rPos += Math.floor(SR * rand(0.14, 0.65));
+  }
+  hp1(rattles, 800);
+  lp1(rattles, 3500); // lower ceiling on rattles too
 
   const mix = new Float32Array(N);
-  const sway = smoothRandomLfo(0.88, 1.12, 1.5, 4.5);
-  const wheelRhythm = smoothRandomLfo(0.92, 1.08, 0.3, 0.8);
+  const sway = smoothRandomLfo(0.84, 1.16, 1.2, 4.0);
   for (let i = 0; i < N; i++) {
-    mix[i] = cabin[i] * 0.40 * sway[i]
-           + thuds[i] * 0.22
-           + rumble[i] * 0.24 * wheelRhythm[i]
-           + airHiss[i] * 0.14;
+    // Slower wheel modulation — 8.7Hz was too fast/obvious
+    const wheel = 0.92 + 0.08 * Math.sin((2 * Math.PI * 3.4 * i) / SR);
+    mix[i] = drone[i] * 0.62 * sway[i] * wheel + pulses[i] * 0.26 + rattles[i] * 0.12;
   }
   return gen(mix, 0.68);
 }
@@ -714,97 +626,50 @@ function genWaterfall(): string {
 }
 
 function genFrogs(): string {
-  // Frog chorus: vocal-sac resonance model with chorus synchronisation dynamics
-  // Each frog is a noise excitation through a resonant filter (vocal sac),
-  // not a pure harmonic stack. Chorus activity waxes and wanes via a shared LFO.
+  // Frog chorus: pulse-train ribbits with varied envelopes and chorus clustering
   const croaks = new Float32Array(N);
-  const chorusActivity = smoothRandomLfo(0.3, 1.0, 2.5, 7.0); // shared chorus wave
-
   const frogs = [
-    { fMin: 280, fMax: 420, formant2: 1.62, minGap: 0.9, maxGap: 2.2, amp: 0.28, pulsesMin: 3, pulsesMax: 7, sacQ: 6.5 },
-    { fMin: 380, fMax: 560, formant2: 1.55, minGap: 0.7, maxGap: 1.8, amp: 0.22, pulsesMin: 2, pulsesMax: 5, sacQ: 5.0 },
-    { fMin: 180, fMax: 300, formant2: 1.78, minGap: 1.2, maxGap: 2.8, amp: 0.24, pulsesMin: 2, pulsesMax: 4, sacQ: 8.0 },
-    { fMin: 520, fMax: 740, formant2: 1.45, minGap: 1.0, maxGap: 2.6, amp: 0.16, pulsesMin: 1, pulsesMax: 3, sacQ: 4.5 },
-  ];
-
+    { fMin: 110, fMax: 150, minGap: 1.1, maxGap: 2.5, amp: 0.30, pulsesMin: 3, pulsesMax: 6 },
+    { fMin: 140, fMax: 190, minGap: 0.8, maxGap: 2.0, amp: 0.24, pulsesMin: 2, pulsesMax: 5 },
+    { fMin: 90,  fMax: 130, minGap: 1.5, maxGap: 3.0, amp: 0.20, pulsesMin: 2, pulsesMax: 4 },
+  ] as const;
   for (const frog of frogs) {
-    let pos = Math.floor(SR * Math.random() * 1.5);
-    const rateDrift = smoothRandomLfo(0.82, 1.18, 2.0, 6.0);
+    let pos = Math.floor(SR * Math.random() * 1.2);
     while (pos < N) {
-      // Skip calls when chorus activity is low (creates natural silences)
-      const activity = chorusActivity[Math.min(pos, N - 1)];
-      if (activity < 0.35 && chance(0.6)) {
-        pos += Math.floor(SR * rand(1.5, 3.5));
-        continue;
-      }
-      const pulseCount = Math.floor(rand(frog.pulsesMin, frog.pulsesMax + 1));
+      const pulses = Math.floor(rand(frog.pulsesMin, frog.pulsesMax + 1));
       const baseFreq = rand(frog.fMin, frog.fMax);
       let eventPos = pos;
-      for (let pIdx = 0; pIdx < pulseCount && eventPos < N; pIdx++) {
-        const len = Math.floor(SR * rand(0.05, 0.16));
-        const pulseGap = Math.floor(SR * rand(0.02, 0.065));
-        const freq = baseFreq * rand(0.93, 1.08);
-        const freq2 = freq * frog.formant2 * rand(0.95, 1.05);
-
-        // Excitation: short filtered noise burst (glottal pulse analog)
-        // shaped by envelope — NOT a sine wave
+      for (let pIdx = 0; pIdx < pulses && eventPos < N; pIdx++) {
+        const len = Math.floor(SR * rand(0.045, 0.13));
+        const pulseGap = Math.floor(SR * rand(0.025, 0.06));
+        const freq = baseFreq * rand(0.95, 1.07);
         for (let i = 0; i < len && eventPos + i < N; i++) {
           const t = i / SR;
           const frac = i / len;
-          // Asymmetric envelope: fast attack, slower decay with per-pulse variation
-          const attackW = rand(0.08, 0.18);
-          const env = frac < attackW
-            ? (frac / attackW) ** 0.7
-            : Math.exp(-rand(2.8, 5.0) * (frac - attackW));
-          const pitchDrop = 1 - rand(0.12, 0.30) * frac;
-          const f1 = freq * pitchDrop;
-          const f2 = freq2 * pitchDrop;
-
-          // Vocal sac resonance: two formants driven by noise+pulse train
-          const excitation = (Math.random() * 2 - 1) * 0.6
-            + 0.4 * Math.sin(2 * Math.PI * f1 * t * rand(0.98, 1.02));
-          const mode1 = Math.sin(2 * Math.PI * f1 * t) * 0.55;
-          const mode2 = Math.sin(2 * Math.PI * f2 * t + 0.8) * 0.25;
-          // Subharmonic rumble (chest/body resonance)
-          const sub = Math.sin(2 * Math.PI * f1 * 0.5 * t) * 0.12;
-          // Slight inharmonic roughness
-          const rough = Math.sin(2 * Math.PI * f1 * 1.07 * t + 1.3) * 0.08;
-          croaks[eventPos + i] += (excitation * 0.3 + mode1 + mode2 + sub + rough) * env * frog.amp;
+          const envShape = rand(1.35, 1.9);
+          const env = (Math.sin(frac * Math.PI) ** envShape) * Math.exp(-rand(0.32, 0.58) * frac);
+          const pitchDrop = 1 - 0.22 * frac;
+          const tone = freq * pitchDrop;
+          croaks[eventPos + i] += (
+            0.76 * Math.sin(2 * Math.PI * tone * t) +
+            0.16 * Math.sin(2 * Math.PI * 2.0 * tone * t + 0.65) +
+            0.07 * Math.sin(2 * Math.PI * 3.1 * tone * t + 1.2) +
+            0.025 * Math.sin(2 * Math.PI * 0.52 * tone * t + 0.2)
+          ) * env * frog.amp;
         }
         eventPos += len + pulseGap;
       }
-      // Gap modulated by chorus activity and individual drift
-      const baseGap = frog.minGap + Math.random() * (frog.maxGap - frog.minGap);
-      const activityMod = 1.0 + (1.0 - activity) * 1.5; // longer gaps when chorus is quiet
-      pos += Math.floor(SR * baseGap * activityMod * rateDrift[Math.min(pos, N - 1)]);
+      const chorusPause = chance(0.2) ? rand(0.7, 1.9) : 0;
+      pos += Math.floor(SR * (frog.minGap + Math.random() * (frog.maxGap - frog.minGap) + chorusPause));
     }
   }
-
-  // Bandpass the croaks through vocal-sac-like resonance
-  bp2(croaks, 350, 2.5);
-
-  // Ambient bed: very dark, warm — like a still pond at night, NOT white/pink hiss
+  // Dark warm ambient — NOT bright pink noise which read as hiss
   const amb = brownNoise();
-  lp1(amb, 180); lp1(amb, 140);
-  // Occasional distant water lapping
-  const laps = new Float32Array(N);
-  let lapPos = Math.floor(SR * rand(1.0, 3.0));
-  while (lapPos < N) {
-    const lapLen = Math.floor(SR * rand(0.3, 0.8));
-    const lapF = rand(60, 140);
-    for (let i = 0; i < lapLen && lapPos + i < N; i++) {
-      const p = i / lapLen;
-      const env = Math.sin(p * Math.PI) ** 2.0 * 0.04;
-      laps[lapPos + i] += Math.sin(2 * Math.PI * lapF * (i / SR)) * env;
-    }
-    lapPos += Math.floor(SR * rand(3.0, 8.0));
-  }
-  lp1(laps, 200);
-
+  lp1(amb, 320); lp1(amb, 220);
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = croaks[i] * 0.86 + amb[i] * 0.10 + laps[i] * 0.04;
-  hp1(mix, 50);
-  lp1(mix, 3200);
+  for (let i = 0; i < N; i++) mix[i] = croaks[i] * 0.90 + amb[i] * 0.10;
+  hp1(mix, 55);
+  lp1(mix, 2600);
   return gen(mix, 0.58);
 }
 
