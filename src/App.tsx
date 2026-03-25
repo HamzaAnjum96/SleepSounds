@@ -211,39 +211,6 @@ export default function App() {
         </div>
 
         <div className="section-header">
-          <span className="section-label">sounds</span>
-          <div className="cat-pills">
-            {CATEGORIES.map((cat) => {
-              const n = activeInCategory(cat);
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  className={`cat-pill${category === cat ? ' active' : ''}`}
-                  onClick={() => setCategory(cat)}
-                >
-                  {cat}
-                  {n > 0 && <span className="cat-count">{n}</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="sounds-grid">
-          {visibleSounds.map((sound) => (
-            <SoundCard
-              key={sound.id}
-              sound={sound}
-              enabled={soundState[sound.id]?.enabled ?? false}
-              volume={soundState[sound.id]?.volume ?? 0.5}
-              onToggle={() => handleSoundToggle(sound.id)}
-              onVolumeChange={(v) => setSoundVolume(sound.id, v)}
-            />
-          ))}
-        </div>
-
-        <div className="section-header" style={{ marginTop: '6px' }}>
           <span className="section-label">presets</span>
         </div>
 
@@ -291,10 +258,44 @@ export default function App() {
           </ul>
         )}
 
+        <div className="section-header" style={{ marginTop: '6px' }}>
+          <span className="section-label">sounds</span>
+          <div className="cat-pills">
+            {CATEGORIES.map((cat) => {
+              const n = activeInCategory(cat);
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`cat-pill${category === cat ? ' active' : ''}`}
+                  onClick={() => setCategory(cat)}
+                >
+                  {cat}
+                  {n > 0 && <span className="cat-count">{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="sounds-grid">
+          {visibleSounds.map((sound) => (
+            <SoundCard
+              key={sound.id}
+              sound={sound}
+              enabled={soundState[sound.id]?.enabled ?? false}
+              volume={soundState[sound.id]?.volume ?? 0.5}
+              onToggle={() => handleSoundToggle(sound.id)}
+              onVolumeChange={(v) => setSoundVolume(sound.id, v)}
+            />
+          ))}
+        </div>
+
         <div className="app-footer">
-          {activeSounds.length > 0
-            ? activeSounds.map((s) => s.name).join(' · ')
-            : 'rest well'}
+          {activeSounds.length > 0 && (
+            <div className="footer-playing">{activeSounds.map((s) => s.name).join(' · ')}</div>
+          )}
+          <div className="footer-rest">rest well</div>
         </div>
       </div>
     </>

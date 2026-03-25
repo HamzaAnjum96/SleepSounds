@@ -674,6 +674,19 @@ header {
   text-align: center;
   padding: 8px 0 36px;
   flex-shrink: 0;
-  transition: color 0.4s, opacity 0.4s;
-  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.footer-playing {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+}
+
+.footer-rest {
+  color: var(--text-dim);
+  letter-spacing: 0.18em;
 }
