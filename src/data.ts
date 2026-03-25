@@ -479,6 +479,117 @@ function genBoatCabin(): string {
   return gen(mix, 0.63);
 }
 
+function genShower(): string {
+  // Shower: dense hiss + tiled-room body + sparkling droplets
+  const hiss = whiteNoise();
+  hp1(hiss, 900);
+  lp1(hiss, 7600);
+
+  const body = pinkNoise();
+  hp1(body, 180);
+  lp1(body, 1800);
+
+  const droplets = new Float32Array(N);
+  let pos = Math.floor(SR * 0.03);
+  while (pos < N) {
+    const len = Math.floor(SR * (0.004 + Math.random() * 0.01));
+    const amp = 0.08 + Math.random() * 0.18;
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const t = i / Math.max(1, len - 1);
+      const env = Math.exp(-8 * t);
+      droplets[pos + i] += (Math.random() * 2 - 1) * amp * env;
+    }
+    pos += Math.floor(SR * (0.01 + Math.random() * 0.028));
+  }
+  hp1(droplets, 1200);
+  lp1(droplets, 5200);
+
+  const mix = new Float32Array(N);
+  const pressure = smoothRandomLfo(0.86, 1.12, 0.8, 2.2);
+  for (let i = 0; i < N; i++) {
+    mix[i] = hiss[i] * 0.54 * pressure[i] + body[i] * 0.30 + droplets[i] * 0.16;
+  }
+  return gen(mix, 0.66);
+}
+
+function genTentRain(): string {
+  // Rain on tent fabric: papery taps over soft low rain bed
+  const bed = pinkNoise();
+  hp1(bed, 240);
+  lp1(bed, 2600);
+
+  const taps = new Float32Array(N);
+  let pos = Math.floor(SR * 0.05);
+  while (pos < N) {
+    const len = Math.floor(SR * (0.006 + Math.random() * 0.018));
+    const amp = 0.12 + Math.random() * 0.26;
+    const tone = 900 + Math.random() * 1500;
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const t = i / SR;
+      const env = Math.exp(-i / (SR * 0.012));
+      taps[pos + i] += Math.sin(2 * Math.PI * tone * t) * env * amp;
+    }
+    pos += Math.floor(SR * (0.02 + Math.random() * 0.09));
+  }
+  hp1(taps, 450);
+  lp1(taps, 4200);
+
+  const mix = new Float32Array(N);
+  const gust = smoothRandomLfo(0.82, 1.18, 1.3, 4.0);
+  for (let i = 0; i < N; i++) mix[i] = bed[i] * 0.72 * gust[i] + taps[i] * 0.28;
+  return gen(mix, 0.64);
+}
+
+function genHeartbeat(): string {
+  // Muffled heartbeat with "lub-dub" pulse pair
+  const beat = new Float32Array(N);
+  const bpm = 60 + Math.random() * 10;
+  const cycle = SR * (60 / bpm);
+  for (let c = Math.floor(SR * 0.2); c < N; c += Math.floor(cycle)) {
+    const events = [
+      { o: 0, a: 0.75, l: Math.floor(SR * 0.09), f: 76 },
+      { o: Math.floor(SR * 0.18), a: 0.55, l: Math.floor(SR * 0.07), f: 92 },
+    ];
+    for (const e of events) {
+      const start = c + e.o;
+      for (let i = 0; i < e.l && start + i < N; i++) {
+        const p = i / e.l;
+        const env = Math.sin(Math.min(1, p) * Math.PI) ** 1.5 * Math.exp(-2.1 * p);
+        beat[start + i] += Math.sin(2 * Math.PI * e.f * (i / SR)) * env * e.a;
+      }
+    }
+  }
+  const body = brownNoise();
+  lp1(body, 120); lp1(body, 85);
+  const mix = new Float32Array(N);
+  const drift = smoothRandomLfo(0.92, 1.08, 2.2, 6.0);
+  for (let i = 0; i < N; i++) mix[i] = beat[i] * 0.80 * drift[i] + body[i] * 0.20;
+  lp1(mix, 320);
+  hp1(mix, 28);
+  return gen(mix, 0.57);
+}
+
+function genCatPurr(): string {
+  // Cat purr: low voiced rumble with gentle throaty modulation
+  const base = brownNoise();
+  lp1(base, 180); lp1(base, 145);
+
+  const rasp = pinkNoise();
+  hp1(rasp, 90);
+  lp1(rasp, 600);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const p1 = 0.74 + 0.26 * Math.sin((2 * Math.PI * 24 * i) / SR);
+    const p2 = 0.85 + 0.15 * Math.sin((2 * Math.PI * 29 * i) / SR + 1.2);
+    const breath = 0.9 + 0.1 * Math.sin((2 * Math.PI * 0.22 * i) / SR);
+    mix[i] = (base[i] * 0.68 * p1 + rasp[i] * 0.32 * p2) * breath;
+  }
+  hp1(mix, 25);
+  lp1(mix, 450);
+  return gen(mix, 0.58);
+}
+
 function genUnderwater(): string {
   // Deep underwater: heavily low-passed brown noise with slow bubbly modulation
   const depth = brownNoise();
@@ -551,16 +662,20 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
   { id: 'waterfall',   name: 'Waterfall',   category: 'Nature', url: genWaterfall() },
+  { id: 'tent-rain',   name: 'Tent Rain',   category: 'Nature', url: genTentRain() },
   { id: 'night',       name: 'Night',       category: 'Nature', url: genNight() },
   { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
   { id: 'frogs',       name: 'Frogs',       category: 'Nature', url: genFrogs() },
   { id: 'underwater',  name: 'Underwater',  category: 'Nature', url: genUnderwater() },
   { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
   { id: 'cafe',        name: 'Café',        category: 'Cozy',   url: genCafe() },
+  { id: 'shower',      name: 'Shower',      category: 'Cozy',   url: genShower() },
+  { id: 'cat-purr',    name: 'Cat Purr',    category: 'Cozy',   url: genCatPurr() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
   { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
+  { id: 'heartbeat',   name: 'Heartbeat',   category: 'Noise',  url: genHeartbeat() },
   { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
   { id: 'airplane',    name: 'Airplane',    category: 'Noise',  url: genAirplane() },
   { id: 'dryer',       name: 'Dryer',       category: 'Noise',  url: genDryer() },
@@ -590,4 +705,7 @@ export const BUILTIN_PRESETS: Preset[] = [
   { id: 'builtin-ocean-night',  name: 'Ocean Night',  createdAt: '', masterVolume: 0.8, state: builtinState([['ocean', 0.65], ['night', 0.55]]) },
   { id: 'builtin-cozy-fire',    name: 'Cozy Fire',    createdAt: '', masterVolume: 0.8, state: builtinState([['fireplace', 0.7], ['brown-noise', 0.25]]) },
   { id: 'builtin-deep-space',   name: 'Deep Space',   createdAt: '', masterVolume: 0.8, state: builtinState([['space', 0.75], ['brown-noise', 0.3]]) },
+  { id: 'builtin-tent-night',   name: 'Tent Night',   createdAt: '', masterVolume: 0.8, state: builtinState([['tent-rain', 0.64], ['wind', 0.28], ['cat-purr', 0.22]]) },
+  { id: 'builtin-shower-focus', name: 'Shower Focus', createdAt: '', masterVolume: 0.8, state: builtinState([['shower', 0.68], ['pink-noise', 0.24]]) },
+  { id: 'builtin-heart-rest',   name: 'Heart Rest',   createdAt: '', masterVolume: 0.8, state: builtinState([['heartbeat', 0.62], ['brown-noise', 0.22]]) },
 ];
