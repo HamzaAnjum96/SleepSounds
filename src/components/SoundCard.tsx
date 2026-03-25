@@ -7,6 +7,7 @@ const SOUND_ICONS: Record<string, string> = {
   forest:        'park',
   fireplace:     'local_fire_department',
   'white-noise': 'graphic_eq',
+  'pink-noise':  'equalizer',
   'brown-noise': 'noise_aware',
   night:         'bedtime',
   thunder:       'thunderstorm',
@@ -16,6 +17,9 @@ const SOUND_ICONS: Record<string, string> = {
   cafe:          'local_cafe',
   airplane:      'flight',
   birdsong:      'yard',
+  underwater:    'scuba_diving',
+  dryer:         'local_laundry_service',
+  train:         'train',
 };
 
 interface SoundCardProps {
@@ -23,6 +27,7 @@ interface SoundCardProps {
   enabled: boolean;
   playing: boolean;
   volume: number;
+  cardIndex?: number;
   onToggle: () => void;
   onVolumeChange: (value: number) => void;
 }
@@ -34,12 +39,13 @@ function sliderBg(value: number) {
   };
 }
 
-export default function SoundCard({ sound, enabled, playing, volume, onToggle, onVolumeChange }: SoundCardProps) {
+export default function SoundCard({ sound, enabled, playing, volume, cardIndex, onToggle, onVolumeChange }: SoundCardProps) {
   const icon = SOUND_ICONS[sound.id] ?? 'music_note';
 
   return (
     <button
       type="button"
+      style={cardIndex !== undefined ? { animationDelay: `${0.34 + cardIndex * 0.025}s` } : undefined}
       className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}`}
       onClick={onToggle}
       aria-pressed={enabled}

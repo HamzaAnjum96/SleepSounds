@@ -263,7 +263,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           </div>
         </div>
 
-        <div className="section-header">
+        <div className="section-header" style={{ animationDelay: '0.18s' }}>
           <span className="section-label">presets</span>
         </div>
 
@@ -346,13 +346,14 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
         </div>
 
         <div className="sounds-grid">
-          {visibleSounds.map((sound) => (
+          {visibleSounds.map((sound, i) => (
             <SoundCard
               key={sound.id}
               sound={sound}
               enabled={soundState[sound.id]?.enabled ?? false}
               playing={(soundState[sound.id]?.enabled ?? false) && !isPaused}
               volume={soundState[sound.id]?.volume ?? 0.5}
+              cardIndex={i}
               onToggle={() => handleSoundToggle(sound.id)}
               onVolumeChange={(v) => setSoundVolume(sound.id, v)}
             />

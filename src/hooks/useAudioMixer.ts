@@ -271,16 +271,18 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
   const stopAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
-    Object.entries(audioMapRef.current).forEach(([id, cfa]) => {
-      cfa.stop();
-      if (soundState[id]?.enabled) {
-        setSoundState((prev) => ({
-          ...prev,
-          [id]: { ...prev[id], enabled: false },
-        }));
+    Object.values(audioMapRef.current).forEach((cfa) => cfa.stop());
+    // Single state update instead of one per active sound — avoids batching jank
+    setSoundState((prev) => {
+      const next: Record<string, SoundState> = {};
+      let changed = false;
+      for (const [id, s] of Object.entries(prev)) {
+        if (s.enabled) { next[id] = { ...s, enabled: false }; changed = true; }
+        else next[id] = s;
       }
+      return changed ? next : prev;
     });
-  }, [clearFade, soundState]);
+  }, [clearFade]);
 
   const restoreMixerState = useCallback(async (
     nextState: Record<string, SoundState>,

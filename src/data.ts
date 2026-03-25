@@ -188,55 +188,70 @@ function genFan(): string {
 }
 
 function genNight(): string {
-  // Crickets: rhythmic bursts of high-freq noise (~3.8 chirps/sec)
-  const chirps = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const phase = ((i / SR) * 3.8) % 1;
-    // Two-pulse chirp pattern (each pulse ~15% of cycle)
-    const p1 = phase < 0.15 ? Math.sin((phase / 0.15) * Math.PI) : 0;
-    const p2 = phase >= 0.22 && phase < 0.37 ? Math.sin(((phase - 0.22) / 0.15) * Math.PI) : 0;
-    chirps[i] = (Math.random() * 2 - 1) * (p1 + p2 * 0.8);
+  // Crickets: smooth sinusoidal stridulation at ~4.5 kHz, four overlapping insects
+  const buf = new Float32Array(N);
+  // [carrier Hz, chirps/sec, phase offset, amplitude]
+  const crickets = [
+    [4500, 3.82, 0.00, 0.26],
+    [4630, 3.75, 0.13, 0.20],
+    [4370, 3.88, 0.27, 0.18],
+    [4750, 3.70, 0.54, 0.14],
+  ] as const;
+  for (const [freq, rate, phase0, amp] of crickets) {
+    for (let i = 0; i < N; i++) {
+      const t = i / SR;
+      const cycle = (t * rate + phase0) % 1;
+      let env = 0;
+      if (cycle < 0.14) {
+        env = Math.sin((cycle / 0.14) * Math.PI);
+      } else if (cycle >= 0.22 && cycle < 0.36) {
+        env = Math.sin(((cycle - 0.22) / 0.14) * Math.PI) * 0.80;
+      }
+      buf[i] += Math.sin(2 * Math.PI * freq * t) * env * amp;
+    }
   }
-  hp1(chirps, 2600);
-  lp1(chirps, 5500);
-
-  // Soft background ambience
   const amb = pinkNoise();
-  lp1(amb, 500);
-
+  lp1(amb, 400);
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = chirps[i] * 0.82 + amb[i] * 0.1;
-  return gen(mix, 0.58);
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.88 + amb[i] * 0.12;
+  return gen(mix, 0.52);
 }
 
 function genBirdsong(): string {
-  // Dawn chorus: several tonal chirp patterns + soft forest bed
+  // Dawn chorus: multi-harmonic chirps with frequency sweep — avoids pure-sine "beep" quality
   const buf = new Float32Array(N);
-  // [baseFreq Hz, chirpsPerSec, phaseOffset, amplitude]
+  // [fundamental Hz, chirpsPerSec, phaseOffset, amplitude]
   const birds = [
-    [2050, 2.3, 0.00, 0.22],
-    [3150, 0.7, 0.18, 0.17],
-    [1820, 1.4, 0.43, 0.15],
-    [2680, 3.0, 0.61, 0.13],
-    [1530, 0.5, 0.77, 0.11],
+    [2100, 2.3, 0.00, 0.15],
+    [3300, 0.7, 0.18, 0.12],
+    [1850, 1.4, 0.43, 0.11],
+    [2700, 3.0, 0.61, 0.10],
+    [1600, 0.5, 0.77, 0.08],
   ] as const;
   for (const [freq, rate, phase0, amp] of birds) {
     for (let i = 0; i < N; i++) {
       const t = i / SR;
       const cycle = (t * rate + phase0) % 1;
-      if (cycle < 0.07) {
-        const env = Math.sin((cycle / 0.07) * Math.PI);
-        const f = freq * (1 + 0.07 * Math.sin((cycle / 0.07) * Math.PI));
-        buf[i] += Math.sin(2 * Math.PI * f * t) * env * amp;
+      if (cycle < 0.08) {
+        const p = cycle / 0.08;          // 0→1 within the chirp
+        const env = Math.sin(p * Math.PI); // smooth fade in/out
+        const f = freq * (1 + 0.10 * p);  // slight upward glide per chirp
+        // Harmonic series gives organic bird timbre instead of a pure beep
+        buf[i] += env * amp * (
+          0.55 * Math.sin(2 * Math.PI * f * t) +
+          0.28 * Math.sin(2 * Math.PI * 2 * f * t) +
+          0.12 * Math.sin(2 * Math.PI * 3 * f * t) +
+          0.05 * Math.sin(2 * Math.PI * 4 * f * t)
+        );
       }
     }
   }
-  hp1(buf, 600);
+  hp1(buf, 800);
   const bed = pinkNoise();
-  lp1(bed, 1500);
+  lp1(bed, 1400);
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.72 + bed[i] * 0.28;
-  return gen(mix, 0.55);
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.68 + bed[i] * 0.32;
+  return gen(mix, 0.50);
 }
 
 function genCafe(): string {
@@ -276,6 +291,47 @@ function genAirplane(): string {
 function genPink(): string {
   const buf = pinkNoise();
   return gen(buf, 0.65);
+}
+
+function genDryer(): string {
+  // Tumbling dryer: low mechanical hum with rhythmic thump at ~0.85 Hz
+  const hum = pinkNoise();
+  hp1(hum, 65); lp1(hum, 280); lp1(hum, 210);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const cycle = ((i / SR) * 0.85) % 1;
+    const thump = cycle < 0.16 ? Math.sin((cycle / 0.16) * Math.PI) * 0.55 : 0;
+    mix[i] = hum[i] * (0.70 + thump);
+  }
+  return gen(mix, 0.65);
+}
+
+function genTrain(): string {
+  // Train: steady mechanical drone with clackety-clack track joints
+  const drone = pinkNoise();
+  hp1(drone, 90); lp1(drone, 620); lp1(drone, 480);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const t = i / SR;
+    // Two clicks per beat at ~3.8 Hz (paired rail joints)
+    const c1 = ((t * 3.8) % 1 < 0.06) ? Math.sin(((t * 3.8) % 1) / 0.06 * Math.PI) * 0.45 : 0;
+    const c2 = (((t * 3.8) + 0.15) % 1 < 0.05) ? Math.sin((((t * 3.8) + 0.15) % 1) / 0.05 * Math.PI) * 0.35 : 0;
+    mix[i] = drone[i] * 0.68 + (Math.random() * 2 - 1) * (c1 + c2) * 0.32;
+  }
+  return gen(mix, 0.65);
+}
+
+function genUnderwater(): string {
+  // Deep underwater: heavily low-passed brown noise with slow bubbly modulation
+  const depth = brownNoise();
+  lp1(depth, 140); lp1(depth, 110); lp1(depth, 85);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const b1 = 0.68 + 0.32 * Math.sin((2 * Math.PI * 0.28 * i) / SR);
+    const b2 = 0.84 + 0.16 * Math.sin((2 * Math.PI * 0.71 * i) / SR + 0.9);
+    mix[i] = depth[i] * b1 * b2;
+  }
+  return gen(mix, 0.60);
 }
 
 function genRain(): string {
@@ -337,6 +393,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
   { id: 'night',       name: 'Night',       category: 'Nature', url: genNight() },
   { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
+  { id: 'underwater',  name: 'Underwater',  category: 'Nature', url: genUnderwater() },
   { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
   { id: 'cafe',        name: 'Café',        category: 'Cozy',   url: genCafe() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
@@ -345,6 +402,8 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
   { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
   { id: 'airplane',    name: 'Airplane',    category: 'Noise',  url: genAirplane() },
+  { id: 'dryer',       name: 'Dryer',       category: 'Noise',  url: genDryer() },
+  { id: 'train',       name: 'Train',       category: 'Noise',  url: genTrain() },
 ];
 
 export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
