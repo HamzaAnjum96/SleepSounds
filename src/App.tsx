@@ -48,6 +48,10 @@ export default function App() {
     localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(next));
   };
 
+  const handleDeletePreset = (id: string) => {
+    persistPresets(presets.filter((p) => p.id !== id));
+  };
+
   const handleSavePreset = () => {
     if (!presetName.trim()) return;
     persistPresets([...presets, {
@@ -246,14 +250,21 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
             </button>
           ))}
           {presets.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className="builtin-preset-btn saved"
-              onClick={() => handleLoadPreset(preset.id)}
-            >
-              {preset.name}
-            </button>
+            <div key={preset.id} className="preset-chip-wrap">
+              <button
+                type="button"
+                className="builtin-preset-btn saved"
+                onClick={() => handleLoadPreset(preset.id)}
+              >
+                {preset.name}
+              </button>
+              <button
+                type="button"
+                className="preset-chip-del"
+                onClick={(e) => { e.stopPropagation(); handleDeletePreset(preset.id); }}
+                aria-label={`Delete preset ${preset.name}`}
+              >✕</button>
+            </div>
           ))}
           <button
             type="button"
@@ -323,7 +334,9 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           {activeSounds.length > 0 && (
             <div className="footer-playing">{activeSounds.map((s) => s.name).join(' · ')}</div>
           )}
-          <div className="footer-rest">rest well</div>
+          {(activeSounds.length > 0 || isPaused) && (
+            <div className="footer-rest">rest well</div>
+          )}
         </div>
       </div>
     </>

@@ -3,7 +3,7 @@ import type { Preset, Sound, SoundState } from './types';
 // ── WAV generation helpers ─────────────────────────────────────────────────
 
 const SR = 22050;
-const SECS = 20;
+const SECS = 30;
 const N = SR * SECS;
 
 function makeWav(i16: Int16Array, sr: number): string {
@@ -93,23 +93,21 @@ function genStream(): string {
 }
 
 function genThunder(): string {
-  const rumble = brownNoise();
-  lp1(rumble, 100); lp1(rumble, 100); lp1(rumble, 80);
+  // Continuous deep rolling rumble — two filtered brown-noise layers blended
+  const r1 = brownNoise();
+  lp1(r1, 90); lp1(r1, 70); lp1(r1, 55); lp1(r1, 40);
 
-  const cracks = new Float32Array(N);
-  let pos = SR;
-  while (pos < N - SR) {
-    const len = Math.floor(SR * (0.3 + Math.random() * 1.2));
-    for (let i = 0; i < len && pos + i < N; i++) {
-      cracks[pos + i] = (Math.random() * 2 - 1) * Math.exp(-i / (SR * 0.25));
-    }
-    pos += Math.floor(SR * (2.5 + Math.random() * 4));
-  }
-  lp1(cracks, 500);
+  const r2 = brownNoise();
+  lp1(r2, 130); lp1(r2, 100); lp1(r2, 80);
 
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = rumble[i] * 0.65 + cracks[i] * 0.35;
-  return gen(mix, 0.72);
+  for (let i = 0; i < N; i++) {
+    // Slow undulating intensity — ominous ebb and flow over ~8–14 second cycles
+    const env1 = 0.55 + 0.45 * Math.abs(Math.sin((2 * Math.PI * 0.072 * i) / SR));
+    const env2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.041 * i) / SR + 1.8);
+    mix[i] = (r1[i] * 0.58 + r2[i] * 0.42) * env1 * env2;
+  }
+  return gen(mix, 0.78);
 }
 
 function genSpace(): string {
@@ -192,12 +190,60 @@ function genNight(): string {
   return gen(mix, 0.58);
 }
 
+function genRain(): string {
+  // Rain: dense pink noise bandpassed, gentle slow-swell intensity variation
+  const buf = pinkNoise();
+  hp1(buf, 280);      // cut sub-bass rumble
+  lp1(buf, 4800);     // soften ultrasound
+  lp1(buf, 3600);
+  // Gentle rainfall intensity swell (~0.06 Hz = 16-second cycle)
+  for (let i = 0; i < N; i++) {
+    const swell = 0.87 + 0.13 * Math.sin((2 * Math.PI * 0.062 * i) / SR + 0.5);
+    buf[i] *= swell;
+  }
+  return gen(buf, 0.72);
+}
+
+function genOcean(): string {
+  // Ocean: brown-noise base with slow wave-swell modulation + pink surf layer
+  const base = brownNoise();
+  lp1(base, 550); lp1(base, 420);
+
+  const surf = pinkNoise();
+  hp1(surf, 220);
+  lp1(surf, 2200);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    // ~0.085 Hz = 11.8-second wave cycle
+    const phase = (2 * Math.PI * 0.085 * i) / SR;
+    const waveEnv = 0.28 + 0.72 * Math.pow(0.5 + 0.5 * Math.sin(phase - Math.PI / 2), 1.6);
+    const surfEnv = 0.15 + 0.85 * Math.pow(Math.max(0, Math.sin(phase - Math.PI / 2)), 2);
+    mix[i] = base[i] * waveEnv * 0.62 + surf[i] * surfEnv * 0.38;
+  }
+  return gen(mix, 0.72);
+}
+
+function genWind(): string {
+  // Wind: pink noise heavily low-passed, multi-rate gust envelope
+  const buf = pinkNoise();
+  hp1(buf, 90);
+  lp1(buf, 1400); lp1(buf, 900);
+  for (let i = 0; i < N; i++) {
+    const g1 = 0.48 + 0.52 * Math.abs(Math.sin((2 * Math.PI * 0.038 * i) / SR));
+    const g2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.11 * i) / SR + 1.3);
+    const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
+    buf[i] *= g1 * g2 * g3;
+  }
+  return gen(buf, 0.68);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
-  { id: 'rain',        name: 'Rain',        category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3' },
-  { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3' },
-  { id: 'wind',        name: 'Wind',        category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/1166/1166-preview.mp3' },
+  { id: 'rain',        name: 'Rain',        category: 'Nature', url: genRain() },
+  { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
+  { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
   { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },

@@ -79,9 +79,12 @@ html, body {
   right: 4%;
   width: 52px; height: 52px;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 38%, #e8dfc0 0%, #c8ae72 55%, #a0804a 100%);
-  box-shadow: 0 0 18px rgba(184,154,106,0.13), 0 0 40px rgba(184,154,106,0.05);
-  opacity: 0.55;
+  background: radial-gradient(circle at 38% 38%, #f0e8ca 0%, #d4b878 55%, #a88040 100%);
+  box-shadow:
+    0 0 22px rgba(210,180,110,0.55),
+    0 0 55px rgba(200,165,100,0.28),
+    0 0 100px rgba(184,154,106,0.12);
+  opacity: 0.92;
   z-index: 1;
   animation: moonDrift 14s ease-in-out infinite;
 }
@@ -573,6 +576,38 @@ header {
 .builtin-preset-btn.saved:hover {
   border-color: rgba(184,154,106,0.45);
   background: var(--warm-glow);
+}
+
+/* Saved preset chip with inline delete button */
+.preset-chip-wrap {
+  display: inline-flex;
+  align-items: stretch;
+}
+.preset-chip-wrap .builtin-preset-btn.saved {
+  border-radius: 20px 0 0 20px;
+  border-right: none;
+}
+.preset-chip-del {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: 0 20px 20px 0;
+  border: 1px solid rgba(184,154,106,0.22);
+  border-left: 1px solid rgba(184,154,106,0.12);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+  line-height: 1;
+}
+.preset-chip-del:hover {
+  border-color: rgba(220,80,80,0.4);
+  color: #e07070;
+  background: rgba(220,80,80,0.08);
 }
 
 /* ── Presets ─────────────────────────────────────────────────────── */
