@@ -238,44 +238,66 @@ function genStream(): string {
 }
 
 function genThunder(): string {
-  // Rolling thunder with occasional distant lightning crack / bolt moments
-  const r1 = brownNoise();
-  lp1(r1, 90); lp1(r1, 70); lp1(r1, 55); lp1(r1, 40);
+  // Thunder: near-subsonic atmospheric base + event-based strikes with multi-reflection rumble.
+  // Each strike spawns 3–6 staggered reflections (off terrain/clouds), each lower and slower
+  // than the last — this is what makes thunder "roll" rather than just go "boom".
 
-  const r2 = brownNoise();
-  lp1(r2, 130); lp1(r2, 100); lp1(r2, 80);
+  // Atmospheric base: near-inaudible subsonic pressure, always present
+  const base = brownNoise();
+  lp1(base, 45); lp1(base, 35); lp1(base, 28);
+  const weatherLfo = smoothRandomLfo(0.25, 1.0, 3.0, 9.0); // weather changes slowly
+
+  // Strike events
+  const strikes = new Float32Array(N);
+  let pos = Math.floor(SR * rand(1.8, 3.5));
+  while (pos < N) {
+    const strikeAmp = rand(0.45, 0.95);
+    const distance = rand(0.15, 1.0); // 0=close, 1=very distant
+
+    // Initial crack: only for close strikes, ultra-fast broadband transient
+    if (distance < 0.5) {
+      const crackLen = Math.floor(SR * rand(0.003, 0.011));
+      const crackAmp = strikeAmp * (1 - distance * 2.0) * rand(0.6, 1.0);
+      for (let i = 0; i < crackLen && pos + i < N; i++) {
+        const env = Math.exp(-28 * i / Math.max(1, crackLen));
+        strikes[pos + i] += (Math.random() * 2 - 1) * env * crackAmp;
+      }
+    }
+
+    // Multi-reflection rumble: 3–6 echoes staggered in time
+    const numRef = Math.floor(rand(3, 7));
+    for (let r = 0; r < numRef; r++) {
+      const delay = Math.floor(SR * (distance * 0.08 + r * rand(0.07, 0.28)));
+      const rumbleLen = Math.floor(SR * rand(0.6, 2.8) * (1.0 + distance * 0.8));
+      // Each reflection: lower pitch, longer tail, quieter
+      const rumbleF = rand(28, 68) * Math.exp(-r * 0.09);
+      const rumbleAmp = strikeAmp * Math.exp(-r * 0.52) * rand(0.55, 1.0);
+      const start = pos + delay;
+      for (let i = 0; i < rumbleLen && start + i < N; i++) {
+        const p = i / rumbleLen;
+        // Fast rise (~10% of duration), long exponential decay
+        const riseW = 0.10 + distance * 0.12;
+        const env = p < riseW
+          ? p / riseW
+          : Math.exp(-2.8 * (p - riseW));
+        // 60% noise + 40% tonal — the tonal part gives the "bass note" quality
+        const sig = (Math.random() * 2 - 1) * 0.60
+                  + Math.sin(2 * Math.PI * rumbleF * (i / SR)) * 0.40;
+        strikes[start + i] += sig * env * rumbleAmp;
+      }
+    }
+
+    pos += Math.floor(SR * rand(5.0, 14.0));
+  }
+
+  // Filter strikes: thunder lives below ~300Hz
+  lp1(strikes, 300); lp1(strikes, 220); lp1(strikes, 160);
+  hp1(strikes, 16);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const env1 = 0.55 + 0.45 * Math.abs(Math.sin((2 * Math.PI * 0.072 * i) / SR));
-    const env2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.041 * i) / SR + 1.8);
-    mix[i] = (r1[i] * 0.58 + r2[i] * 0.42) * env1 * env2;
+    mix[i] = base[i] * 0.55 * weatherLfo[i] + strikes[i] * 0.45;
   }
-
-  const bolts = new Float32Array(N);
-  let pos = Math.floor(SR * (2.5 + Math.random() * 2));
-  while (pos < N) {
-    const crackLen = Math.floor(SR * (0.012 + Math.random() * 0.04));
-    const crackAmp = 0.26 + Math.random() * 0.30;
-    for (let i = 0; i < crackLen && pos + i < N; i++) {
-      const t = i / Math.max(1, crackLen - 1);
-      const env = Math.exp(-8 * t);
-      bolts[pos + i] += (Math.random() * 2 - 1) * crackAmp * env;
-    }
-
-    const tailStart = pos + Math.floor(SR * (0.02 + Math.random() * 0.08));
-    const tailLen = Math.floor(SR * (0.35 + Math.random() * 0.8));
-    const tailFreq = 58 + Math.random() * 40;
-    for (let i = 0; i < tailLen && tailStart + i < N; i++) {
-      const p = i / tailLen;
-      const env = Math.exp(-3.2 * p);
-      bolts[tailStart + i] += Math.sin(2 * Math.PI * tailFreq * (i / SR)) * env * (0.12 + Math.random() * 0.12);
-    }
-    pos += Math.floor(SR * (4.8 + Math.random() * 7.5));
-  }
-  hp1(bolts, 220);
-  lp1(bolts, 3200);
-  for (let i = 0; i < N; i++) mix[i] += bolts[i] * 0.50;
   return gen(mix, 0.78);
 }
 
@@ -308,32 +330,64 @@ function genBrown(): string {
 }
 
 function genFireplace(): string {
-  // Low fire roar
-  const base = brownNoise();
-  lp1(base, 400); lp1(base, 300);
+  // 5 distinct layers: roar (breathing) + turbulence + snaps + pops + hiss.
+  // Key fix: fire "breathes" with huge amplitude swings (28%–165%), not a gentle drift.
 
-  // Random crackles with shaped transients (softer attack than digital clicks)
+  // Roar: deep filtered brown noise, very heavily breathing
+  const roar = brownNoise();
+  lp1(roar, 420); lp1(roar, 310); lp1(roar, 220);
+  const breath = smoothRandomLfo(0.28, 1.65, 0.35, 1.4);
+
+  // Turbulence: combustion mid-range (the warm "whoosh" body)
+  const turb = pinkNoise();
+  hp1(turb, 300); lp1(turb, 920);
+  const turbDrift = smoothRandomLfo(0.50, 1.50, 0.25, 0.90);
+
+  // Hot-air hiss: very quiet, high-frequency
+  const hiss = whiteNoise();
+  hp1(hiss, 2400); lp1(hiss, 6500);
+  const hissDrift = smoothRandomLfo(0.40, 1.10, 1.2, 3.5);
+
   const crackles = new Float32Array(N);
-  let pos = Math.floor(SR * 0.08);
-  while (pos < N) {
-    const len = Math.floor(SR * (0.02 + Math.random() * 0.09));
-    const amp = 0.15 + Math.random() * 0.45;
-    const attack = Math.max(4, Math.floor(len * 0.22));
-    for (let i = 0; i < len && pos + i < N; i++) {
-      const rise = i < attack ? (i / attack) : 1;
-      const decay = Math.exp(-(i - attack) / (SR * 0.015));
-      const env = i < attack ? rise : decay;
-      crackles[pos + i] += (Math.random() * 2 - 1) * amp * env;
+
+  // Snap crackles: 0.5–3ms, bright and fast — the "spit" of resin/wood cells bursting
+  let sPos = Math.floor(SR * 0.04);
+  while (sPos < N) {
+    const sLen = Math.floor(SR * rand(0.0005, 0.0028));
+    const sAmp = rand(0.22, 0.88);
+    for (let i = 0; i < sLen && sPos + i < N; i++) {
+      crackles[sPos + i] += (Math.random() * 2 - 1) * Math.exp(-35 * i / Math.max(1, sLen)) * sAmp;
     }
-    pos += Math.floor(SR * (0.05 + Math.random() * 0.22));
+    sPos += Math.floor(SR * rand(0.032, 0.26));
   }
-  hp1(crackles, 500);
-  lp1(crackles, 3000);
+
+  // Log pops: 15–60ms, lower-freq resonant body — the "pop" of trapped moisture
+  let pPos = Math.floor(SR * rand(0.4, 1.2));
+  while (pPos < N) {
+    const pLen = Math.floor(SR * rand(0.015, 0.058));
+    const pAmp = rand(0.12, 0.52);
+    const popF = rand(145, 490);
+    for (let i = 0; i < pLen && pPos + i < N; i++) {
+      const p = i / pLen;
+      const env = Math.exp(-7.0 * p);
+      crackles[pPos + i] += (
+        Math.sin(2 * Math.PI * popF * (i / SR)) * 0.45 +
+        (Math.random() * 2 - 1) * 0.55
+      ) * env * pAmp;
+    }
+    pPos += Math.floor(SR * rand(0.28, 1.65));
+  }
+
+  hp1(crackles, 180); lp1(crackles, 5200);
 
   const mix = new Float32Array(N);
-  const drift = smoothRandomLfo(0.82, 1.16, 0.7, 2.2);
-  for (let i = 0; i < N; i++) mix[i] = base[i] * 0.58 + crackles[i] * 0.42 * drift[i];
-  return gen(mix, 0.68);
+  for (let i = 0; i < N; i++) {
+    mix[i] = roar[i] * 0.45 * breath[i]
+           + turb[i] * 0.30 * turbDrift[i]
+           + crackles[i] * 0.20
+           + hiss[i] * 0.05 * hissDrift[i];
+  }
+  return gen(mix, 0.66);
 }
 
 function genFan(): string {
@@ -422,53 +476,113 @@ function genNight(): string {
 }
 
 function genBirdsong(): string {
-  // Event-based motifs: gliding tones + harmonics + noisy onset/offset texture
-  const buf = new Float32Array(N);
-  const species = [
-    { minF: 1700, maxF: 2600, minGap: 0.35, maxGap: 1.4, amp: 0.10, motifMin: 2, motifMax: 5 },
-    { minF: 2400, maxF: 3900, minGap: 0.45, maxGap: 1.8, amp: 0.09, motifMin: 1, motifMax: 3 },
-    { minF: 1200, maxF: 1900, minGap: 0.8,  maxGap: 2.4, amp: 0.08, motifMin: 2, motifMax: 4 },
-    { minF: 3100, maxF: 5200, minGap: 0.3,  maxGap: 1.2, amp: 0.07, motifMin: 3, motifMax: 6 },
-  ] as const;
+  // Specific call archetypes instead of random glides — each type maps to a
+  // recognisable real-bird pattern. Long silences (minGap 3.5–9s) so it feels
+  // like morning birds, not a constant soundtrack.
+  //
+  // Call types:
+  //   A — Single ascending whistle (warbler/canary)
+  //   B — Two-note "fee-BEE" (down then up, chickadee-like)
+  //   C — Rapid 3–5 note trill at same pitch (wren)
+  //   D — Three descending steps (thrush/dove)
+  //   E — Short sharp "chip" contact call
 
-  for (const g of species) {
-    let pos = Math.floor(SR * Math.random() * 0.5);
-    while (pos < N) {
-      const motifCount = Math.floor(rand(g.motifMin, g.motifMax + 1));
-      for (let m = 0; m < motifCount && pos < N; m++) {
-        const len = Math.floor(SR * rand(0.04, 0.11));
-        const f0 = rand(g.minF, g.maxF);
-        const f1 = f0 * rand(0.82, 1.18);
-        const vibRate = rand(6, 11);
-        const vibDepth = rand(0.004, 0.014);
-        // Per-note tremolo rate so each syllable has different "flutter"
-        const tremuloRate = rand(11, 26);
-        const phase = rand(0, Math.PI * 2);
-        for (let i = 0; i < len && pos + i < N; i++) {
-          const t = i / SR;
-          const p = i / len;
-          const env = (Math.sin(p * Math.PI) ** 0.9) * (0.85 + 0.15 * Math.sin(2 * Math.PI * tremuloRate * t));
-          const glide = f0 + (f1 - f0) * p;
-          const f = glide * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t + phase));
-          // Noisy texture at both onset AND offset (breathy attack + airy tail)
-          const noisyEdge = (Math.random() * 2 - 1) * (Math.exp(-6 * p) * 0.14 + Math.exp(-6 * (1 - p)) * 0.08);
-          buf[pos + i] += env * g.amp * (
-            0.70 * Math.sin(2 * Math.PI * f * t + phase) +
-            0.18 * Math.sin(2 * Math.PI * 2.04 * f * t + phase * 0.63) +
-            0.06 * Math.sin(2 * Math.PI * 2.97 * f * t + phase * 1.4) +
-            noisyEdge
-          );
-        }
-        pos += Math.floor(SR * rand(0.03, 0.18));
-      }
-      pos += Math.floor(SR * (g.minGap + Math.random() * (g.maxGap - g.minGap)));
+  const buf = new Float32Array(N);
+  // Activity LFO: creates genuine quiet periods of 10–20s
+  const activityLfo = smoothRandomLfo(0.0, 1.0, 8.0, 20.0);
+
+  // Render one note into buf at given position
+  function renderNote(pos: number, f0: number, f1: number, len: number, amp: number): void {
+    const vibRate = rand(6, 12);
+    const vibDepth = rand(0.003, 0.012);
+    const tremuloRate = rand(12, 24);
+    const phase = rand(0, Math.PI * 2);
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const t = i / SR;
+      const p = i / len;
+      const env = (Math.sin(p * Math.PI) ** 0.85) * (0.86 + 0.14 * Math.sin(2 * Math.PI * tremuloRate * t));
+      const glide = f0 + (f1 - f0) * p;
+      const f = glide * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t + phase));
+      const noisyEdge = (Math.random() * 2 - 1) * (Math.exp(-6 * p) * 0.13 + Math.exp(-6 * (1 - p)) * 0.07);
+      buf[pos + i] += env * amp * (
+        0.70 * Math.sin(2 * Math.PI * f * t + phase) +
+        0.18 * Math.sin(2 * Math.PI * 2.04 * f * t + phase * 0.63) +
+        0.06 * Math.sin(2 * Math.PI * 2.97 * f * t + phase * 1.4) +
+        noisyEdge
+      );
     }
   }
-  bp2(buf, 1800, 1.6);
-  bp2(buf, 3200, 2.4);
-  softClip(buf, 0.85); // reduced from 1.35 — less aliasing harshness
+
+  const species = [
+    { baseF: 2100, amp: 0.10, callTypes: ['A', 'B'] as const, minGap: 3.5, maxGap: 8.0 },
+    { baseF: 3200, amp: 0.09, callTypes: ['C', 'E'] as const, minGap: 4.0, maxGap: 9.0 },
+    { baseF: 1500, amp: 0.08, callTypes: ['D', 'A'] as const, minGap: 5.0, maxGap: 11.0 },
+  ];
+
+  for (const sp of species) {
+    let pos = Math.floor(SR * rand(0.5, 3.0));
+    while (pos < N) {
+      const activity = activityLfo[Math.min(pos, N - 1)];
+      if (activity < 0.25 && chance(0.80)) {
+        pos += Math.floor(SR * rand(3.0, 8.0));
+        continue;
+      }
+      const callType = sp.callTypes[Math.floor(Math.random() * sp.callTypes.length)];
+      // ±18% pitch variation per call so same species sounds like small variation
+      const pitchScale = rand(0.88, 1.15);
+      const bf = sp.baseF * pitchScale;
+      const amp = sp.amp * (0.75 + 0.5 * activity);
+
+      if (callType === 'A') {
+        // Single ascending whistle: ~110ms, rises ~20%
+        const len = Math.floor(SR * rand(0.085, 0.130));
+        renderNote(pos, bf * rand(0.90, 0.96), bf * rand(1.14, 1.22), len, amp);
+        pos += len;
+
+      } else if (callType === 'B') {
+        // Two-note "fee-BEE": note1 falls, gap, note2 rises higher
+        const len1 = Math.floor(SR * rand(0.055, 0.080));
+        const len2 = Math.floor(SR * rand(0.055, 0.085));
+        const gap  = Math.floor(SR * rand(0.032, 0.055));
+        renderNote(pos, bf * rand(1.05, 1.12), bf * rand(0.88, 0.95), len1, amp);
+        renderNote(pos + len1 + gap, bf * rand(0.82, 0.90), bf * rand(1.06, 1.16), len2, amp * 1.1);
+        pos += len1 + gap + len2;
+
+      } else if (callType === 'C') {
+        // Rapid trill: 3–5 short same-pitch notes, quick gaps
+        const noteCount = Math.floor(rand(3, 6));
+        const noteLen = Math.floor(SR * rand(0.025, 0.042));
+        const noteGap = Math.floor(SR * rand(0.010, 0.020));
+        for (let n = 0; n < noteCount && pos < N; n++) {
+          renderNote(pos, bf * rand(0.97, 1.03), bf * rand(0.98, 1.04), noteLen, amp);
+          pos += noteLen + noteGap;
+        }
+
+      } else if (callType === 'D') {
+        // Three descending steps: three notes each ~10% lower
+        const stepLen = Math.floor(SR * rand(0.045, 0.065));
+        const stepGap = Math.floor(SR * rand(0.022, 0.038));
+        for (let n = 0; n < 3 && pos < N; n++) {
+          const stepF = bf * Math.pow(0.88, n) * rand(0.97, 1.03);
+          renderNote(pos, stepF * rand(1.01, 1.05), stepF * rand(0.95, 0.99), stepLen, amp);
+          pos += stepLen + stepGap;
+        }
+
+      } else {
+        // E — chip call: very short, flat or slight fall
+        const len = Math.floor(SR * rand(0.020, 0.038));
+        renderNote(pos, bf * rand(0.98, 1.02), bf * rand(0.92, 0.98), len, amp * 0.8);
+        pos += len;
+      }
+
+      // Long inter-call gap — birds are sporadic, not constant
+      pos += Math.floor(SR * rand(sp.minGap, sp.maxGap));
+    }
+  }
+
   hp1(buf, 900);
-  lp1(buf, 6000);
+  lp1(buf, 7000);
+  // No softClip — gen() normalises anyway and clip was causing aliasing harshness
   return gen(buf, 0.54);
 }
 
@@ -626,50 +740,78 @@ function genWaterfall(): string {
 }
 
 function genFrogs(): string {
-  // Frog chorus: pulse-train ribbits with varied envelopes and chorus clustering
+  // Frog chorus: 4 species spanning bass→treble for a real pond soundscape.
+  // Bullfrogs (deep), tree frogs (mid), chorus frogs (high), peepers (very high).
+  // Shared chorus activity creates natural swells and silences.
   const croaks = new Float32Array(N);
-  const frogs = [
-    { fMin: 110, fMax: 150, minGap: 1.1, maxGap: 2.5, amp: 0.30, pulsesMin: 3, pulsesMax: 6 },
-    { fMin: 140, fMax: 190, minGap: 0.8, maxGap: 2.0, amp: 0.24, pulsesMin: 2, pulsesMax: 5 },
-    { fMin: 90,  fMax: 130, minGap: 1.5, maxGap: 3.0, amp: 0.20, pulsesMin: 2, pulsesMax: 4 },
-  ] as const;
-  for (const frog of frogs) {
-    let pos = Math.floor(SR * Math.random() * 1.2);
+  const chorusLfo = smoothRandomLfo(0.2, 1.0, 5.0, 14.0);
+
+  const species = [
+    // Bullfrog: deep "jug-o-rum", slow and dramatic
+    { fMin: 100, fMax: 165, sacR: 1.88, sub: 0.12, nz: 0.15,
+      minGap: 2.0, maxGap: 5.0, amp: 0.26, pMin: 2, pMax: 4 },
+    // Tree frog: mid "ribbit", moderately paced
+    { fMin: 580, fMax: 950, sacR: 1.65, sub: 0.06, nz: 0.22,
+      minGap: 0.8, maxGap: 2.5, amp: 0.18, pMin: 3, pMax: 6 },
+    // Chorus frog: higher, faster, raspy
+    { fMin: 1600, fMax: 2400, sacR: 1.48, sub: 0.02, nz: 0.28,
+      minGap: 0.5, maxGap: 1.6, amp: 0.14, pMin: 2, pMax: 4 },
+    // Spring peeper: high pitched, short single calls
+    { fMin: 2700, fMax: 3300, sacR: 1.35, sub: 0.0, nz: 0.32,
+      minGap: 1.2, maxGap: 3.0, amp: 0.10, pMin: 1, pMax: 2 },
+  ];
+
+  for (const sp of species) {
+    const sacRatio = sp.sacR * rand(0.94, 1.06); // per-frog variation
+    let pos = Math.floor(SR * Math.random() * 2.0);
     while (pos < N) {
-      const pulses = Math.floor(rand(frog.pulsesMin, frog.pulsesMax + 1));
-      const baseFreq = rand(frog.fMin, frog.fMax);
+      const activity = chorusLfo[Math.min(pos, N - 1)];
+      if (activity < 0.3 && chance(0.65)) {
+        pos += Math.floor(SR * rand(2.0, 5.0));
+        continue;
+      }
+      const pulseCount = Math.floor(rand(sp.pMin, sp.pMax + 1));
+      const baseFreq = rand(sp.fMin, sp.fMax);
       let eventPos = pos;
-      for (let pIdx = 0; pIdx < pulses && eventPos < N; pIdx++) {
-        const len = Math.floor(SR * rand(0.045, 0.13));
-        const pulseGap = Math.floor(SR * rand(0.025, 0.06));
-        const freq = baseFreq * rand(0.95, 1.07);
+      for (let pIdx = 0; pIdx < pulseCount && eventPos < N; pIdx++) {
+        const len = Math.floor(SR * rand(0.04, 0.14));
+        const pulseGap = Math.floor(SR * rand(0.022, 0.065));
+        const freq = baseFreq * rand(0.93, 1.07);
+        const pitchDropAmt = rand(0.10, 0.32); // per-pulse variation
         for (let i = 0; i < len && eventPos + i < N; i++) {
           const t = i / SR;
           const frac = i / len;
-          const envShape = rand(1.35, 1.9);
-          const env = (Math.sin(frac * Math.PI) ** envShape) * Math.exp(-rand(0.32, 0.58) * frac);
-          const pitchDrop = 1 - 0.22 * frac;
+          const envShape = rand(1.3, 2.0);
+          const env = (Math.sin(frac * Math.PI) ** envShape)
+                    * Math.exp(-rand(0.28, 0.65) * frac)
+                    * activity;
+          const pitchDrop = 1 - pitchDropAmt * frac;
           const tone = freq * pitchDrop;
+          const sac  = freq * sacRatio * pitchDrop;
+          // Fundamental + vocal-sac resonance + 2nd harmonic + sub-bass + onset noise
           croaks[eventPos + i] += (
-            0.76 * Math.sin(2 * Math.PI * tone * t) +
-            0.16 * Math.sin(2 * Math.PI * 2.0 * tone * t + 0.65) +
-            0.07 * Math.sin(2 * Math.PI * 3.1 * tone * t + 1.2) +
-            0.025 * Math.sin(2 * Math.PI * 0.52 * tone * t + 0.2)
-          ) * env * frog.amp;
+            0.52 * Math.sin(2 * Math.PI * tone * t) +
+            0.20 * Math.sin(2 * Math.PI * sac  * t + 0.4) +
+            0.12 * Math.sin(2 * Math.PI * tone * 2.0 * t + 0.65) +
+            sp.sub * Math.sin(2 * Math.PI * tone * 0.5 * t + 0.2) +
+            (Math.random() * 2 - 1) * sp.nz * Math.exp(-12 * frac)
+          ) * env * sp.amp;
         }
         eventPos += len + pulseGap;
       }
-      const chorusPause = chance(0.2) ? rand(0.7, 1.9) : 0;
-      pos += Math.floor(SR * (frog.minGap + Math.random() * (frog.maxGap - frog.minGap) + chorusPause));
+      const gapMod = 1.0 + (1.0 - activity) * 1.8;
+      pos += Math.floor(SR * (sp.minGap + Math.random() * (sp.maxGap - sp.minGap)) * gapMod);
     }
   }
-  // Dark warm ambient — NOT bright pink noise which read as hiss
+
+  // Dark ambient — barely audible, no hiss
   const amb = brownNoise();
-  lp1(amb, 320); lp1(amb, 220);
+  lp1(amb, 260); lp1(amb, 180);
+
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = croaks[i] * 0.90 + amb[i] * 0.10;
-  hp1(mix, 55);
-  lp1(mix, 2600);
+  for (let i = 0; i < N; i++) mix[i] = croaks[i] * 0.92 + amb[i] * 0.08;
+  hp1(mix, 45);
+  lp1(mix, 4800);
   return gen(mix, 0.58);
 }
 
@@ -789,31 +931,72 @@ function genTinRoofRain(): string {
 }
 
 function genHeartbeat(): string {
-  // Muffled heartbeat with "lub-dub" pulse pair
+  // Realistic lub-dub with heart rate variability (HRV) and thumpy resonance.
+  // Key fixes: ±12% beat-to-beat timing variation, each beat is 40% tonal + 60%
+  // filtered noise (a real heartbeat sounds like a thump, not a sine wave).
   const beat = new Float32Array(N);
-  const bpm = 60 + Math.random() * 10;
-  const cycle = SR * (60 / bpm);
-  for (let c = Math.floor(SR * 0.2); c < N; c += Math.floor(cycle)) {
-    const events = [
-      { o: 0, a: 0.75, l: Math.floor(SR * 0.09), f: 76 },
-      { o: Math.floor(SR * 0.18), a: 0.55, l: Math.floor(SR * 0.07), f: 92 },
-    ];
-    for (const e of events) {
-      const start = c + e.o;
-      for (let i = 0; i < e.l && start + i < N; i++) {
-        const p = i / e.l;
-        const env = Math.sin(Math.min(1, p) * Math.PI) ** 1.5 * Math.exp(-2.1 * p);
-        beat[start + i] += Math.sin(2 * Math.PI * e.f * (i / SR)) * env * e.a;
-      }
+  const bpm = rand(58, 70);
+  const baseInterval = SR * (60 / bpm);
+  const hrvLfo = smoothRandomLfo(0.88, 1.12, 4.0, 11.0); // slow HRV drift
+
+  // Per-beat chest body resonance: small brown noise burst filtered low
+  const chestNoise = brownNoise();
+  lp1(chestNoise, 160); lp1(chestNoise, 120);
+
+  let c = Math.floor(SR * 0.4);
+  while (c < N) {
+    const amp1 = rand(0.58, 0.82);
+
+    // S1 (lub): louder, lower, longer — mitral valve snap excites chest cavity
+    const s1Len = Math.floor(SR * rand(0.072, 0.100));
+    const s1F = rand(55, 75);
+    for (let i = 0; i < s1Len && c + i < N; i++) {
+      const p = i / s1Len;
+      // Fast rise (8% of duration), then exponential decay
+      const env = p < 0.08 ? (p / 0.08) ** 0.6 : Math.exp(-5.2 * (p - 0.08));
+      // Inharmonic ratio (1.72×) makes it feel like a resonant cavity, not a sine
+      const tonal = Math.sin(2 * Math.PI * s1F * (i / SR)) * 0.40
+                  + Math.sin(2 * Math.PI * s1F * 1.72 * (i / SR)) * 0.20;
+      const thump = (Math.random() * 2 - 1) * 0.40; // blood turbulence
+      beat[c + i] += (tonal + thump) * env * amp1;
     }
+
+    // Chest resonance tail after S1
+    const chestLen = Math.floor(SR * 0.038);
+    for (let i = 0; i < chestLen && c + i < N; i++) {
+      const env = Math.exp(-6.0 * i / chestLen);
+      beat[c + i] += chestNoise[c + i] * env * amp1 * 0.18;
+    }
+
+    // S2 (dub): quieter, shorter, slightly higher — aortic valve closure
+    const s2Off = Math.floor(SR * rand(0.14, 0.22));
+    const s2Len = Math.floor(SR * rand(0.042, 0.065));
+    const s2F = rand(70, 92);
+    const amp2 = amp1 * rand(0.48, 0.68);
+    for (let i = 0; i < s2Len && c + s2Off + i < N; i++) {
+      const p = i / s2Len;
+      const env = p < 0.08 ? (p / 0.08) ** 0.6 : Math.exp(-6.5 * (p - 0.08));
+      const tonal = Math.sin(2 * Math.PI * s2F * (i / SR)) * 0.42
+                  + Math.sin(2 * Math.PI * s2F * 1.68 * (i / SR)) * 0.18;
+      const thump = (Math.random() * 2 - 1) * 0.40;
+      beat[c + s2Off + i] += (tonal + thump) * env * amp2;
+    }
+
+    // Advance by interval with per-beat HRV
+    c += Math.floor(baseInterval * hrvLfo[Math.min(c, N - 1)]);
   }
+
+  // Warm body sound: blood flow and muscle
   const body = brownNoise();
-  lp1(body, 120); lp1(body, 85);
+  lp1(body, 95); lp1(body, 72);
+  const breathing = smoothRandomLfo(0.72, 1.0, 1.8, 4.5);
+
   const mix = new Float32Array(N);
-  const drift = smoothRandomLfo(0.92, 1.08, 2.2, 6.0);
-  for (let i = 0; i < N; i++) mix[i] = beat[i] * 0.80 * drift[i] + body[i] * 0.20;
-  lp1(mix, 320);
-  hp1(mix, 28);
+  for (let i = 0; i < N; i++) {
+    mix[i] = beat[i] * 0.82 + body[i] * 0.18 * breathing[i];
+  }
+  lp1(mix, 260);
+  hp1(mix, 20);
   return gen(mix, 0.57);
 }
 
