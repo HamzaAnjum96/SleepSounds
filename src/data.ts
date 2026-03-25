@@ -131,6 +131,29 @@ function genBrown(): string {
   return gen(buf, 0.65);
 }
 
+function genFireplace(): string {
+  // Low fire roar
+  const base = brownNoise();
+  lp1(base, 400); lp1(base, 300);
+
+  // Random crackles and pops
+  const crackles = new Float32Array(N);
+  let pos = Math.floor(SR * 0.08);
+  while (pos < N) {
+    const len = Math.floor(SR * (0.015 + Math.random() * 0.07));
+    const amp = 0.4 + Math.random() * 0.6;
+    for (let i = 0; i < len && pos + i < N; i++) {
+      crackles[pos + i] = (Math.random() * 2 - 1) * amp * Math.exp(-i / (SR * 0.012));
+    }
+    pos += Math.floor(SR * (0.04 + Math.random() * 0.25));
+  }
+  lp1(crackles, 4000);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = base[i] * 0.55 + crackles[i] * 0.45;
+  return gen(mix, 0.68);
+}
+
 function genFan(): string {
   const airflow = pinkNoise();
   hp1(airflow, 200);
@@ -157,7 +180,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
   { id: 'night',       name: 'Night',       category: 'Nature', url: 'https://assets.mixkit.co/active_storage/sfx/2348/2348-preview.mp3' },
-  { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: 'https://assets.mixkit.co/active_storage/sfx/2535/2535-preview.mp3' },
+  { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
   { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
@@ -179,6 +202,7 @@ function builtinState(active: Array<[string, number]>): Record<string, SoundStat
 }
 
 export const BUILTIN_PRESETS: Preset[] = [
+  { id: 'builtin-fan-rain',     name: 'Fan & Rain',   createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.65], ['rain', 0.6]]) },
   { id: 'builtin-fan',          name: 'Fan',          createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.8]]) },
   { id: 'builtin-rain',         name: 'Rain',         createdAt: '', masterVolume: 0.8, state: builtinState([['rain', 0.75]]) },
   { id: 'builtin-rainy-forest', name: 'Rainy Forest', createdAt: '', masterVolume: 0.8, state: builtinState([['rain', 0.55], ['forest', 0.65], ['thunder', 0.3]]) },
