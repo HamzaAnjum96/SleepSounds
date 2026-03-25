@@ -5,15 +5,6 @@ import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
 
-const TIMER_OPTIONS = [15, 30, 45, 60, 90, 120] as const;
-
-function timerLabel(m: number) {
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  const rem = m % 60;
-  return rem ? `${h}h${rem}` : `${h}h`;
-}
-
 function sliderBg(value: number, max = 1) {
   const pct = (value / max) * 100;
   return {
@@ -100,9 +91,17 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       ],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-    navigator.mediaSession.setActionHandler('play', () => { playAllActive(); setIsPaused(false); });
-    navigator.mediaSession.setActionHandler('pause', () => { pauseAll(); setIsPaused(true); });
-    navigator.mediaSession.setActionHandler('stop', () => { stopAll(); setIsPaused(false); });
+    navigator.mediaSession.setActionHandler('play',  () => { playAllActive(); setIsPaused(false); });
+    navigator.mediaSession.setActionHandler('pause', () => { pauseAll();      setIsPaused(true); });
+    navigator.mediaSession.setActionHandler('stop',  () => { stopAll();       setIsPaused(false); });
+    // Live-stream mode: no scrubber or duration shown
+    try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch { /* ok */ }
+    try { navigator.mediaSession.setActionHandler('seekforward',  null); } catch { /* ok */ }
+    try { navigator.mediaSession.setActionHandler('seekto',       null); } catch { /* ok */ }
+    try {
+      (navigator.mediaSession as MediaSession & { setPositionState?: (s: object) => void })
+        .setPositionState?.({ duration: Infinity, playbackRate: 1, position: 0 });
+    } catch { /* ok */ }
   }, [isPlaying, activeSounds, playAllActive, pauseAll, stopAll]);
 
   const handleMasterToggle = useCallback(async () => {
@@ -122,7 +121,6 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   }, [soundState, isPaused, toggleSound]);
 
   // Sleep timer — counts down playing-time only (pauses when audio pauses)
-  const [activeTimer, setActiveTimer] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   // Tick only while playing
@@ -139,20 +137,18 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     if (secondsLeft === 0) {
       stopAll();
       setIsPaused(false);
-      setActiveTimer(null);
       setSecondsLeft(null);
     }
   }, [secondsLeft, stopAll]);
 
-  const handleTimerClick = (minutes: number) => {
-    if (activeTimer === minutes) {
-      setActiveTimer(null);
-      setSecondsLeft(null);
-    } else {
-      setActiveTimer(minutes);
-      setSecondsLeft(minutes * 60);
-    }
+  const handleTimerAdjust = (minutes: number) => {
+    setSecondsLeft((prev) => {
+      const next = (prev ?? 0) + minutes * 60;
+      return next <= 0 ? null : next;
+    });
   };
+
+  const handleTimerReset = () => setSecondsLeft(null);
 
   const visibleSounds = category === 'All'
     ? SOUND_LIBRARY
@@ -163,13 +159,18 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       ? activeSounds.length
       : activeSounds.filter((s) => s.category === cat).length;
 
+  const handleAppScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const scrollY = (e.target as HTMLDivElement).scrollTop;
+    document.documentElement.style.setProperty('--moon-scroll', `${scrollY}px`);
+  }, []);
+
   return (
     <>
       <div className="bg-layer" />
       <div className="stars" />
       <div className="moon" />
 
-      <div className="app">
+      <div className="app" onScroll={handleAppScroll}>
         <header>
           <div className="wordmark">drift</div>
           <div className="tagline">sleep sounds</div>
@@ -191,16 +192,14 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
 
             <div className="timers">
               <div className="timer-chips">
-                {TIMER_OPTIONS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={`timer-btn${activeTimer === m ? ' active' : ''}`}
-                    onClick={() => handleTimerClick(m)}
-                  >
-                    {timerLabel(m)}
-                  </button>
-                ))}
+                <button type="button" className="timer-btn" onClick={() => handleTimerAdjust(-30)}>−30m</button>
+                <button type="button" className="timer-btn" onClick={() => handleTimerAdjust(15)}>+15m</button>
+                <button type="button" className="timer-btn" onClick={() => handleTimerAdjust(30)}>+30m</button>
+                <button
+                  type="button"
+                  className={`timer-btn timer-reset${secondsLeft === null ? ' dim' : ''}`}
+                  onClick={handleTimerReset}
+                >✕</button>
               </div>
               <div className="timer-countdown">
                 {secondsLeft !== null ? formatCountdown(secondsLeft) : ''}

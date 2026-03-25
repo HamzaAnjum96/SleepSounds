@@ -75,11 +75,13 @@ html, body {
 
 .moon {
   position: fixed;
-  top: 18%; right: 6%;
-  width: 56px; height: 56px;
+  top: calc(7% - var(--moon-scroll, 0px) * 0.7);
+  right: 4%;
+  width: 52px; height: 52px;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 38%, #fdf6e0 0%, #dfc98a 55%, #b89a6a 100%);
-  box-shadow: 0 0 28px rgba(184,154,106,0.22), 0 0 64px rgba(184,154,106,0.08);
+  background: radial-gradient(circle at 38% 38%, #e8dfc0 0%, #c8ae72 55%, #a0804a 100%);
+  box-shadow: 0 0 18px rgba(184,154,106,0.13), 0 0 40px rgba(184,154,106,0.05);
+  opacity: 0.55;
   z-index: 1;
   animation: moonDrift 14s ease-in-out infinite;
 }
@@ -285,6 +287,10 @@ header {
   border-color: rgba(184,154,106,0.45);
   color: var(--warm);
   background: var(--warm-glow);
+}
+.timer-reset.dim {
+  opacity: 0.28;
+  pointer-events: none;
 }
 .timer-countdown {
   font-size: 10px;
