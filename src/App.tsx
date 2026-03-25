@@ -67,7 +67,7 @@ export default function App() {
     const pool = builtinSearch ? BUILTIN_PRESETS : presets;
     const preset = pool.find((p) => p.id === id);
     if (!preset) return;
-    restoreMixerState(preset.state, preset.masterVolume, isPlaying);
+    restoreMixerState(preset.state, preset.masterVolume, true);
     setIsPaused(false);
   };
 
