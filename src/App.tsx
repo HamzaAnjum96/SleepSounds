@@ -66,9 +66,46 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
 
+  const makeDefaultState = useCallback(() => (
+    SOUND_LIBRARY.reduce<Record<string, { enabled: boolean; volume: number }>>((acc, sound) => {
+      acc[sound.id] = { enabled: false, volume: 0.5 };
+      return acc;
+    }, {})
+  ), []);
+
+  const normalizePreset = useCallback((raw: unknown): Preset | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const candidate = raw as Partial<Preset>;
+    if (!candidate.id || !candidate.name || !candidate.createdAt || !candidate.state) return null;
+    const base = makeDefaultState();
+    for (const sound of SOUND_LIBRARY) {
+      const item = (candidate.state as Record<string, { enabled?: unknown; volume?: unknown }>)[sound.id];
+      if (!item) continue;
+      base[sound.id] = {
+        enabled: Boolean(item.enabled),
+        volume: typeof item.volume === 'number' ? Math.min(1, Math.max(0, item.volume)) : 0.5,
+      };
+    }
+    return {
+      id: candidate.id,
+      name: candidate.name,
+      createdAt: candidate.createdAt,
+      state: base,
+      masterVolume: typeof candidate.masterVolume === 'number'
+        ? Math.min(1, Math.max(0, candidate.masterVolume))
+        : undefined,
+    };
+  }, [makeDefaultState]);
+
   // Presets
   const [presets, setPresets] = useState<Preset[]>(() => {
-    try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '[]'); }
+    try {
+      const raw = JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '[]');
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((preset) => normalizePreset(preset))
+        .filter((preset): preset is Preset => preset !== null);
+    }
     catch { return []; }
   });
   const [presetName, setPresetName] = useState('');
@@ -100,7 +137,7 @@ export default function App() {
     const pool = builtinSearch ? BUILTIN_PRESETS : presets;
     const preset = pool.find((p) => p.id === id);
     if (!preset) return;
-    restoreMixerState(preset.state, preset.masterVolume, true);
+    restoreMixerState(preset.state, undefined, true);
     setIsPaused(false);
   };
 

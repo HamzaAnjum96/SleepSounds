@@ -286,12 +286,13 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
   const restoreMixerState = useCallback(async (
     nextState: Record<string, SoundState>,
-    nextMasterVolume: number,
+    nextMasterVolume?: number,
     shouldPlay = false,
   ) => {
+    const effectiveMaster = nextMasterVolume ?? masterVolume;
     stopAll();
     setSoundState(nextState);
-    setMasterVolume(nextMasterVolume);
+    if (nextMasterVolume != null) setMasterVolume(nextMasterVolume);
     if (shouldPlay) {
       // Play all enabled sounds in parallel to minimise the async window.
       // After each play() resolves we guard against a race where the user
@@ -304,7 +305,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
           .map(async ([soundId, state]) => {
             const cfa = audioMapRef.current[soundId];
             if (!cfa) return;
-            const targetVol = Math.min(1, Math.max(0, state.volume * nextMasterVolume));
+            const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster));
             cfa.volume = 0;
             try {
               await cfa.play();
@@ -314,7 +315,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
           }),
       );
     }
-  }, [doFadeIn, stopAll]);
+  }, [doFadeIn, masterVolume, stopAll]);
 
   const activeSounds = useMemo(
     () => sounds.filter((sound) => soundState[sound.id]?.enabled),
