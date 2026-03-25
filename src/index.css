@@ -75,7 +75,7 @@ html, body {
 
 .moon {
   position: fixed;
-  top: 36px; right: 40px;
+  top: 18%; right: 6%;
   width: 56px; height: 56px;
   border-radius: 50%;
   background: radial-gradient(circle at 38% 38%, #fdf6e0 0%, #dfc98a 55%, #b89a6a 100%);
@@ -418,6 +418,142 @@ header {
   color: var(--text-secondary);
   font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 16;
   flex-shrink: 0;
+}
+
+/* ── Presets ─────────────────────────────────────────────────────── */
+
+.preset-save-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.preset-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+.preset-input:focus {
+  border-color: rgba(123,167,232,0.3);
+}
+.preset-input::placeholder {
+  color: var(--text-dim);
+}
+
+.preset-save-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(123,167,232,0.28);
+  background: rgba(123,167,232,0.07);
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+  flex-shrink: 0;
+}
+.preset-save-btn:hover:not(:disabled) {
+  background: rgba(123,167,232,0.13);
+  border-color: rgba(123,167,232,0.5);
+}
+.preset-save-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.preset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  gap: 8px;
+}
+
+.preset-name {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--text-primary);
+  letter-spacing: 0.03em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.preset-load-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+}
+.preset-load-btn:hover {
+  border-color: rgba(123,167,232,0.35);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.preset-del-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.preset-del-btn:hover {
+  border-color: rgba(220,80,80,0.35);
+  color: #e07070;
+  background: rgba(220,80,80,0.08);
 }
 
 /* ── Footer ──────────────────────────────────────────────────────── */

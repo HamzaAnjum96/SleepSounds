@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SoundCard from './components/SoundCard';
-import { SOUND_LIBRARY } from './data';
+import { CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
+import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
+import type { Preset } from './types';
 
 const TIMER_OPTIONS = [15, 30, 60] as const;
 
@@ -29,9 +31,47 @@ export default function App() {
     playAllActive,
     stopAll,
     activeSounds,
+    restoreMixerState,
   } = useAudioMixer(SOUND_LIBRARY);
 
   const [isPaused, setIsPaused] = useState(false);
+  const [category, setCategory] = useState<Category>('All');
+
+  // Presets
+  const [presets, setPresets] = useState<Preset[]>(() => {
+    try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '[]'); }
+    catch { return []; }
+  });
+  const [presetName, setPresetName] = useState('');
+
+  const persistPresets = (next: Preset[]) => {
+    setPresets(next);
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const handleSavePreset = () => {
+    if (!presetName.trim()) return;
+    persistPresets([...presets, {
+      id: crypto.randomUUID(),
+      name: presetName.trim(),
+      createdAt: new Date().toISOString(),
+      state: soundState,
+      masterVolume,
+    }]);
+    setPresetName('');
+  };
+
+  const handleLoadPreset = (id: string) => {
+    const preset = presets.find((p) => p.id === id);
+    if (!preset) return;
+    restoreMixerState(preset.state, preset.masterVolume);
+    setIsPaused(false);
+  };
+
+  const handleDeletePreset = (id: string) => {
+    persistPresets(presets.filter((p) => p.id !== id));
+  };
+
   const isPlaying = activeSounds.length > 0 && !isPaused;
 
   useEffect(() => {
@@ -91,10 +131,21 @@ export default function App() {
       setActiveTimer(null);
       setTimerEndAt(null);
     } else {
+      const endAt = Date.now() + minutes * 60 * 1000;
+      setNow(Date.now());
       setActiveTimer(minutes);
-      setTimerEndAt(Date.now() + minutes * 60 * 1000);
+      setTimerEndAt(endAt);
     }
   };
+
+  const visibleSounds = category === 'All'
+    ? SOUND_LIBRARY
+    : SOUND_LIBRARY.filter((s) => s.category === category);
+
+  const activeInCategory = (cat: Category) =>
+    cat === 'All'
+      ? activeSounds.length
+      : activeSounds.filter((s) => s.category === cat).length;
 
   return (
     <>
@@ -158,9 +209,28 @@ export default function App() {
           </div>
         </div>
 
-        <div className="section-label">sounds</div>
+        <div className="section-header">
+          <span className="section-label">sounds</span>
+          <div className="cat-pills">
+            {CATEGORIES.map((cat) => {
+              const n = activeInCategory(cat);
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`cat-pill${category === cat ? ' active' : ''}`}
+                  onClick={() => setCategory(cat)}
+                >
+                  {cat}
+                  {n > 0 && <span className="cat-count">{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="sounds-grid">
-          {SOUND_LIBRARY.map((sound) => (
+          {visibleSounds.map((sound) => (
             <SoundCard
               key={sound.id}
               sound={sound}
@@ -172,7 +242,46 @@ export default function App() {
           ))}
         </div>
 
-        <div className="app-footer">rest well</div>
+        <div className="section-header" style={{ marginTop: '6px' }}>
+          <span className="section-label">presets</span>
+        </div>
+
+        <div className="preset-save-row">
+          <input
+            className="preset-input"
+            placeholder="name this mix…"
+            value={presetName}
+            maxLength={40}
+            onChange={(e) => setPresetName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
+          />
+          <button
+            type="button"
+            className="preset-save-btn"
+            disabled={!presetName.trim()}
+            onClick={handleSavePreset}
+          >save</button>
+        </div>
+
+        {presets.length > 0 && (
+          <ul className="preset-list">
+            {presets.map((preset) => (
+              <li key={preset.id} className="preset-item">
+                <span className="preset-name">{preset.name}</span>
+                <div className="preset-actions">
+                  <button type="button" className="preset-load-btn" onClick={() => handleLoadPreset(preset.id)}>load</button>
+                  <button type="button" className="preset-del-btn" onClick={() => handleDeletePreset(preset.id)}>×</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="app-footer">
+          {activeSounds.length > 0
+            ? activeSounds.map((s) => s.name).join(' · ')
+            : 'rest well'}
+        </div>
       </div>
     </>
   );
