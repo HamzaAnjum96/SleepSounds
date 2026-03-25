@@ -238,73 +238,67 @@ function genStream(): string {
 }
 
 function genThunder(): string {
-  // Thunder: two physically distinct sounds kept in separate buffers so they
-  // can be filtered at very different frequencies:
-  //   - cracks: short broadband transient (midrange, heard only on close strikes)
-  //   - rumbles: deep multi-reflection rolling decay (sub-300Hz)
-  //   - base:  near-subsonic atmospheric pressure (always present)
+  // Thunder: near-subsonic atmospheric base + event-based strikes with multi-reflection rumble.
+  // Each strike spawns 3–6 staggered reflections (off terrain/clouds), each lower and slower
+  // than the last — this is what makes thunder "roll" rather than just go "boom".
 
+  // Atmospheric base: near-inaudible subsonic pressure, always present
   const base = brownNoise();
   lp1(base, 45); lp1(base, 35); lp1(base, 28);
-  const weatherLfo = smoothRandomLfo(0.20, 1.0, 3.0, 9.0);
+  const weatherLfo = smoothRandomLfo(0.25, 1.0, 3.0, 9.0); // weather changes slowly
 
-  const cracks  = new Float32Array(N); // bright broadband transients
-  const rumbles = new Float32Array(N); // deep rolling body
-
-  let pos = Math.floor(SR * rand(1.0, 3.5));
+  // Strike events
+  const strikes = new Float32Array(N);
+  let pos = Math.floor(SR * rand(1.8, 3.5));
   while (pos < N) {
-    const distance  = rand(0.12, 1.0);
-    const strikeAmp = rand(0.50, 1.0);
+    const strikeAmp = rand(0.45, 0.95);
+    const distance = rand(0.15, 1.0); // 0=close, 1=very distant
 
-    // Crack: close strikes only — broadband, very fast decay, stays bright
-    if (distance < 0.55) {
-      const crackLen = Math.floor(SR * rand(0.004, 0.013));
-      const crackAmp = strikeAmp * (1.0 - distance * 1.8) * rand(0.65, 1.0);
+    // Initial crack: only for close strikes, ultra-fast broadband transient
+    if (distance < 0.5) {
+      const crackLen = Math.floor(SR * rand(0.003, 0.011));
+      const crackAmp = strikeAmp * (1 - distance * 2.0) * rand(0.6, 1.0);
       for (let i = 0; i < crackLen && pos + i < N; i++) {
-        const env = Math.exp(-24 * i / Math.max(1, crackLen));
-        cracks[pos + i] += (Math.random() * 2 - 1) * env * crackAmp;
+        const env = Math.exp(-28 * i / Math.max(1, crackLen));
+        strikes[pos + i] += (Math.random() * 2 - 1) * env * crackAmp;
       }
     }
 
-    // Rolling rumble: 4–7 staggered reflections, each lower/longer/quieter
-    const numRef = Math.floor(rand(4, 8));
+    // Multi-reflection rumble: 3–6 echoes staggered in time
+    const numRef = Math.floor(rand(3, 7));
     for (let r = 0; r < numRef; r++) {
-      const delay = Math.floor(SR * (distance * 0.10 + r * rand(0.08, 0.35)));
-      // Longer lengths = more "rolling" — key to realistic thunder
-      const rumbleLen = Math.floor(SR * rand(1.4, 5.0) * (1.0 + distance * 1.3));
-      const rumbleF   = rand(20, 58) * Math.exp(-r * 0.08);
-      const rumbleAmp = strikeAmp * Math.exp(-r * 0.44) * rand(0.55, 1.0);
+      const delay = Math.floor(SR * (distance * 0.08 + r * rand(0.07, 0.28)));
+      const rumbleLen = Math.floor(SR * rand(0.6, 2.8) * (1.0 + distance * 0.8));
+      // Each reflection: lower pitch, longer tail, quieter
+      const rumbleF = rand(28, 68) * Math.exp(-r * 0.09);
+      const rumbleAmp = strikeAmp * Math.exp(-r * 0.52) * rand(0.55, 1.0);
       const start = pos + delay;
-      // riseW grows per-reflection: distant echoes build more slowly
-      const riseW = 0.05 + r * 0.035 + distance * 0.08;
       for (let i = 0; i < rumbleLen && start + i < N; i++) {
         const p = i / rumbleLen;
+        // Fast rise (~10% of duration), long exponential decay
+        const riseW = 0.10 + distance * 0.12;
         const env = p < riseW
-          ? (p / riseW) ** 0.7
-          : Math.exp(-1.9 * (p - riseW));
-        const sig = (Math.random() * 2 - 1) * 0.65
-                  + Math.sin(2 * Math.PI * rumbleF * (i / SR)) * 0.35;
-        rumbles[start + i] += sig * env * rumbleAmp;
+          ? p / riseW
+          : Math.exp(-2.8 * (p - riseW));
+        // 60% noise + 40% tonal — the tonal part gives the "bass note" quality
+        const sig = (Math.random() * 2 - 1) * 0.60
+                  + Math.sin(2 * Math.PI * rumbleF * (i / SR)) * 0.40;
+        strikes[start + i] += sig * env * rumbleAmp;
       }
     }
 
-    pos += Math.floor(SR * rand(4.0, 11.0));
+    pos += Math.floor(SR * rand(5.0, 14.0));
   }
 
-  // Keep crack at midrange — DO NOT deeply LP-filter it or it loses its crack character
-  hp1(cracks, 180); lp1(cracks, 2200);
-
-  // Rumble goes very deep
-  lp1(rumbles, 280); lp1(rumbles, 190); lp1(rumbles, 130);
-  hp1(rumbles, 14);
+  // Filter strikes: thunder lives below ~300Hz
+  lp1(strikes, 300); lp1(strikes, 220); lp1(strikes, 160);
+  hp1(strikes, 16);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = base[i] * 0.42 * weatherLfo[i]
-           + rumbles[i] * 0.48
-           + cracks[i] * 0.10;
+    mix[i] = base[i] * 0.55 * weatherLfo[i] + strikes[i] * 0.45;
   }
-  return gen(mix, 0.82);
+  return gen(mix, 0.78);
 }
 
 function genSpace(): string {
@@ -364,7 +358,7 @@ function genFireplace(): string {
     for (let i = 0; i < sLen && sPos + i < N; i++) {
       crackles[sPos + i] += (Math.random() * 2 - 1) * Math.exp(-35 * i / Math.max(1, sLen)) * sAmp;
     }
-    sPos += Math.floor(SR * rand(0.18, 1.40));
+    sPos += Math.floor(SR * rand(0.032, 0.26));
   }
 
   // Log pops: 15–60ms, lower-freq resonant body — the "pop" of trapped moisture
@@ -388,9 +382,9 @@ function genFireplace(): string {
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = roar[i] * 0.52 * breath[i]
-           + turb[i] * 0.33 * turbDrift[i]
-           + crackles[i] * 0.10
+    mix[i] = roar[i] * 0.45 * breath[i]
+           + turb[i] * 0.30 * turbDrift[i]
+           + crackles[i] * 0.20
            + hiss[i] * 0.05 * hissDrift[i];
   }
   return gen(mix, 0.66);
@@ -413,79 +407,69 @@ function genFan(): string {
 }
 
 function genNight(): string {
-  // Night insects: stridulation model — event-based chirp PAIRS (the natural "chirp-chirp"
-  // double burst crickets produce), not a phase loop which creates audible periodicity.
+  // Night insects: stridulation model — noise through narrow resonators, not pure sines.
+  // Each cricket is white noise band-passed at its wing resonance frequency,
+  // gated by an irregular chirp envelope with per-tooth amplitude variation.
   const buf = new Float32Array(N);
 
   const crickets = [
-    { freq: 4200, q: 22, amp: 0.24, toothRate: 42, minGap: 0.32, maxGap: 0.80 },
-    { freq: 4480, q: 18, amp: 0.20, toothRate: 38, minGap: 0.38, maxGap: 0.95 },
-    { freq: 3980, q: 25, amp: 0.17, toothRate: 45, minGap: 0.28, maxGap: 0.75 },
-    { freq: 4720, q: 20, amp: 0.13, toothRate: 35, minGap: 0.42, maxGap: 1.10 },
-    { freq: 5100, q: 16, amp: 0.09, toothRate: 50, minGap: 0.35, maxGap: 0.90 },
+    { freq: 4200, q: 22, rate: 2.1, amp: 0.24, toothRate: 42, burstDuty: 0.13 },
+    { freq: 4480, q: 18, rate: 1.85, amp: 0.20, toothRate: 38, burstDuty: 0.11 },
+    { freq: 3980, q: 25, rate: 2.05, amp: 0.17, toothRate: 45, burstDuty: 0.14 },
+    { freq: 4720, q: 20, rate: 1.65, amp: 0.13, toothRate: 35, burstDuty: 0.10 },
+    { freq: 5100, q: 16, rate: 2.3, amp: 0.09, toothRate: 50, burstDuty: 0.09 },
   ];
 
   for (const c of crickets) {
-    // Narrowband resonated noise — stridulation wing resonance
+    // Generate narrowband noise via resonant filter (stridulation resonance)
     const noise = whiteNoise();
     const resonated = new Float32Array(N);
     for (let i = 0; i < N; i++) resonated[i] = noise[i];
     bp2(resonated, c.freq, c.q);
+    // Second pass for sharper resonance
     bp2(resonated, c.freq * rand(0.995, 1.005), c.q * 0.7);
 
-    const ampDrift = smoothRandomLfo(0.60, 1.0, 3.0, 10.0);
-    const silenceLfo = smoothRandomLfo(0.0, 1.0, 4.0, 14.0);
+    const rateDrift = smoothRandomLfo(0.82, 1.18, 1.5, 6.0);
+    const ampDrift = smoothRandomLfo(0.6, 1.0, 3.0, 10.0);
+    // Occasional silence periods (cricket pauses)
+    const silenceLfo = smoothRandomLfo(0.0, 1.0, 4.0, 12.0);
 
-    // Event-based: place individual chirp-pair events with random gaps
-    let ePos = Math.floor(SR * rand(0.05, 0.50));
-    while (ePos < N) {
-      // Silence periods — genuine quiet gaps in the chorus
-      if (silenceLfo[Math.min(ePos, N - 1)] < 0.22 && chance(0.72)) {
-        ePos += Math.floor(SR * rand(0.4, 1.8));
-        continue;
-      }
-      const ampVal = c.amp * ampDrift[Math.min(ePos, N - 1)];
+    for (let i = 0; i < N; i++) {
+      const t = i / SR;
+      const effectiveRate = c.rate * rateDrift[i];
+      const cycle = (t * effectiveRate) % 1;
 
-      // First chirp: slightly longer/louder
-      const c1Len = Math.floor(SR * rand(0.028, 0.055));
-      for (let i = 0; i < c1Len && ePos + i < N; i++) {
-        const p = i / c1Len;
-        const env = Math.sin(p * Math.PI);
-        const toothMod = 0.60 + 0.40 * Math.sin((i * c.toothRate / SR) * 2 * Math.PI);
-        buf[ePos + i] += resonated[ePos + i] * env * toothMod * ampVal;
+      // Two chirp bursts per cycle with slight asymmetry
+      let env = 0;
+      if (cycle < c.burstDuty) {
+        env = Math.sin((cycle / c.burstDuty) * Math.PI);
+      } else if (cycle >= 0.32 && cycle < 0.32 + c.burstDuty * 0.7) {
+        env = Math.sin(((cycle - 0.32) / (c.burstDuty * 0.7)) * Math.PI) * 0.55;
       }
 
-      // Brief intra-pair gap (the natural pause between the two chirps)
-      const innerGap = Math.floor(SR * rand(0.010, 0.022));
-
-      // Second chirp: shorter and quieter (natural pair asymmetry)
-      const c2Start = ePos + c1Len + innerGap;
-      const c2Len = Math.floor(SR * rand(0.018, 0.042));
-      for (let i = 0; i < c2Len && c2Start + i < N; i++) {
-        const p = i / c2Len;
-        const env = Math.sin(p * Math.PI) * 0.62;
-        const toothMod = 0.60 + 0.40 * Math.sin((i * c.toothRate / SR) * 2 * Math.PI);
-        buf[c2Start + i] += resonated[c2Start + i] * env * toothMod * ampVal;
+      // Stridulation tooth texture: rapid amplitude modulation at tooth-strike rate
+      // This creates the characteristic "zz-zz" texture instead of a smooth tone
+      if (env > 0) {
+        const toothPhase = (t * c.toothRate * effectiveRate) % 1;
+        const toothMod = 0.6 + 0.4 * Math.sin(toothPhase * 2 * Math.PI);
+        env *= toothMod;
       }
 
-      // Random gap to next pair — varied ±range to avoid metronomic feel
-      ePos += c1Len + innerGap + c2Len + Math.floor(SR * rand(c.minGap, c.maxGap));
+      // Apply silence periods
+      const silenceGate = silenceLfo[i] > 0.25 ? 1.0 : silenceLfo[i] / 0.25;
+      buf[i] += resonated[i] * env * c.amp * ampDrift[i] * silenceGate;
     }
   }
 
-  // Katydid-like background: slower raspy buzz at lower pitch — event-based too
+  // Katydid-like background: slower, lower-pitched raspy buzz (different species)
   const katydid = whiteNoise();
   bp2(katydid, 2800, 12);
   const katyEnv = smoothRandomLfo(0.0, 0.06, 2.0, 8.0);
-  let kPos = Math.floor(SR * rand(0.2, 1.2));
-  while (kPos < N) {
-    const kLen = Math.floor(SR * rand(0.28, 0.55));
-    const kAmpVal = katyEnv[Math.min(kPos, N - 1)];
-    for (let i = 0; i < kLen && kPos + i < N; i++) {
-      const p = i / kLen;
-      buf[kPos + i] += katydid[kPos + i] * (Math.sin(p * Math.PI) ** 0.5) * kAmpVal;
-    }
-    kPos += kLen + Math.floor(SR * rand(0.8, 2.8));
+  for (let i = 0; i < N; i++) {
+    const t = i / SR;
+    const buzzCycle = (t * 0.8) % 1;
+    const gate = buzzCycle < 0.45 ? Math.sin((buzzCycle / 0.45) * Math.PI) ** 0.5 : 0;
+    buf[i] += katydid[i] * gate * katyEnv[i];
   }
 
   return gen(buf, 0.52);
@@ -530,9 +514,9 @@ function genBirdsong(): string {
   }
 
   const species = [
-    { baseF: 1400, amp: 0.10, callTypes: ['A', 'B'] as const, minGap: 3.5, maxGap: 8.0 },
-    { baseF: 2100, amp: 0.09, callTypes: ['C', 'E'] as const, minGap: 4.0, maxGap: 9.0 },
-    { baseF:  950, amp: 0.08, callTypes: ['D', 'A'] as const, minGap: 5.0, maxGap: 11.0 },
+    { baseF: 2100, amp: 0.10, callTypes: ['A', 'B'] as const, minGap: 3.5, maxGap: 8.0 },
+    { baseF: 3200, amp: 0.09, callTypes: ['C', 'E'] as const, minGap: 4.0, maxGap: 9.0 },
+    { baseF: 1500, amp: 0.08, callTypes: ['D', 'A'] as const, minGap: 5.0, maxGap: 11.0 },
   ];
 
   for (const sp of species) {
@@ -596,7 +580,7 @@ function genBirdsong(): string {
     }
   }
 
-  hp1(buf, 650);
+  hp1(buf, 900);
   lp1(buf, 7000);
   // No softClip — gen() normalises anyway and clip was causing aliasing harshness
   return gen(buf, 0.54);
@@ -973,8 +957,7 @@ function genHeartbeat(): string {
       // Inharmonic ratio (1.72×) makes it feel like a resonant cavity, not a sine
       const tonal = Math.sin(2 * Math.PI * s1F * (i / SR)) * 0.40
                   + Math.sin(2 * Math.PI * s1F * 1.72 * (i / SR)) * 0.20;
-      // Use pre-filtered chest noise (not raw white) — avoids click artifacts
-      const thump = chestNoise[c + i] * 1.40;
+      const thump = (Math.random() * 2 - 1) * 0.40; // blood turbulence
       beat[c + i] += (tonal + thump) * env * amp1;
     }
 
@@ -995,7 +978,7 @@ function genHeartbeat(): string {
       const env = p < 0.08 ? (p / 0.08) ** 0.6 : Math.exp(-6.5 * (p - 0.08));
       const tonal = Math.sin(2 * Math.PI * s2F * (i / SR)) * 0.42
                   + Math.sin(2 * Math.PI * s2F * 1.68 * (i / SR)) * 0.18;
-      const thump = chestNoise[c + s2Off + i] * 1.40;
+      const thump = (Math.random() * 2 - 1) * 0.40;
       beat[c + s2Off + i] += (tonal + thump) * env * amp2;
     }
 
@@ -1143,38 +1126,31 @@ function genWind(): string {
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
-  // ── First 4 fixed (per user) ─────────────────────────────────────────────
-  { id: 'rain',        name: 'Rain',            category: 'Nature', url: genRain() },
-  { id: 'ocean',       name: 'Ocean',           category: 'Nature', url: genOcean() },
-  { id: 'wind',        name: 'Wind',            category: 'Nature', url: genWind() },
-  { id: 'forest',      name: 'Forest',          category: 'Nature', url: genForest() },
-  // ── Nature events / evening ──────────────────────────────────────────────
-  { id: 'thunder',     name: 'Thunder',         category: 'Nature', url: genThunder() },
-  { id: 'night',       name: 'Night Insects',   category: 'Nature', url: genNight() },
-  { id: 'birdsong',    name: 'Birdsong',        category: 'Nature', url: genBirdsong() },
-  // ── Water sounds (separated so stream/waterfall aren't adjacent) ─────────
-  { id: 'stream',      name: 'Stream',          category: 'Nature', url: genStream() },
-  { id: 'frogs',       name: 'Frogs',           category: 'Nature', url: genFrogs() },
-  { id: 'waterfall',   name: 'Waterfall',       category: 'Nature', url: genWaterfall() },
-  { id: 'underwater',  name: 'Underwater',      category: 'Nature', url: genUnderwater() },
-  // ── Rain variants (rain on surfaces — grouped together but far from main Rain) ─
-  { id: 'tent-rain',   name: 'Tent Rain',       category: 'Nature', url: genTentRain() },
+  { id: 'rain',        name: 'Rain',        category: 'Nature', url: genRain() },
+  { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
+  { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
+  { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
+  { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
+  { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
+  { id: 'waterfall',   name: 'Waterfall',   category: 'Nature', url: genWaterfall() },
+  { id: 'tent-rain',   name: 'Tent Rain',   category: 'Nature', url: genTentRain() },
   { id: 'tin-roof-rain', name: 'Rain on Tin Roof', category: 'Nature', url: genTinRoofRain() },
-  // ── Cozy / interior ──────────────────────────────────────────────────────
-  { id: 'fireplace',   name: 'Fireplace',       category: 'Cozy',   url: genFireplace() },
-  { id: 'dryer',       name: 'Dryer',           category: 'Cozy',   url: genDryer() },
-  { id: 'cafe',        name: 'Café',            category: 'Cozy',   url: genCafe() },
-  { id: 'shower',      name: 'Shower',          category: 'Cozy',   url: genShower() },
-  // ── Noise / mechanical ───────────────────────────────────────────────────
-  { id: 'white-noise', name: 'White Noise',     category: 'Noise',  url: genWhite() },
-  { id: 'pink-noise',  name: 'Pink Noise',      category: 'Noise',  url: genPink() },
-  { id: 'brown-noise', name: 'Brown Noise',     category: 'Noise',  url: genBrown() },
-  { id: 'space',       name: 'Deep Space',      category: 'Noise',  url: genSpace() },
-  { id: 'heartbeat',   name: 'Heartbeat',       category: 'Noise',  url: genHeartbeat() },
-  { id: 'fan',         name: 'Fan',             category: 'Noise',  url: genFan() },
-  { id: 'airplane',    name: 'Airplane',        category: 'Noise',  url: genAirplane() },
-  { id: 'train',       name: 'Train',           category: 'Noise',  url: genTrain() },
-  // Dryer moved to Cozy above — Train ends the list, far from Dryer
+  { id: 'night',       name: 'Night Insects', category: 'Nature', url: genNight() },
+  { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
+  { id: 'frogs',       name: 'Frogs',       category: 'Nature', url: genFrogs() },
+  { id: 'underwater',  name: 'Underwater',  category: 'Nature', url: genUnderwater() },
+  { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
+  { id: 'cafe',        name: 'Café',        category: 'Cozy',   url: genCafe() },
+  { id: 'shower',      name: 'Shower',      category: 'Cozy',   url: genShower() },
+  { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
+  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
+  { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
+  { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
+  { id: 'heartbeat',   name: 'Heartbeat',   category: 'Noise',  url: genHeartbeat() },
+  { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
+  { id: 'airplane',    name: 'Airplane',    category: 'Noise',  url: genAirplane() },
+  { id: 'dryer',       name: 'Dryer',       category: 'Noise',  url: genDryer() },
+  { id: 'train',       name: 'Train',       category: 'Noise',  url: genTrain() },
 ];
 
 export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
