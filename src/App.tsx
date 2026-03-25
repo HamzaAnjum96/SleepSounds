@@ -290,6 +290,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
               key={sound.id}
               sound={sound}
               enabled={soundState[sound.id]?.enabled ?? false}
+              playing={(soundState[sound.id]?.enabled ?? false) && !isPaused}
               volume={soundState[sound.id]?.volume ?? 0.5}
               onToggle={() => handleSoundToggle(sound.id)}
               onVolumeChange={(v) => setSoundVolume(sound.id, v)}

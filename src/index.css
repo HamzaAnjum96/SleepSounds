@@ -437,6 +437,10 @@ header {
   transition: background 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
 }
+.card-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
 
 /* ── EQ Bars ─────────────────────────────────────────────────────── */
 

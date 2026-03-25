@@ -21,6 +21,7 @@ const SoundLibrary = ({ sounds, state, onToggle, onVolumeChange }: SoundLibraryP
             key={sound.id}
             sound={sound}
             enabled={state[sound.id]?.enabled ?? false}
+            playing={state[sound.id]?.enabled ?? false}
             volume={state[sound.id]?.volume ?? 0.5}
             onToggle={() => onToggle(sound.id)}
             onVolumeChange={(value) => onVolumeChange(sound.id, value)}
