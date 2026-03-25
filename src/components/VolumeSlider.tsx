@@ -6,10 +6,10 @@ interface VolumeSliderProps {
 
 const VolumeSlider = ({ value, onChange, label }: VolumeSliderProps) => {
   return (
-    <label className="block">
-      {label ? <span className="mb-2 block text-xs font-medium text-slate-300">{label}</span> : null}
+    <label className="flex w-full flex-col gap-1">
+      {label ? <span className="text-xs font-medium text-slate-300">{label}</span> : null}
       <input
-        className="drift-slider"
+        className="drift-slider w-full"
         type="range"
         min={0}
         max={1}

@@ -1,4 +1,3 @@
-import VolumeSlider from './VolumeSlider';
 
 interface MasterControlsProps {
   masterVolume: number;
@@ -38,7 +37,15 @@ const MasterControls = ({
 
       <div className="flex w-full items-center gap-3">
         <span className="shrink-0 text-xs font-medium text-slate-300">Master volume</span>
-        <VolumeSlider value={masterVolume} onChange={onMasterVolumeChange} />
+        <input
+          className="drift-slider min-w-0 flex-1"
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={masterVolume}
+          onChange={(e) => onMasterVolumeChange(Number(e.target.value))}
+        />
       </div>
     </section>
   );
