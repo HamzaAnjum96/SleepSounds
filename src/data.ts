@@ -292,40 +292,44 @@ function genNight(): string {
 }
 
 function genBirdsong(): string {
-  // Dawn chorus: multi-harmonic chirps with frequency sweep — avoids pure-sine "beep" quality
+  // Dawn chorus: layered chirps with vibrato + pitch drift.
+  // Intentionally no noise bed to keep it clean and avoid hiss.
   const buf = new Float32Array(N);
+  const driftA = smoothRandomLfo(-0.06, 0.06, 0.6, 1.7);
+  const driftB = smoothRandomLfo(-0.08, 0.08, 0.8, 2.4);
   // [fundamental Hz, chirpsPerSec, phaseOffset, amplitude]
   const birds = [
-    [2100, 2.3, 0.00, 0.15],
-    [3300, 0.7, 0.18, 0.12],
-    [1850, 1.4, 0.43, 0.11],
-    [2700, 3.0, 0.61, 0.10],
-    [1600, 0.5, 0.77, 0.08],
+    [2050, 2.0, 0.00, 0.16],
+    [3250, 0.8, 0.21, 0.12],
+    [1760, 1.3, 0.47, 0.11],
+    [2580, 2.7, 0.63, 0.09],
+    [1480, 0.6, 0.79, 0.08],
   ] as const;
   for (const [freq, rate, phase0, amp] of birds) {
     for (let i = 0; i < N; i++) {
       const t = i / SR;
       const cycle = (t * rate + phase0) % 1;
-      if (cycle < 0.08) {
-        const p = cycle / 0.08;          // 0→1 within the chirp
-        const env = Math.sin(p * Math.PI); // smooth fade in/out
-        const f = freq * (1 + 0.10 * p);  // slight upward glide per chirp
-        // Harmonic series gives organic bird timbre instead of a pure beep
+      if (cycle < 0.09) {
+        const p = cycle / 0.09;
+        const env = Math.sin(p * Math.PI) ** 0.8;
+        const chirpBend = 1 + 0.12 * p - 0.05 * p * p;
+        const vibrato = 1 + 0.014 * Math.sin(2 * Math.PI * (9.5 + 1.5 * phase0) * t);
+        const randomDrift = 1 + (phase0 < 0.5 ? driftA[i] : driftB[i]);
+        const f = freq * chirpBend * vibrato * randomDrift;
         buf[i] += env * amp * (
-          0.55 * Math.sin(2 * Math.PI * f * t) +
-          0.28 * Math.sin(2 * Math.PI * 2 * f * t) +
-          0.12 * Math.sin(2 * Math.PI * 3 * f * t) +
-          0.05 * Math.sin(2 * Math.PI * 4 * f * t)
+          0.50 * Math.sin(2 * Math.PI * f * t) +
+          0.25 * Math.sin(2 * Math.PI * 2.03 * f * t + 0.2) +
+          0.14 * Math.sin(2 * Math.PI * 2.98 * f * t + 0.6) +
+          0.07 * Math.sin(2 * Math.PI * 4.12 * f * t + 1.1)
         );
       }
     }
   }
-  hp1(buf, 800);
-  const bed = pinkNoise();
-  lp1(bed, 1400);
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.68 + bed[i] * 0.32;
-  return gen(mix, 0.50);
+  // Mild saturation + filtering softens digital edge while keeping no hiss bed.
+  softClip(buf, 1.8);
+  hp1(buf, 900);
+  lp1(buf, 5400);
+  return gen(buf, 0.48);
 }
 
 function genCafe(): string {
@@ -411,6 +415,70 @@ function genTrain(): string {
   return gen(mix, 0.65);
 }
 
+function genWaterfall(): string {
+  // Waterfall: dense broad-spectrum water noise with smooth pressure surges
+  const low = brownNoise();
+  hp1(low, 120);
+  lp1(low, 1000); lp1(low, 760);
+
+  const spray = whiteNoise();
+  hp1(spray, 1200);
+  lp1(spray, 5200); lp1(spray, 3800);
+
+  const mix = new Float32Array(N);
+  const flow = smoothRandomLfo(0.82, 1.18, 0.7, 2.1);
+  for (let i = 0; i < N; i++) {
+    const plunge = 0.70 + 0.30 * Math.sin((2 * Math.PI * 0.13 * i) / SR + 0.5);
+    mix[i] = low[i] * 0.62 * flow[i] + spray[i] * 0.38 * plunge;
+  }
+  return gen(mix, 0.66);
+}
+
+function genFrogs(): string {
+  // Frog chorus: pulsed croaks with independent timing and gentle room ambience
+  const croaks = new Float32Array(N);
+  const frogs = [
+    [170, 0.62, 0.0, 0.35],
+    [210, 0.78, 0.3, 0.25],
+    [145, 0.55, 0.6, 0.22],
+  ] as const;
+  for (const [freq, rate, phase, amp] of frogs) {
+    for (let i = 0; i < N; i++) {
+      const t = i / SR;
+      const cyc = (t * rate + phase) % 1;
+      if (cyc < 0.26) {
+        const p = cyc / 0.26;
+        const env = Math.sin(p * Math.PI) ** 1.2;
+        const wobble = 1 + 0.03 * Math.sin(2 * Math.PI * 4.5 * t + phase * 3);
+        const f = freq * (1 - 0.14 * p) * wobble;
+        croaks[i] += Math.sin(2 * Math.PI * f * t) * env * amp;
+      }
+    }
+  }
+  const amb = pinkNoise();
+  lp1(amb, 900);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = croaks[i] * 0.84 + amb[i] * 0.16;
+  hp1(mix, 70);
+  return gen(mix, 0.56);
+}
+
+function genBoatCabin(): string {
+  // Boat cabin: low hull drone + gentle water slaps
+  const hull = brownNoise();
+  lp1(hull, 95); lp1(hull, 72);
+  const water = pinkNoise();
+  hp1(water, 180);
+  lp1(water, 1900);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const roll = 0.84 + 0.16 * Math.sin((2 * Math.PI * 0.09 * i) / SR);
+    const slap = 0.74 + 0.26 * Math.pow(Math.max(0, Math.sin((2 * Math.PI * 0.26 * i) / SR + 0.9)), 1.7);
+    mix[i] = hull[i] * 0.58 * roll + water[i] * 0.42 * slap;
+  }
+  return gen(mix, 0.63);
+}
+
 function genUnderwater(): string {
   // Deep underwater: heavily low-passed brown noise with slow bubbly modulation
   const depth = brownNoise();
@@ -482,8 +550,10 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
   { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
+  { id: 'waterfall',   name: 'Waterfall',   category: 'Nature', url: genWaterfall() },
   { id: 'night',       name: 'Night',       category: 'Nature', url: genNight() },
   { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
+  { id: 'frogs',       name: 'Frogs',       category: 'Nature', url: genFrogs() },
   { id: 'underwater',  name: 'Underwater',  category: 'Nature', url: genUnderwater() },
   { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
   { id: 'cafe',        name: 'Café',        category: 'Cozy',   url: genCafe() },
@@ -495,6 +565,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'airplane',    name: 'Airplane',    category: 'Noise',  url: genAirplane() },
   { id: 'dryer',       name: 'Dryer',       category: 'Noise',  url: genDryer() },
   { id: 'train',       name: 'Train',       category: 'Noise',  url: genTrain() },
+  { id: 'boat-cabin',  name: 'Boat Cabin',  category: 'Noise',  url: genBoatCabin() },
 ];
 
 export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
