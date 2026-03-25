@@ -78,18 +78,28 @@ function pinkNoise(): Float32Array {
 // ── Sound generators ───────────────────────────────────────────────────────
 
 function genForest(): string {
+  // Rustling leaves with gentle breeze variation
   const buf = pinkNoise();
-  lp1(buf, 1800);
-  return gen(buf, 0.55);
+  lp1(buf, 2400);
+  for (let i = 0; i < N; i++) {
+    const breeze = 0.70 + 0.30 * Math.abs(Math.sin((2 * Math.PI * 0.044 * i) / SR + 0.4));
+    buf[i] *= breeze;
+  }
+  return gen(buf, 0.58);
 }
 
 function genStream(): string {
+  // Babbling brook: bright bandpassed noise with multi-rate gurgle variation
   const buf = whiteNoise();
-  hp1(buf, 350);
-  lp1(buf, 3500);
-  for (let i = 0; i < N; i++)
-    buf[i] *= 0.82 + 0.18 * Math.sin((2 * Math.PI * 0.28 * i) / SR);
-  return gen(buf, 0.55);
+  hp1(buf, 420);
+  lp1(buf, 4500); lp1(buf, 3200);
+  for (let i = 0; i < N; i++) {
+    const g1 = 0.76 + 0.24 * Math.sin((2 * Math.PI * 0.30 * i) / SR);
+    const g2 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 1.3  * i) / SR + 0.8);
+    const g3 = 0.93 + 0.07 * Math.sin((2 * Math.PI * 3.1  * i) / SR + 1.5);
+    buf[i] *= g1 * g2 * g3;
+  }
+  return gen(buf, 0.60);
 }
 
 function genThunder(): string {
@@ -111,11 +121,20 @@ function genThunder(): string {
 }
 
 function genSpace(): string {
-  const buf = brownNoise();
-  lp1(buf, 80); lp1(buf, 60); lp1(buf, 50);
-  for (let i = 0; i < N; i++)
-    buf[i] *= 0.7 + 0.3 * Math.sin((2 * Math.PI * 0.05 * i) / SR);
-  return gen(buf, 0.6);
+  // Two-layer deep drone with slow independent modulations
+  const r1 = brownNoise();
+  lp1(r1, 80); lp1(r1, 60); lp1(r1, 50);
+
+  const r2 = brownNoise();
+  lp1(r2, 200); lp1(r2, 160);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const m1 = 0.62 + 0.38 * Math.sin((2 * Math.PI * 0.037 * i) / SR);
+    const m2 = 0.78 + 0.22 * Math.sin((2 * Math.PI * 0.016 * i) / SR + 1.1);
+    mix[i] = r1[i] * 0.65 * m1 + r2[i] * 0.35 * m2;
+  }
+  return gen(mix, 0.62);
 }
 
 function genWhite(): string {
@@ -190,6 +209,75 @@ function genNight(): string {
   return gen(mix, 0.58);
 }
 
+function genBirdsong(): string {
+  // Dawn chorus: several tonal chirp patterns + soft forest bed
+  const buf = new Float32Array(N);
+  // [baseFreq Hz, chirpsPerSec, phaseOffset, amplitude]
+  const birds = [
+    [2050, 2.3, 0.00, 0.22],
+    [3150, 0.7, 0.18, 0.17],
+    [1820, 1.4, 0.43, 0.15],
+    [2680, 3.0, 0.61, 0.13],
+    [1530, 0.5, 0.77, 0.11],
+  ] as const;
+  for (const [freq, rate, phase0, amp] of birds) {
+    for (let i = 0; i < N; i++) {
+      const t = i / SR;
+      const cycle = (t * rate + phase0) % 1;
+      if (cycle < 0.07) {
+        const env = Math.sin((cycle / 0.07) * Math.PI);
+        const f = freq * (1 + 0.07 * Math.sin((cycle / 0.07) * Math.PI));
+        buf[i] += Math.sin(2 * Math.PI * f * t) * env * amp;
+      }
+    }
+  }
+  hp1(buf, 600);
+  const bed = pinkNoise();
+  lp1(bed, 1500);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.72 + bed[i] * 0.28;
+  return gen(mix, 0.55);
+}
+
+function genCafe(): string {
+  // Distant café murmur: bandpassed pink noise with conversational ebb and flow
+  const base = pinkNoise();
+  hp1(base, 200);
+  lp1(base, 1100); lp1(base, 850);
+  const mix = new Float32Array(N);
+  let p1 = 0, p2 = 0.7, p3 = 1.3;
+  for (let i = 0; i < N; i++) {
+    p1 += (2 * Math.PI * 0.31) / SR;
+    p2 += (2 * Math.PI * 0.52) / SR;
+    p3 += (2 * Math.PI * 0.17) / SR;
+    const activity = 0.62 + 0.22 * Math.sin(p1) + 0.10 * Math.sin(p2) + 0.06 * Math.abs(Math.sin(p3));
+    mix[i] = base[i] * activity;
+  }
+  return gen(mix, 0.60);
+}
+
+function genAirplane(): string {
+  // Cabin drone: steady filtered airflow + deep engine fundamental
+  const air = pinkNoise();
+  hp1(air, 160);
+  lp1(air, 850); lp1(air, 680);
+
+  const engine = brownNoise();
+  lp1(engine, 58); lp1(engine, 48);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const flutter = 0.97 + 0.03 * Math.sin((2 * Math.PI * 11.3 * i) / SR);
+    mix[i] = air[i] * 0.68 * flutter + engine[i] * 0.32;
+  }
+  return gen(mix, 0.68);
+}
+
+function genPink(): string {
+  const buf = pinkNoise();
+  return gen(buf, 0.65);
+}
+
 function genRain(): string {
   // Rain: dense pink noise bandpassed, gentle slow-swell intensity variation
   const buf = pinkNoise();
@@ -248,11 +336,15 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
   { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
   { id: 'night',       name: 'Night',       category: 'Nature', url: genNight() },
+  { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
   { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
+  { id: 'cafe',        name: 'Café',        category: 'Cozy',   url: genCafe() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
+  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
   { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
   { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
+  { id: 'airplane',    name: 'Airplane',    category: 'Noise',  url: genAirplane() },
 ];
 
 export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;

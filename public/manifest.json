@@ -4,8 +4,8 @@
   "description": "Blend soothing layers to relax, focus, or drift to sleep.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#080c14",
-  "theme_color": "#080c14",
+  "background_color": "#0d1f3c",
+  "theme_color": "#0d1f3c",
   "orientation": "portrait",
   "icons": [
     {

@@ -457,28 +457,51 @@ header {
   color: var(--accent);
   font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
+/* ── Card Indicator (dot ↔ EQ crossfade) ─────────────────────────── */
+
+.card-indicator {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
 .card-dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(1);
   width: 5px; height: 5px;
   border-radius: 50%;
   background: var(--text-dim);
-  margin-top: 2px;
-  transition: background 0.2s, box-shadow 0.2s;
-  flex-shrink: 0;
+  transition: background 0.25s, box-shadow 0.25s, opacity 0.28s, transform 0.28s;
 }
 .card-dot.active {
   background: var(--accent);
   box-shadow: 0 0 6px var(--accent);
 }
+.sound-card.playing .card-dot {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+}
 
 /* ── EQ Bars ─────────────────────────────────────────────────────── */
 
 .eq-bars {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   gap: 2px;
   height: 12px;
-  margin-top: 0;
-  flex-shrink: 0;
+  opacity: 0;
+  transform: scaleY(0.3);
+  transform-origin: bottom center;
+  transition: opacity 0.28s, transform 0.28s;
+}
+.sound-card.playing .eq-bars {
+  opacity: 1;
+  transform: scaleY(1);
 }
 .eq-bars span {
   display: block;
@@ -488,9 +511,10 @@ header {
   box-shadow: 0 0 4px var(--accent);
   min-height: 3px;
 }
-.eq-bars span:nth-child(1) { animation: eqBounce 0.9s 0.0s ease-in-out infinite; }
-.eq-bars span:nth-child(2) { animation: eqBounce 0.9s 0.22s ease-in-out infinite; }
-.eq-bars span:nth-child(3) { animation: eqBounce 0.9s 0.44s ease-in-out infinite; }
+.eq-bars span:nth-child(1) { animation: eqBounce 0.9s 0.0s  ease-in-out infinite paused; }
+.eq-bars span:nth-child(2) { animation: eqBounce 0.9s 0.22s ease-in-out infinite paused; }
+.eq-bars span:nth-child(3) { animation: eqBounce 0.9s 0.44s ease-in-out infinite paused; }
+.sound-card.playing .eq-bars span { animation-play-state: running; }
 @keyframes eqBounce {
   0%, 100% { height: 3px; }
   50%       { height: 11px; }

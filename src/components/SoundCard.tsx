@@ -13,6 +13,9 @@ const SOUND_ICONS: Record<string, string> = {
   stream:        'stream',
   space:         'public',
   fan:           'mode_fan',
+  cafe:          'local_cafe',
+  airplane:      'flight',
+  birdsong:      'yard',
 };
 
 interface SoundCardProps {
@@ -37,19 +40,18 @@ export default function SoundCard({ sound, enabled, playing, volume, onToggle, o
   return (
     <button
       type="button"
-      className={`sound-card${enabled ? ' active' : ''}`}
+      className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}`}
       onClick={onToggle}
       aria-pressed={enabled}
     >
       <div className="card-top">
         <span className="material-symbols-rounded card-icon">{icon}</span>
-        {playing ? (
+        <div className="card-indicator">
+          <div className={`card-dot${enabled ? ' active' : ''}`} />
           <div className="eq-bars">
             <span /><span /><span />
           </div>
-        ) : (
-          <div className={`card-dot${enabled ? ' active' : ''}`} />
-        )}
+        </div>
       </div>
 
       <div className="card-name">{sound.name}</div>

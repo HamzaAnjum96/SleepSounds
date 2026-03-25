@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
@@ -18,6 +18,35 @@ function formatCountdown(seconds: number) {
   return `${m}:${s}`;
 }
 
+/** Generate a blue-gradient crescent canvas for the media-session artwork.
+ *  Android extracts a palette from this image to colour the notification. */
+function buildMediaArtwork(size: number): string {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    if (!ctx) return '/icon-512.png';
+    // Deep blue gradient background
+    const g = ctx.createLinearGradient(0, 0, 0, size);
+    g.addColorStop(0, '#0c1e50');
+    g.addColorStop(1, '#1a3880');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    // Stars
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    for (const [x, y, r] of [[0.14, 0.14, 0.004], [0.30, 0.08, 0.003], [0.82, 0.19, 0.004],
+                              [0.88, 0.74, 0.003], [0.11, 0.68, 0.004], [0.76, 0.11, 0.003]] as const) {
+      ctx.beginPath(); ctx.arc(x * size, y * size, r * size, 0, Math.PI * 2); ctx.fill();
+    }
+    // Crescent moon
+    ctx.fillStyle = '#d4b878';
+    ctx.beginPath(); ctx.arc(0.53 * size, 0.43 * size, 0.23 * size, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#142660';
+    ctx.beginPath(); ctx.arc(0.65 * size, 0.37 * size, 0.20 * size, 0, Math.PI * 2); ctx.fill();
+    return c.toDataURL('image/png');
+  } catch { return '/icon-512.png'; }
+}
+
 export default function App() {
   const {
     soundState,
@@ -31,6 +60,8 @@ export default function App() {
     activeSounds,
     restoreMixerState,
   } = useAudioMixer(SOUND_LIBRARY);
+
+  const mediaArtwork = useMemo(() => buildMediaArtwork(512), []);
 
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
@@ -89,9 +120,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
         : 'sleep sounds',
       album: 'sleep sounds',
       artwork: [
-        { src: '/icon-192.png',  sizes: '192x192',   type: 'image/png' },
-        { src: '/icon-512.png',  sizes: '512x512',   type: 'image/png' },
-        { src: '/icon-1024.png', sizes: '1024x1024', type: 'image/png' },
+        { src: mediaArtwork, sizes: '512x512', type: 'image/png' },
       ],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
@@ -106,7 +135,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       (navigator.mediaSession as MediaSession & { setPositionState?: (s: object) => void })
         .setPositionState?.({ duration: Infinity, playbackRate: 1, position: 0 });
     } catch { /* ok */ }
-  }, [isPlaying, activeSounds, playAllActive, pauseAll, stopAll]);
+  }, [isPlaying, activeSounds, mediaArtwork, playAllActive, pauseAll, stopAll]);
 
   const handleMasterToggle = useCallback(async () => {
     if (isPlaying) {

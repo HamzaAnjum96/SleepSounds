@@ -291,17 +291,26 @@ export const useAudioMixer = (sounds: Sound[]) => {
     setSoundState(nextState);
     setMasterVolume(nextMasterVolume);
     if (shouldPlay) {
-      for (const [soundId, state] of Object.entries(nextState)) {
-        if (!state.enabled) continue;
-        const cfa = audioMapRef.current[soundId];
-        if (!cfa) continue;
-        const targetVol = Math.min(1, Math.max(0, state.volume * nextMasterVolume));
-        cfa.volume = 0;
-        try {
-          await cfa.play();
-          doFadeIn(soundId, targetVol);
-        } catch { /* ignore autoplay constraints */ }
-      }
+      // Play all enabled sounds in parallel to minimise the async window.
+      // After each play() resolves we guard against a race where the user
+      // toggled the sound off while the Promise was pending: if a fade-out
+      // timer is already running for that sound we skip the fade-in so the
+      // toggle-off wins cleanly.
+      await Promise.all(
+        Object.entries(nextState)
+          .filter(([, s]) => s.enabled)
+          .map(async ([soundId, state]) => {
+            const cfa = audioMapRef.current[soundId];
+            if (!cfa) return;
+            const targetVol = Math.min(1, Math.max(0, state.volume * nextMasterVolume));
+            cfa.volume = 0;
+            try {
+              await cfa.play();
+              if (fadeTimersRef.current[soundId] != null) return; // toggled off during await
+              doFadeIn(soundId, targetVol);
+            } catch { /* ignore autoplay constraints */ }
+          }),
+      );
     }
   }, [doFadeIn, stopAll]);
 
