@@ -437,15 +437,18 @@ function genFire(): string {
   const breathA = smoothRandomLfo(0.55, 1.0, 2.0, 6.0);
   const breathB = smoothRandomLfo(0.60, 1.0, 1.5, 4.5);
 
-  // ── 2. Flame hiss: high-pass sizzle that rises with flame intensity ──
+  // ── 2. Flame hiss: high-pass sizzle that rises with flame intensity.
+  // LP at 6000 Hz (not 9000) keeps the sizzle warm rather than sharp white. ──
   const hiss = whiteNoise();
   hp1(hiss, 2000);
-  lp1(hiss, 9000);
+  lp1(hiss, 6000);
 
-  // ── 3. Ember sizzle: very high, quiet, fading in/out independently ──
+  // ── 3. Ember sizzle: warm high-freq texture, fading in/out independently.
+  // HP lowered to 3500 Hz and LP to 7500 Hz so it blends as a sizzle rather
+  // than adding harsh white noise energy near Nyquist. ──
   const ember = whiteNoise();
-  hp1(ember, 4500);
-  lp1(ember, 12000);
+  hp1(ember, 3500);
+  lp1(ember, 7500);
   const emberLfo = smoothRandomLfo(0.0, 1.0, 2.0, 7.0);
 
   // ── 4. Whoosh: mid-freq air-rush that swells with each breath peak.
@@ -551,18 +554,20 @@ function genFire(): string {
   lp1(logShifts, 280);
 
   // ── Mix ──
+  // Roar and body are weighted heavily so the warm low-frequency turbulence
+  // dominates. Hiss/ember/spits are kept small so they add texture without
+  // accumulating into a perceived white-noise floor.
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const breath   = breathA[i] * breathB[i]; // compound modulation
-    const breathSq = breath * breath;           // hiss/whoosh rise steeply with flame
+    const breath = breathA[i] * breathB[i]; // compound modulation
     mix[i] =
-      roar[i]       * 0.26 * breathA[i] +
-      body[i]       * 0.28 * breath +
-      hiss[i]       * 0.10 * breathSq +
-      ember[i]      * 0.05 * emberLfo[i] +
-      whoosh[i]     * 0.08 * breath +
+      roar[i]       * 0.34 * breathA[i] +
+      body[i]       * 0.32 * breath +
+      hiss[i]       * 0.07 * breath +
+      ember[i]      * 0.03 * emberLfo[i] +
+      whoosh[i]     * 0.06 * breath +
       crackles[i]   * 0.10 +
-      spits[i]      * 0.06 +
+      spits[i]      * 0.04 +
       pops[i]       * 0.05 +
       logShifts[i]  * 0.02;
   }
@@ -586,7 +591,7 @@ export const SOUND_LIBRARY: Sound[] = [
 export const CATEGORIES = ['All', 'Nature', 'Noise'] as const;
 export type Category = typeof CATEGORIES[number];
 
-export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v1';
+export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';
 
 // ── Built-in presets ───────────────────────────────────────────────────────
 
