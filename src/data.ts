@@ -55,6 +55,22 @@ function hp1(buf: Float32Array, fc: number): void {
   }
 }
 
+// 2nd-order Butterworth LP (12 dB/oct) — steeper rolloff for transient events
+function lp2(buf: Float32Array, fc: number): void {
+  const w0 = (2 * Math.PI * Math.min(fc, SR * 0.49)) / SR;
+  const cosW = Math.cos(w0);
+  const alpha = Math.sin(w0) / 1.4142; // Q = 1/√2
+  const b0 = (1 - cosW) / 2, b1 = 1 - cosW, b2 = (1 - cosW) / 2;
+  const a0 = 1 + alpha, a1 = -2 * cosW, a2 = 1 - alpha;
+  const nb0 = b0/a0, nb1 = b1/a0, nb2 = b2/a0, na1 = a1/a0, na2 = a2/a0;
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const x0 = buf[i];
+    const y0 = nb0*x0 + nb1*x1 + nb2*x2 - na1*y1 - na2*y2;
+    buf[i] = y0; x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+  }
+}
+
 function bp2(buf: Float32Array, fc: number, q: number): void {
   const w0 = (2 * Math.PI * fc) / SR;
   const alpha = Math.sin(w0) / (2 * Math.max(0.05, q));
@@ -215,23 +231,23 @@ function genStream(): string {
     const g3 = 0.93 + 0.07 * Math.sin((2 * Math.PI * 3.1  * i) / SR + 1.5);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
+  // Bubbles: each is a damped bandpassed noise burst at a fixed ring frequency,
+  // not a sine sweep — real bubbles resonate at one frequency set by their radius.
   const bubbles = new Float32Array(N);
   let pos = Math.floor(SR * 0.05);
   while (pos < N) {
-    const len = Math.floor(SR * rand(0.008, 0.024));
-    const f = rand(700, 1800);
-    const amp = rand(0.02, 0.1);
-    const f1 = f * rand(0.72, 0.94);
+    const len = Math.floor(SR * rand(0.006, 0.018));
+    const amp = rand(0.02, 0.10);
+    const riseN2 = Math.max(2, Math.floor(SR * 0.0008));
     for (let i = 0; i < len && pos + i < N; i++) {
-      const p = i / Math.max(1, len - 1);
-      const env = Math.exp(-7 * p);
-      const ff = f + (f1 - f) * p;
-      bubbles[pos + i] += Math.sin(2 * Math.PI * ff * (i / SR)) * env * amp;
+      const riseGain = Math.min(1, i / riseN2);
+      bubbles[pos + i] += (Math.random() * 2 - 1) * Math.exp(-8 * (i / len)) * amp * riseGain;
     }
     pos += Math.floor(SR * rand(0.02, 0.09));
   }
-  hp1(bubbles, 350);
-  lp1(bubbles, 2200);
+  // Per-band filter pass: each bubble gets a resonant ring (applied to whole buffer)
+  bp2(bubbles, rand(600, 1600), rand(4, 9));
+  lp2(bubbles, 2000);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.86 + bubbles[i] * 0.14;
   return gen(mix, 0.60);
@@ -350,15 +366,23 @@ function genFireplace(): string {
 
   const crackles = new Float32Array(N);
 
-  // Snap crackles: 0.5–3ms, bright and fast — the "spit" of resin/wood cells bursting
+  // Snap crackles: power-law amplitude distribution — most are barely audible,
+  // occasional ones are 3–4× louder, grouped in small bursts.
   let sPos = Math.floor(SR * 0.04);
   while (sPos < N) {
-    const sLen = Math.floor(SR * rand(0.0005, 0.0028));
-    const sAmp = rand(0.22, 0.88);
-    for (let i = 0; i < sLen && sPos + i < N; i++) {
-      crackles[sPos + i] += (Math.random() * 2 - 1) * Math.exp(-35 * i / Math.max(1, sLen)) * sAmp;
+    // Burst or single: 25% chance of a cluster of 2–4 rapid snaps
+    const isBurst = chance(0.22);
+    const burstCount = isBurst ? Math.floor(rand(2, 5)) : 1;
+    for (let b = 0; b < burstCount; b++) {
+      const sLen = Math.floor(SR * rand(0.0005, 0.0028));
+      // Power-law: 90% quiet (0.02–0.14), 10% loud pop (0.38–0.95)
+      const sAmp = chance(0.10) ? rand(0.38, 0.95) : rand(0.02, 0.14);
+      for (let i = 0; i < sLen && sPos + i < N; i++) {
+        crackles[sPos + i] += (Math.random() * 2 - 1) * Math.exp(-35 * i / Math.max(1, sLen)) * sAmp;
+      }
+      if (b < burstCount - 1) sPos += Math.floor(SR * rand(0.003, 0.012));
     }
-    sPos += Math.floor(SR * rand(0.032, 0.26));
+    sPos += Math.floor(SR * rand(0.10, 0.85));
   }
 
   // Log pops: 15–60ms, lower-freq resonant body — the "pop" of trapped moisture
@@ -491,25 +515,30 @@ function genBirdsong(): string {
   // Activity LFO: creates genuine quiet periods of 10–20s
   const activityLfo = smoothRandomLfo(0.0, 1.0, 8.0, 20.0);
 
-  // Render one note into buf at given position
+  // Render one note — FM synthesis so calls sound breathy/chaotic, not organ-like.
+  // The frequency modulator adds harmonic jitter; a loud breath burst at onset
+  // simulates syrinx turbulence at the start of each note.
   function renderNote(pos: number, f0: number, f1: number, len: number, amp: number): void {
-    const vibRate = rand(6, 12);
-    const vibDepth = rand(0.003, 0.012);
-    const tremuloRate = rand(12, 24);
-    const phase = rand(0, Math.PI * 2);
+    const modRatio = rand(1.8, 3.4);        // FM modulator ratio (inharmonic spread)
+    const modIdx   = rand(0.5, 2.2);        // FM index — higher = richer/buzzier
+    const vibRate  = rand(5, 11);
+    const vibDepth = rand(0.004, 0.014);
+    const phase    = rand(0, Math.PI * 2);
+    const breathAmt = rand(0.30, 0.55);     // breathiness — much louder than before
+    const riseN    = Math.max(2, Math.floor(SR * 0.003)); // 3 ms onset rise
     for (let i = 0; i < len && pos + i < N; i++) {
       const t = i / SR;
       const p = i / len;
-      const env = (Math.sin(p * Math.PI) ** 0.85) * (0.86 + 0.14 * Math.sin(2 * Math.PI * tremuloRate * t));
+      const riseGain = Math.min(1, i / riseN);
+      const env = (Math.sin(p * Math.PI) ** 0.80) * riseGain;
       const glide = f0 + (f1 - f0) * p;
       const f = glide * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t + phase));
-      const noisyEdge = (Math.random() * 2 - 1) * (Math.exp(-6 * p) * 0.13 + Math.exp(-6 * (1 - p)) * 0.07);
-      buf[pos + i] += env * amp * (
-        0.70 * Math.sin(2 * Math.PI * f * t + phase) +
-        0.18 * Math.sin(2 * Math.PI * 2.04 * f * t + phase * 0.63) +
-        0.06 * Math.sin(2 * Math.PI * 2.97 * f * t + phase * 1.4) +
-        noisyEdge
-      );
+      // FM: carrier modulated by modRatio*f — creates inharmonic partials
+      const mod = modIdx * Math.sin(2 * Math.PI * f * modRatio * t);
+      const tonal = Math.sin(2 * Math.PI * f * t + mod + phase);
+      // Breath: strongest at attack, trails away
+      const breath = (Math.random() * 2 - 1) * breathAmt * Math.exp(-5 * p);
+      buf[pos + i] += env * amp * ((1 - breathAmt * 0.45) * tonal + breath);
     }
   }
 
@@ -587,19 +616,50 @@ function genBirdsong(): string {
 }
 
 function genCafe(): string {
-  // Distant café murmur: bandpassed pink noise with conversational ebb and flow
-  const base = pinkNoise();
-  hp1(base, 200);
-  lp1(base, 1100); lp1(base, 850);
+  // 4 independent bandpass voices simulating conversation groups at different distances,
+  // plus discrete events (cup clinks, chair scrapes) for dimensionality.
+  const voiceDefs = [
+    { fc: 310,  q: 1.5, amp: 0.26 }, // close deep voice
+    { fc: 540,  q: 1.8, amp: 0.20 }, // nearby mid
+    { fc: 820,  q: 2.2, amp: 0.16 }, // distant mid
+    { fc: 1150, q: 2.8, amp: 0.10 }, // far, brighter
+  ];
   const mix = new Float32Array(N);
-  let p1 = 0, p2 = 0.7, p3 = 1.3;
-  for (let i = 0; i < N; i++) {
-    p1 += (2 * Math.PI * 0.31) / SR;
-    p2 += (2 * Math.PI * 0.52) / SR;
-    p3 += (2 * Math.PI * 0.17) / SR;
-    const activity = 0.62 + 0.22 * Math.sin(p1) + 0.10 * Math.sin(p2) + 0.06 * Math.abs(Math.sin(p3));
-    mix[i] = base[i] * activity;
+
+  for (const v of voiceDefs) {
+    const noise = pinkNoise();
+    bp2(noise, v.fc, v.q);
+    const actLfo = smoothRandomLfo(0.0, 1.0, 1.5, 6.0);
+    for (let i = 0; i < N; i++) mix[i] += noise[i] * v.amp * (0.30 + 0.70 * actLfo[i]);
   }
+
+  // Discrete events: cup clinks + occasional chair scrapes
+  let ePos = Math.floor(SR * rand(0.8, 3.5));
+  while (ePos < N) {
+    if (chance(0.65)) {
+      // Cup/glass clink: high resonant sine ping with fast decay
+      const clinkF   = rand(1800, 4400);
+      const clinkLen = Math.floor(SR * rand(0.06, 0.20));
+      const clinkAmp = rand(0.05, 0.16);
+      const riseN    = Math.max(2, Math.floor(SR * 0.001));
+      for (let i = 0; i < clinkLen && ePos + i < N; i++) {
+        const riseGain = Math.min(1, i / riseN);
+        mix[ePos + i] += Math.sin(2 * Math.PI * clinkF * (i / SR))
+          * Math.exp(-5 * (i / clinkLen)) * clinkAmp * riseGain;
+      }
+    } else {
+      // Chair scrape: short broadband burst, filtered low
+      const scrapeLen = Math.floor(SR * rand(0.04, 0.12));
+      const scrapeAmp = rand(0.04, 0.10);
+      for (let i = 0; i < scrapeLen && ePos + i < N; i++) {
+        mix[ePos + i] += (Math.random() * 2 - 1) * Math.exp(-4 * (i / scrapeLen)) * scrapeAmp;
+      }
+    }
+    ePos += Math.floor(SR * rand(1.8, 7.5));
+  }
+
+  hp1(mix, 180);
+  lp2(mix, 1300);
   return gen(mix, 0.60);
 }
 
@@ -668,22 +728,25 @@ function genTrain(): string {
   const pulseShape = (phase: number) => Math.sin(phase * Math.PI) ** 3.8;
   let next = Math.floor(SR * 0.2);
   while (next < N) {
-    // Tighter interval variance so rhythm feels consistent, not randomly clicky
     const interval = Math.floor(SR * rand(0.50, 0.68));
-    const lenA = Math.floor(SR * rand(0.025, 0.045)); // slightly longer = softer
+    const lenA = Math.floor(SR * rand(0.025, 0.045));
     const lenB = Math.floor(SR * rand(0.016, 0.032));
     const offsetB = Math.floor(SR * rand(0.06, 0.14));
+    // Metallic noise kernel mixed with the tonal shape — turns click into muffled clunk
+    const noiseAmpA = rand(0.06, 0.14);
     for (let i = 0; i < lenA && next + i < N; i++) {
-      pulses[next + i] += pulseShape(i / lenA) * rand(0.18, 0.36); // quieter
+      const s = pulseShape(i / lenA);
+      pulses[next + i] += s * rand(0.18, 0.36) + (Math.random() * 2 - 1) * s * noiseAmpA;
     }
+    const noiseAmpB = rand(0.04, 0.10);
     for (let i = 0; i < lenB && next + offsetB + i < N; i++) {
-      pulses[next + offsetB + i] += pulseShape(i / lenB) * rand(0.10, 0.24);
+      const s = pulseShape(i / lenB);
+      pulses[next + offsetB + i] += s * rand(0.10, 0.24) + (Math.random() * 2 - 1) * s * noiseAmpB;
     }
     next += interval;
   }
-  // Only the low resonator — removing the 1240Hz bp which caused clicking
   bp2(pulses, 420, 1.2);
-  lp1(pulses, 520); // hard cap on pulse frequency content
+  lp2(pulses, 480); // steeper rolloff than lp1 chain — kills the spectral edge click
 
   const rattles = new Float32Array(N);
   let rPos = Math.floor(SR * 0.15);
@@ -777,24 +840,32 @@ function genFrogs(): string {
         const len = Math.floor(SR * rand(0.04, 0.14));
         const pulseGap = Math.floor(SR * rand(0.022, 0.065));
         const freq = baseFreq * rand(0.93, 1.07);
-        const pitchDropAmt = rand(0.10, 0.32); // per-pulse variation
+        const pitchDropAmt = rand(0.10, 0.32);
+        // Membrane flutter AM: 30–80 Hz, simulates nonlinear vocal sac vibration
+        const flutterRate  = rand(30, 80);
+        const flutterDepth = rand(0.32, 0.58);
+        const riseN = Math.max(2, Math.floor(SR * 0.002)); // 2ms onset rise
         for (let i = 0; i < len && eventPos + i < N; i++) {
           const t = i / SR;
           const frac = i / len;
+          const riseGain = Math.min(1, i / riseN);
           const envShape = rand(1.3, 2.0);
           const env = (Math.sin(frac * Math.PI) ** envShape)
                     * Math.exp(-rand(0.28, 0.65) * frac)
-                    * activity;
+                    * activity * riseGain;
           const pitchDrop = 1 - pitchDropAmt * frac;
           const tone = freq * pitchDrop;
           const sac  = freq * sacRatio * pitchDrop;
-          // Fundamental + vocal-sac resonance + 2nd harmonic + sub-bass + onset noise
+          // Membrane flutter gate — the buzzy rattling character
+          const flutter = 1 - flutterDepth + flutterDepth * Math.abs(Math.sin(2 * Math.PI * flutterRate * t));
+          // More onset noise (was sp.nz * exp(-12*frac), now 2× louder with slower decay)
+          const onsetNoise = (Math.random() * 2 - 1) * sp.nz * 2.0 * Math.exp(-6 * frac);
           croaks[eventPos + i] += (
-            0.52 * Math.sin(2 * Math.PI * tone * t) +
+            0.52 * Math.sin(2 * Math.PI * tone * t) * flutter +
             0.20 * Math.sin(2 * Math.PI * sac  * t + 0.4) +
-            0.12 * Math.sin(2 * Math.PI * tone * 2.0 * t + 0.65) +
+            0.12 * Math.sin(2 * Math.PI * tone * 2.0 * t + 0.65) * flutter +
             sp.sub * Math.sin(2 * Math.PI * tone * 0.5 * t + 0.2) +
-            (Math.random() * 2 - 1) * sp.nz * Math.exp(-12 * frac)
+            onsetNoise
           ) * env * sp.amp;
         }
         eventPos += len + pulseGap;
@@ -826,13 +897,15 @@ function genShower(): string {
   lp1(body, 1800);
 
   const droplets = new Float32Array(N);
+  const riseN = Math.max(2, Math.floor(SR * 0.001));
   let pos = Math.floor(SR * 0.03);
   while (pos < N) {
     const len = Math.floor(SR * (0.004 + Math.random() * 0.01));
     const amp = 0.08 + Math.random() * 0.18;
     for (let i = 0; i < len && pos + i < N; i++) {
       const t = i / Math.max(1, len - 1);
-      const env = Math.exp(-8 * t);
+      const riseGain = Math.min(1, i / riseN);
+      const env = Math.exp(-8 * t) * riseGain;
       droplets[pos + i] += (Math.random() * 2 - 1) * amp * env;
     }
     pos += Math.floor(SR * (0.01 + Math.random() * 0.028));
@@ -1005,22 +1078,22 @@ function genUnderwater(): string {
   const depth = brownNoise();
   lp1(depth, 140); lp1(depth, 110); lp1(depth, 85);
   hp1(depth, 20);
+  // Underwater bubbles: damped noise bursts with rise ramp, filtered to resonant ring
   const bubbles = new Float32Array(N);
   let pos = Math.floor(SR * 0.35);
   while (pos < N) {
-    const len = Math.floor(SR * rand(0.018, 0.07));
-    const f0 = rand(120, 260);
-    const f1 = f0 * rand(1.2, 1.8);
+    const len = Math.floor(SR * rand(0.015, 0.055));
+    const amp = rand(0.03, 0.09);
     for (let i = 0; i < len && pos + i < N; i++) {
       const p = i / len;
-      const env = Math.sin(Math.min(1, p) * Math.PI) ** 1.8;
-      const f = f0 + (f1 - f0) * p;
-      bubbles[pos + i] += Math.sin(2 * Math.PI * f * (i / SR)) * env * rand(0.03, 0.09);
+      const riseGain = Math.min(1, i / 3);
+      bubbles[pos + i] += (Math.random() * 2 - 1) * Math.exp(-6 * p) * amp * riseGain;
     }
     pos += Math.floor(SR * rand(0.45, 1.45));
   }
   hp1(bubbles, 70);
-  lp1(bubbles, 700);
+  bp2(bubbles, rand(140, 260), rand(4, 8)); // resonant ring at bubble frequency
+  lp2(bubbles, 650);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const b1 = 0.68 + 0.32 * Math.sin((2 * Math.PI * 0.28 * i) / SR);
@@ -1047,9 +1120,23 @@ function genRain(): string {
     while (pos < clusterEnd) {
       const len = Math.floor(SR * rand(0.002, 0.009));
       const amp = rand(0.02, 0.11);
+      // 1ms rise ramp — eliminates instant-on click
+      const riseN = Math.max(2, Math.floor(SR * 0.001));
       for (let i = 0; i < len && pos + i < N; i++) {
-        const env = Math.exp(-8 * (i / Math.max(1, len)));
+        const riseGain = Math.min(1, i / riseN);
+        const env = Math.exp(-8 * (i / Math.max(1, len))) * riseGain;
         impacts[pos + i] += (Math.random() * 2 - 1) * amp * env;
+      }
+      // Surface resonance ping: brief tuned ring excited by each drop
+      if (chance(0.55)) {
+        const pingF  = rand(700, 1800);
+        const pingLen = Math.floor(SR * rand(0.003, 0.008));
+        const pingAmp = amp * rand(0.25, 0.45);
+        for (let i = 0; i < pingLen && pos + i < N; i++) {
+          const riseGain = Math.min(1, i / 2);
+          impacts[pos + i] += Math.sin(2 * Math.PI * pingF * (i / SR))
+            * Math.exp(-14 * (i / pingLen)) * pingAmp * riseGain;
+        }
       }
       if (chance(0.42)) {
         const bLen = Math.floor(SR * rand(0.01, 0.022));
@@ -1083,14 +1170,31 @@ function genOcean(): string {
   hp1(surf, 220);
   lp1(surf, 2000);
 
+  // Random-interval wave envelope: 7–15s periods, variable amplitude sets.
+  // Replaces the fixed 0.085 Hz sine which sounded metronomic.
+  const waveEnvBuf = new Float32Array(N);
+  let wPos = 0;
+  while (wPos < N) {
+    const period = Math.floor(SR * rand(7.0, 15.0));
+    const wAmp   = rand(0.45, 1.0);
+    for (let i = 0; i < period && wPos + i < N; i++) {
+      const p = i / period;
+      // Gradual swell → sharp crest → long washback
+      let env: number;
+      if (p < 0.38) env = Math.pow(p / 0.38, 1.6) * wAmp;
+      else if (p < 0.52) env = wAmp;
+      else env = Math.pow((1 - p) / 0.48, 0.75) * wAmp;
+      waveEnvBuf[wPos + i] += env;
+    }
+    wPos += period;
+  }
+
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const phase = (2 * Math.PI * 0.085 * i) / SR;
-    const crest = Math.max(0, Math.sin(phase - Math.PI / 2));
-    const waveEnv = 0.24 + 0.76 * Math.pow(0.5 + 0.5 * Math.sin(phase - Math.PI / 2), 1.7);
-    const surfEnv = 0.08 + 0.92 * Math.pow(crest, 2.4);
-    const washback = 0.68 + 0.32 * Math.sin((2 * Math.PI * 0.17 * i) / SR + 0.7);
-    mix[i] = base[i] * waveEnv * 0.62 * washback + surf[i] * surfEnv * 0.38;
+    const wEnv  = Math.min(1, waveEnvBuf[i]);
+    const wBase = 0.24 + 0.76 * wEnv;
+    const wSurf = 0.08 + 0.92 * Math.pow(wEnv, 1.8);
+    mix[i] = base[i] * wBase * 0.62 + surf[i] * wSurf * 0.38;
   }
   return gen(mix, 0.72);
 }
@@ -1107,19 +1211,24 @@ function genWind(): string {
     const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
-  const whistle = whiteNoise();
-  const baseFreqLfo = smoothRandomLfo(320, 1200, 0.8, 2.8);
-  for (let i = 0; i < N; i++) {
-    const env = Math.max(0, Math.sin((2 * Math.PI * 0.11 * i) / SR + 1.2)) ** 2;
-    whistle[i] *= env * 0.16;
-  }
-  bp2(whistle, 540, 3.2);
-  bp2(whistle, 1240, 5.4);
-  for (let i = 0; i < N; i++) {
-    whistle[i] *= 0.75 + 0.25 * Math.sin((2 * Math.PI * baseFreqLfo[i] * i) / (SR * 980));
+  // Multi-strip whistle: 4 narrow bandpass strips that fade in/out independently,
+  // simulating wind tone drifting as air speed and angle change.
+  const whistleStrips = [
+    { fc: 360,  q: 4.0 },
+    { fc: 620,  q: 4.5 },
+    { fc: 960,  q: 4.2 },
+    { fc: 1380, q: 5.0 },
+  ];
+  const whistleMix = new Float32Array(N);
+  for (const s of whistleStrips) {
+    const stripNoise = whiteNoise();
+    bp2(stripNoise, s.fc, s.q);
+    // Each strip has its own slow random fade — creates drifting tone character
+    const stripLfo = smoothRandomLfo(0.0, 1.0, 1.4, 5.5);
+    for (let i = 0; i < N; i++) whistleMix[i] += stripNoise[i] * stripLfo[i] * 0.25;
   }
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.88 + whistle[i] * 0.12;
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.86 + whistleMix[i] * 0.14;
   return gen(mix, 0.68);
 }
 
