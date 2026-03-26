@@ -431,7 +431,7 @@ function genFire(): string {
 
   const body = pinkNoise();
   hp1(body, 100);
-  lp1(body, 1800);
+  lp1(body, 1200);
 
   // Irregular "breathing" — two uncorrelated slow LFOs compound-modulate the flame.
   const breathA = smoothRandomLfo(0.55, 1.0, 2.0, 6.0);
@@ -441,7 +441,7 @@ function genFire(): string {
   // LP at 6000 Hz (not 9000) keeps the sizzle warm rather than sharp white. ──
   const hiss = whiteNoise();
   hp1(hiss, 2000);
-  lp1(hiss, 6000);
+  lp1(hiss, 4500);
 
   // ── 3. Ember sizzle: warm high-freq texture, fading in/out independently.
   // HP lowered to 3500 Hz and LP to 7500 Hz so it blends as a sizzle rather
@@ -554,22 +554,20 @@ function genFire(): string {
   lp1(logShifts, 280);
 
   // ── Mix ──
-  // Roar and body are weighted heavily so the warm low-frequency turbulence
-  // dominates. Hiss/ember/spits are kept small so they add texture without
-  // accumulating into a perceived white-noise floor.
+  // Crackles and pops are the dominant character; roar/body are background texture.
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const breath = breathA[i] * breathB[i]; // compound modulation
     mix[i] =
-      roar[i]       * 0.34 * breathA[i] +
-      body[i]       * 0.32 * breath +
-      hiss[i]       * 0.07 * breath +
-      ember[i]      * 0.03 * emberLfo[i] +
-      whoosh[i]     * 0.06 * breath +
-      crackles[i]   * 0.10 +
-      spits[i]      * 0.04 +
-      pops[i]       * 0.05 +
-      logShifts[i]  * 0.02;
+      roar[i]       * 0.18 * breathA[i] +
+      body[i]       * 0.16 * breath +
+      hiss[i]       * 0.025 * breath +
+      ember[i]      * 0.012 * emberLfo[i] +
+      whoosh[i]     * 0.035 * breath +
+      crackles[i]   * 0.30 +
+      spits[i]      * 0.12 +
+      pops[i]       * 0.14 +
+      logShifts[i]  * 0.04;
   }
   return gen(mix, 0.64);
 }
@@ -581,7 +579,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
-  { id: 'fire',        name: 'Fire',        category: 'Nature', url: genFire() },
+  { id: 'fire',        name: 'Local Fire Department', category: 'Nature', url: genFire() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
