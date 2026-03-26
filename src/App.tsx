@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { version } from '../package.json';
+import SoundBuilder from './components/SoundBuilder';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
@@ -399,6 +400,8 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
             />
           ))}
         </div>
+
+        <SoundBuilder />
 
         <div className="app-footer">
           {activeSounds.length > 0 && (
