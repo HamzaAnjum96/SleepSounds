@@ -57,22 +57,6 @@ function hp1(buf: Float32Array, fc: number): void {
   }
 }
 
-// 2nd-order Butterworth LP (12 dB/oct) — steeper rolloff for transient events
-function lp2(buf: Float32Array, fc: number): void {
-  const w0 = (2 * Math.PI * Math.min(fc, SR * 0.49)) / SR;
-  const cosW = Math.cos(w0);
-  const alpha = Math.sin(w0) / 1.4142; // Q = 1/√2
-  const b0 = (1 - cosW) / 2, b1 = 1 - cosW, b2 = (1 - cosW) / 2;
-  const a0 = 1 + alpha, a1 = -2 * cosW, a2 = 1 - alpha;
-  const nb0 = b0/a0, nb1 = b1/a0, nb2 = b2/a0, na1 = a1/a0, na2 = a2/a0;
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-  for (let i = 0; i < buf.length; i++) {
-    const x0 = buf[i];
-    const y0 = nb0*x0 + nb1*x1 + nb2*x2 - na1*y1 - na2*y2;
-    buf[i] = y0; x2 = x1; x1 = x0; y2 = y1; y1 = y0;
-  }
-}
-
 function bp2(buf: Float32Array, fc: number, q: number): void {
   const w0 = (2 * Math.PI * fc) / SR;
   const alpha = Math.sin(w0) / (2 * Math.max(0.05, q));
