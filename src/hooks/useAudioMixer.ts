@@ -78,8 +78,11 @@ class CrossfadeAudio {
     this._xfadeTimer = setInterval(() => {
       step++;
       const t = Math.min(1, step / LOOP_STEPS);
-      outEl.volume = Math.max(0, startOutVol * (1 - t));
-      inEl.volume  = Math.min(1, targetInVol * t);
+      // Equal-power (sqrt) curves maintain constant perceived loudness across the
+      // crossfade — linear curves create a -3 dB amplitude dip at the midpoint
+      // that is audible as a brief quiet pulse on every loop boundary.
+      outEl.volume = Math.max(0, startOutVol * Math.sqrt(Math.max(0, 1 - t)));
+      inEl.volume  = Math.min(1, targetInVol  * Math.sqrt(t));
 
       if (step >= LOOP_STEPS) {
         clearInterval(this._xfadeTimer!);

@@ -29,8 +29,15 @@ function gen(f32: Float32Array, gain = 0.7): string {
   for (let i = 0; i < f32.length; i++) max = Math.max(max, Math.abs(f32[i]));
   const scale = max > 0 ? (gain * 32767) / max : 32767;
   const i16 = new Int16Array(f32.length);
-  for (let i = 0; i < f32.length; i++)
-    i16[i] = Math.max(-32767, Math.min(32767, f32[i] * scale));
+  for (let i = 0; i < f32.length; i++) {
+    // TPDF dither: sum of two independent uniform[-0.5, +0.5] random values gives a
+    // triangular PDF spanning [-1, +1] with zero mean and variance 1/6.  Adding this
+    // before rounding decorrelates the quantisation error from the signal, trading
+    // signal-correlated distortion (audible "digital" artefacts / buzziness) for
+    // spectrally flat noise that sits below the noise floor.
+    const dither = (Math.random() - 0.5) + (Math.random() - 0.5);
+    i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * scale + dither)));
+  }
   return makeWav(i16, SR);
 }
 
@@ -1149,11 +1156,15 @@ function genRain(): string {
         const f0 = rand(650, 1700);
         const f1 = f0 * rand(0.75, 0.92);
         const bAmp = rand(0.015, 0.055);
+        // Phase accumulator: ph += 2π·f/SR avoids the sin(2π·f(t)·t) "chirp" artefact
+        // where f and t both vary and their product creates an audible laser-sweep tone.
+        let bPh = 0;
         for (let i = 0; i < bLen && pos + i < N; i++) {
           const p = i / Math.max(1, bLen - 1);
           const env = Math.exp(-5.5 * p);
           const f = f0 + (f1 - f0) * p;
-          bubbles[pos + i] += Math.sin(2 * Math.PI * f * (i / SR)) * env * bAmp;
+          bPh += (2 * Math.PI * f) / SR;
+          bubbles[pos + i] += Math.sin(bPh) * env * bAmp;
         }
       }
       pos += Math.floor(SR * rand(0.004, 0.03));
