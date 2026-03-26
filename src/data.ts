@@ -1311,30 +1311,13 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
-  { id: 'thunder',     name: 'Thunder',     category: 'Nature', url: genThunder() },
-  { id: 'stream',      name: 'Stream',      category: 'Nature', url: genStream() },
-  { id: 'waterfall',   name: 'Waterfall',   category: 'Nature', url: genWaterfall() },
-  { id: 'tent-rain',   name: 'Tent Rain',   category: 'Nature', url: genTentRain() },
-  { id: 'tin-roof-rain', name: 'Rain on Tin Roof', category: 'Nature', url: genTinRoofRain() },
-  { id: 'night',       name: 'Night Insects', category: 'Nature', url: genNight() },
-  { id: 'birdsong',    name: 'Birdsong',    category: 'Nature', url: genBirdsong() },
-  { id: 'frogs',       name: 'Frogs',       category: 'Nature', url: genFrogs() },
-  { id: 'underwater',  name: 'Underwater',  category: 'Nature', url: genUnderwater() },
-  { id: 'fireplace',   name: 'Fireplace',   category: 'Cozy',   url: genFireplace() },
-  { id: 'cafe',        name: 'Café',        category: 'Cozy',   url: genCafe() },
-  { id: 'shower',      name: 'Shower',      category: 'Cozy',   url: genShower() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
-  { id: 'space',       name: 'Deep Space',  category: 'Noise',  url: genSpace() },
-  { id: 'heartbeat',   name: 'Heartbeat',   category: 'Noise',  url: genHeartbeat() },
   { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
-  { id: 'airplane',    name: 'Airplane',    category: 'Noise',  url: genAirplane() },
-  { id: 'dryer',       name: 'Dryer',       category: 'Noise',  url: genDryer() },
-  { id: 'train',       name: 'Train',       category: 'Noise',  url: genTrain() },
 ];
 
-export const CATEGORIES = ['All', 'Nature', 'Cozy', 'Noise'] as const;
+export const CATEGORIES = ['All', 'Nature', 'Noise'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v1';
@@ -1349,14 +1332,6 @@ function builtinState(active: Array<[string, number]>): Record<string, SoundStat
 }
 
 export const BUILTIN_PRESETS: Preset[] = [
-  { id: 'builtin-fan-rain',     name: 'Fan & Rain',   createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
-  { id: 'builtin-fan',          name: 'Fan',          createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.8]]) },
-  { id: 'builtin-rain',         name: 'Rain',         createdAt: '', masterVolume: 0.8, state: builtinState([['rain', 0.75]]) },
-  { id: 'builtin-rainy-forest', name: 'Rainy Forest', createdAt: '', masterVolume: 0.8, state: builtinState([['rain', 0.55], ['forest', 0.65], ['thunder', 0.3]]) },
-  { id: 'builtin-ocean-night',  name: 'Ocean Night',  createdAt: '', masterVolume: 0.8, state: builtinState([['ocean', 0.65], ['night', 0.55]]) },
-  { id: 'builtin-cozy-fire',    name: 'Cozy Fire',    createdAt: '', masterVolume: 0.8, state: builtinState([['fireplace', 0.7], ['brown-noise', 0.25]]) },
-  { id: 'builtin-deep-space',   name: 'Deep Space',   createdAt: '', masterVolume: 0.8, state: builtinState([['space', 0.75], ['brown-noise', 0.3]]) },
-  { id: 'builtin-tent-night',   name: 'Tent Night',   createdAt: '', masterVolume: 0.8, state: builtinState([['tent-rain', 0.62], ['wind', 0.26], ['night', 0.20]]) },
-  { id: 'builtin-shower-focus', name: 'Shower Focus', createdAt: '', masterVolume: 0.8, state: builtinState([['shower', 0.68], ['pink-noise', 0.24]]) },
-  { id: 'builtin-heart-rest',   name: 'Heart Rest',   createdAt: '', masterVolume: 0.8, state: builtinState([['heartbeat', 0.62], ['brown-noise', 0.22]]) },
+  { id: 'builtin-fan-rain',      name: 'Fan & Rain',    createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
+  { id: 'builtin-windy-forest',  name: 'Windy Forest',  createdAt: '', masterVolume: 0.8, state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
 ];
