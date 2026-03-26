@@ -87,3 +87,13 @@ npm run preview
 
 - All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime (mono 16-bit PCM).
 - No backend is required.
+
+## Changelog
+
+### 0.1.8
+- Rewrote `genFire` with a 9-layer architecture: deep brown roar, pink body, flame hiss, ember sizzle, air whoosh, clustered crackle bursts with resin pings, spit crackles, pops, and log-shift rumble events
+- Fixed fire sounding like white noise — lowered hiss/ember filter cutoffs, boosted roar/body weights, reduced continuous high-freq layer contributions
+- Bumped `PRESET_STORAGE_KEY` to `v2`
+
+### 0.1.7
+- Initial WAV generation implementation
