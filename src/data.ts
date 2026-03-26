@@ -421,35 +421,152 @@ function genWind(): string {
 }
 
 function genFire(): string {
-  // Fire fallback loop: warm low roar + airy hiss + sparse crackle bursts.
+  // Fire: deep turbulent roar + flame body + hiss + ember + whoosh +
+  //       crackle bursts + spit crackles + pops + log shifts
+
+  // ── 1. Deep roar body: brown rumble + pink mid-roar, independently modulated ──
+  const roar = brownNoise();
+  hp1(roar, 40);
+  lp1(roar, 600);
+
   const body = pinkNoise();
-  hp1(body, 120);
-  lp1(body, 1600);
+  hp1(body, 100);
+  lp1(body, 1800);
 
+  // Irregular "breathing" — two uncorrelated slow LFOs compound-modulate the flame.
+  const breathA = smoothRandomLfo(0.55, 1.0, 2.0, 6.0);
+  const breathB = smoothRandomLfo(0.60, 1.0, 1.5, 4.5);
+
+  // ── 2. Flame hiss: high-pass sizzle that rises with flame intensity ──
   const hiss = whiteNoise();
-  hp1(hiss, 1700);
-  lp1(hiss, 7800);
+  hp1(hiss, 2000);
+  lp1(hiss, 9000);
 
+  // ── 3. Ember sizzle: very high, quiet, fading in/out independently ──
+  const ember = whiteNoise();
+  hp1(ember, 4500);
+  lp1(ember, 12000);
+  const emberLfo = smoothRandomLfo(0.0, 1.0, 2.0, 7.0);
+
+  // ── 4. Whoosh: mid-freq air-rush that swells with each breath peak.
+  // When the flame flares, air is drawn in and creates a soft roaring rush
+  // in the 300–1200 Hz band — distinct from the tonal body and high hiss.
+  const whoosh = pinkNoise();
+  hp1(whoosh, 320);
+  lp1(whoosh, 1200);
+  lp1(whoosh, 900); // double-pole for steeper roll-off above 1 kHz
+
+  // ── 5. Clustered crackle bursts ──
   const crackles = new Float32Array(N);
-  let pos = Math.floor(SR * 0.1);
+  let pos = Math.floor(SR * 0.15);
   while (pos < N) {
-    const len = Math.floor(SR * rand(0.0025, 0.012));
-    const amp = rand(0.06, 0.22);
-    for (let i = 0; i < len && pos + i < N; i++) {
-      const env = Math.exp(-8 * (i / Math.max(1, len)));
-      crackles[pos + i] += (Math.random() * 2 - 1) * env * amp;
+    const burstDur = Math.floor(SR * rand(0.05, 0.30));
+    const burstEnd = Math.min(N, pos + burstDur);
+    const burstIntensity = rand(0.08, 0.28);
+    let cPos = pos;
+    while (cPos < burstEnd) {
+      const len = Math.floor(SR * rand(0.001, 0.008));
+      const amp = burstIntensity * rand(0.3, 1.0);
+      for (let i = 0; i < len && cPos + i < N; i++) {
+        const env = Math.exp(-12 * (i / Math.max(1, len)));
+        crackles[cPos + i] += (Math.random() * 2 - 1) * amp * env;
+      }
+      // Resin ping: ~30% of crackles get a brief tonal ring (wood-fiber snap).
+      // 180–520 Hz matches the resonant range of burning wood and dry bark.
+      if (chance(0.30)) {
+        const pingF   = rand(180, 520);
+        const pingLen = Math.floor(SR * rand(0.004, 0.014));
+        const pingAmp = amp * rand(0.20, 0.40);
+        let ph = 0;
+        for (let i = 0; i < pingLen && cPos + i < N; i++) {
+          ph += (2 * Math.PI * pingF) / SR;
+          crackles[cPos + i] += Math.sin(ph)
+            * Math.exp(-9 * (i / Math.max(1, pingLen))) * pingAmp;
+        }
+      }
+      cPos += Math.floor(SR * rand(0.003, 0.04));
     }
-    pos += Math.floor(SR * rand(0.04, 0.4));
+    pos = burstEnd + Math.floor(SR * rand(0.3, 1.8));
   }
-  hp1(crackles, 900);
-  lp1(crackles, 5600);
+  hp1(crackles, 800);
+  lp1(crackles, 7000);
 
+  // ── 6. Spit crackles: sparse individual snaps scattered between bursts.
+  // Fire never fully stops crackling — these fill the gaps between burst clusters
+  // so the texture remains alive even during quiet moments.
+  const spits = new Float32Array(N);
+  let spitPos = Math.floor(SR * rand(0.1, 0.4));
+  while (spitPos < N) {
+    const len = Math.floor(SR * rand(0.0008, 0.004));
+    const amp = rand(0.04, 0.18);
+    for (let i = 0; i < len && spitPos + i < N; i++) {
+      spits[spitPos + i] += (Math.random() * 2 - 1)
+        * amp * Math.exp(-15 * (i / Math.max(1, len)));
+    }
+    spitPos += Math.floor(SR * rand(0.08, 0.6));
+  }
+  hp1(spits, 1200);
+  lp1(spits, 8000);
+
+  // ── 7. Pops: infrequent, louder, low-frequency thuds ──
+  const pops = new Float32Array(N);
+  let popPos = Math.floor(SR * rand(1.0, 3.0));
+  while (popPos < N) {
+    const len = Math.floor(SR * rand(0.008, 0.025));
+    const amp = rand(0.15, 0.40);
+    const f0 = rand(80, 250);
+    let ph = 0;
+    for (let i = 0; i < len && popPos + i < N; i++) {
+      const env = Math.exp(-6 * (i / Math.max(1, len)));
+      ph += (2 * Math.PI * f0) / SR;
+      pops[popPos + i] += (Math.sin(ph) * 0.6 + (Math.random() * 2 - 1) * 0.4)
+                          * env * amp;
+    }
+    popPos += Math.floor(SR * rand(1.5, 6.0));
+  }
+  // 2400 Hz ceiling keeps pop presence without sounding tinny
+  lp1(pops, 2400);
+
+  // ── 8. Log shifts: 3–6 deep low-frequency rumble events per loop.
+  // Occasional settling of logs — single slow-attack impulses in the 40–90 Hz
+  // range, much lower and longer than pops, giving the fire physical weight.
+  const logShifts = new Float32Array(N);
+  const numShifts = Math.floor(rand(3, 7));
+  for (let k = 0; k < numShifts; k++) {
+    const shiftPos = Math.floor(rand(SR * 1.0, N - SR * 2.0));
+    const len      = Math.floor(SR * rand(0.15, 0.50));
+    const amp      = rand(0.12, 0.35);
+    const f0       = rand(40, 90);
+    let ph = 0;
+    for (let i = 0; i < len && shiftPos + i < N; i++) {
+      const p   = i / len;
+      // Slow attack, long tail — sounds like a log settling rather than a pop
+      const env = Math.pow(p < 0.1 ? p / 0.1 : (1 - p) / 0.9, 0.6);
+      ph += (2 * Math.PI * f0) / SR;
+      logShifts[shiftPos + i] +=
+        (Math.sin(ph) * 0.5 + (Math.random() * 2 - 1) * 0.5) * env * amp;
+    }
+  }
+  hp1(logShifts, 25);
+  lp1(logShifts, 280);
+
+  // ── Mix ──
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const swell = 0.84 + 0.16 * Math.sin((2 * Math.PI * 0.08 * i) / SR + 0.5);
-    mix[i] = body[i] * 0.8 * swell + hiss[i] * 0.18 + crackles[i] * 0.2;
+    const breath   = breathA[i] * breathB[i]; // compound modulation
+    const breathSq = breath * breath;           // hiss/whoosh rise steeply with flame
+    mix[i] =
+      roar[i]       * 0.26 * breathA[i] +
+      body[i]       * 0.28 * breath +
+      hiss[i]       * 0.10 * breathSq +
+      ember[i]      * 0.05 * emberLfo[i] +
+      whoosh[i]     * 0.08 * breath +
+      crackles[i]   * 0.10 +
+      spits[i]      * 0.06 +
+      pops[i]       * 0.05 +
+      logShifts[i]  * 0.02;
   }
-  return gen(mix, 0.62);
+  return gen(mix, 0.64);
 }
 
 // ── Sound library ──────────────────────────────────────────────────────────
