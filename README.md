@@ -1,5 +1,10 @@
 # Sleep Mixer
 
+> **For anyone making changes (human or AI):**
+> - Bump the version in `package.json` with every change.
+> - Add an entry to the `## Changelog` section at the bottom of this file describing what changed and why.
+> - If sound generation changes significantly, bump `PRESET_STORAGE_KEY` in `src/data.ts` (e.g. `v2` → `v3`).
+
 Sleep Mixer is a mobile-first ambient sound blending web app designed for relaxation and better sleep.
 
 ## Features
