@@ -218,9 +218,22 @@ function genForest(): string {
 }
 
 function genWhite(): string {
-  const buf = whiteNoise();
-  for (let i = 0; i < N; i++) buf[i] *= 0.5;
-  return gen(buf, 0.65);
+  // Softer white noise: band-limited and gently animated to reduce hiss fatigue.
+  const body = whiteNoise();
+  hp1(body, 90);
+  lp1(body, 8600);
+
+  const air = whiteNoise();
+  hp1(air, 2400);
+  lp1(air, 10800);
+
+  const drift = smoothRandomLfo(0.9, 1.1, 1.2, 3.8);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const shimmer = 0.86 + 0.14 * Math.sin((2 * Math.PI * 0.065 * i) / SR);
+    mix[i] = body[i] * 0.84 * drift[i] + air[i] * 0.16 * shimmer;
+  }
+  return gen(mix, 0.62);
 }
 
 function genBrown(): string {
@@ -258,8 +271,24 @@ function genFan(): string {
 }
 
 function genPink(): string {
-  const buf = pinkNoise();
-  return gen(buf, 0.65);
+  // Smoother pink profile: trim subsonic rumble + tame top edge + add warm bed.
+  const pink = pinkNoise();
+  hp1(pink, 38);
+  lp1(pink, 6200);
+
+  const warmth = brownNoise();
+  hp1(warmth, 24);
+  lp1(warmth, 420);
+
+  const texture = whiteNoise();
+  bp2(texture, 2200, 0.9);
+  lp1(texture, 4200);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = pink[i] * 0.82 + warmth[i] * 0.13 + texture[i] * 0.05;
+  }
+  return gen(mix, 0.64);
 }
 
 function genRain(): string {
