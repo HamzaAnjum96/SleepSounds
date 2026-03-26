@@ -515,30 +515,29 @@ function genBirdsong(): string {
   // Activity LFO: creates genuine quiet periods of 10–20s
   const activityLfo = smoothRandomLfo(0.0, 1.0, 8.0, 20.0);
 
-  // Render one note — FM synthesis so calls sound breathy/chaotic, not organ-like.
-  // The frequency modulator adds harmonic jitter; a loud breath burst at onset
-  // simulates syrinx turbulence at the start of each note.
+  // Render one note — phase accumulator so gliding pitch stays clean.
+  // sin(2π·f(t)·t) is WRONG for a glide: as t grows the phase term f(t)·t
+  // creates a chirp artefact that sounds like R2-D2. ph += 2π·f/SR is correct.
+  // Waveshaper (tanh) adds warm odd harmonics without FM robotic artefacts.
   function renderNote(pos: number, f0: number, f1: number, len: number, amp: number): void {
-    const modRatio = rand(1.9, 2.6);        // FM modulator ratio — narrower range, less R2-D2
-    const modIdx   = rand(0.12, 0.42);      // FM index — subtle jitter only, not laser-sweep
-    const vibRate  = rand(5, 11);
-    const vibDepth = rand(0.004, 0.014);
-    const phase    = rand(0, Math.PI * 2);
-    const breathAmt = rand(0.18, 0.34);     // breathiness — present but not overwhelming
-    const riseN    = Math.max(2, Math.floor(SR * 0.003)); // 3 ms onset rise
+    const vibRate   = rand(5, 10);
+    const vibDepth  = rand(0.003, 0.010);
+    const drive     = rand(1.3, 2.4);
+    const invTanh   = 1 / Math.tanh(drive);
+    const breathAmt = rand(0.14, 0.24);
+    const riseN     = Math.max(2, Math.floor(SR * 0.003));
+    let ph = rand(0, Math.PI * 2);
     for (let i = 0; i < len && pos + i < N; i++) {
       const t = i / SR;
       const p = i / len;
       const riseGain = Math.min(1, i / riseN);
       const env = (Math.sin(p * Math.PI) ** 0.80) * riseGain;
       const glide = f0 + (f1 - f0) * p;
-      const f = glide * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t + phase));
-      // FM: carrier modulated by modRatio*f — creates inharmonic partials
-      const mod = modIdx * Math.sin(2 * Math.PI * f * modRatio * t);
-      const tonal = Math.sin(2 * Math.PI * f * t + mod + phase);
-      // Breath: strongest at attack, trails away
-      const breath = (Math.random() * 2 - 1) * breathAmt * Math.exp(-5 * p);
-      buf[pos + i] += env * amp * ((1 - breathAmt * 0.45) * tonal + breath);
+      const f = glide * (1 + vibDepth * Math.sin(2 * Math.PI * vibRate * t));
+      ph += (2 * Math.PI * f) / SR;
+      const tonal = Math.tanh(drive * Math.sin(ph)) * invTanh;
+      const breath = (Math.random() * 2 - 1) * breathAmt * Math.exp(-4 * p);
+      buf[pos + i] += env * amp * ((1 - breathAmt) * tonal + breath);
     }
   }
 
@@ -840,30 +839,37 @@ function genFrogs(): string {
         const len = Math.floor(SR * rand(0.04, 0.14));
         const pulseGap = Math.floor(SR * rand(0.022, 0.065));
         const freq = baseFreq * rand(0.93, 1.07);
-        const pitchDropAmt = rand(0.04, 0.14); // less sweep = less laser
-        // Membrane flutter AM: gentle 18–40 Hz buzz, not laser-sweep
-        const flutterRate  = rand(18, 40);
-        const flutterDepth = rand(0.12, 0.26);
-        const riseN = Math.max(2, Math.floor(SR * 0.002)); // 2ms onset rise
+        // Phase accumulators: sin(2π·freq·t) is WRONG when freq changes —
+        // the product freq·t creates a chirp/laser sweep. Integrate instead.
+        const pitchDropAmt = rand(0.03, 0.10);
+        const flutterRate  = rand(18, 38);
+        const flutterDepth = rand(0.10, 0.22);
+        const riseN = Math.max(2, Math.floor(SR * 0.002));
+        const decayAmt = rand(0.28, 0.65);
+        const envShape = rand(1.3, 2.0);
+        let phTone = rand(0, Math.PI * 2);
+        let phSac  = rand(0, Math.PI * 2);
+        let ph2h   = rand(0, Math.PI * 2);
+        let phSub  = rand(0, Math.PI * 2);
         for (let i = 0; i < len && eventPos + i < N; i++) {
           const t = i / SR;
           const frac = i / len;
           const riseGain = Math.min(1, i / riseN);
-          const envShape = rand(1.3, 2.0);
           const env = (Math.sin(frac * Math.PI) ** envShape)
-                    * Math.exp(-rand(0.28, 0.65) * frac)
+                    * Math.exp(-decayAmt * frac)
                     * activity * riseGain;
-          const pitchDrop = 1 - pitchDropAmt * frac;
-          const tone = freq * pitchDrop;
-          const sac  = freq * sacRatio * pitchDrop;
-          // Membrane flutter gate — the buzzy rattling character
+          const pitchNow = freq * (1 - pitchDropAmt * frac);
+          phTone += (2 * Math.PI * pitchNow) / SR;
+          phSac  += (2 * Math.PI * pitchNow * sacRatio) / SR;
+          ph2h   += (2 * Math.PI * pitchNow * 2.0) / SR;
+          phSub  += (2 * Math.PI * pitchNow * 0.5) / SR;
           const flutter = 1 - flutterDepth + flutterDepth * Math.abs(Math.sin(2 * Math.PI * flutterRate * t));
           const onsetNoise = (Math.random() * 2 - 1) * sp.nz * 1.2 * Math.exp(-8 * frac);
           croaks[eventPos + i] += (
-            0.52 * Math.sin(2 * Math.PI * tone * t) * flutter +
-            0.20 * Math.sin(2 * Math.PI * sac  * t + 0.4) +
-            0.12 * Math.sin(2 * Math.PI * tone * 2.0 * t + 0.65) * flutter +
-            sp.sub * Math.sin(2 * Math.PI * tone * 0.5 * t + 0.2) +
+            0.52 * Math.sin(phTone) * flutter +
+            0.20 * Math.sin(phSac  + 0.4) +
+            0.12 * Math.sin(ph2h   + 0.65) * flutter +
+            sp.sub * Math.sin(phSub + 0.2) +
             onsetNoise
           ) * env * sp.amp;
         }
