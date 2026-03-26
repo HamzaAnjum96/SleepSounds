@@ -579,7 +579,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
-  { id: 'fire',        name: 'Local Fire Department', category: 'Nature', url: genFire() },
+  { id: 'fire',        name: 'Fire',        category: 'Nature', url: genFire() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
