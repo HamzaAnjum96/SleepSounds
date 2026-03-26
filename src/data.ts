@@ -147,13 +147,6 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function randn(): number {
-  // Box–Muller transform
-  const u1 = Math.max(1e-12, Math.random());
-  const u2 = Math.random();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
 function chance(p: number): boolean {
   return Math.random() < p;
 }
@@ -427,97 +420,6 @@ function genWind(): string {
   return gen(mix, 0.68);
 }
 
-function genFire(): string {
-  // Fire = dark turbulent bed + bright hiss + stochastic crackles + rarer pops + ember ticks
-  const intensity = smoothRandomLfo(0.62, 1.0, 0.5, 2.3);
-
-  const body = whiteNoise();
-  lp1(body, 950);
-  hp1(body, 75);
-  const bodyMotion = smoothRandomLfo(0.68, 1.0, 0.25, 1.2);
-  for (let i = 0; i < N; i++) body[i] *= bodyMotion[i] * (0.74 + 0.26 * intensity[i]);
-
-  const hiss = whiteNoise();
-  hp1(hiss, 1600);
-  lp1(hiss, 7000);
-  const hissMotion = smoothRandomLfo(0.2, 1.0, 0.03, 0.14);
-  for (let i = 0; i < N; i++) hiss[i] *= hissMotion[i] * (0.52 + 0.48 * intensity[i]);
-
-  const crackles = new Float32Array(N);
-  let cPos = 0;
-  while (cPos < N) {
-    const rateHz = 6.5 + 24 * Math.pow(intensity[Math.min(cPos, N - 1)], 1.85);
-    const gap = -Math.log(1 - Math.random()) / rateHz;
-    cPos += Math.max(1, Math.floor(gap * SR));
-    if (cPos >= N) break;
-    const refractory = Math.floor(SR * rand(0.004, 0.028));
-    const len = Math.floor(SR * rand(0.004, 0.02));
-    const amp = 0.028 * Math.exp(0.85 * randn());
-    const burst = new Float32Array(len);
-    for (let i = 0; i < len; i++) {
-      const env = Math.exp(-7.5 * (i / len));
-      burst[i] = (Math.random() * 2 - 1) * env * amp;
-    }
-    bp2(burst, rand(1300, 5400), rand(1.1, 4.8));
-    for (let i = 0; i < len && cPos + i < N; i++) crackles[cPos + i] += burst[i];
-    cPos += refractory;
-  }
-
-  const pops = new Float32Array(N);
-  let pPos = 0;
-  while (pPos < N) {
-    const rateHz = 0.42 + 2.1 * Math.pow(intensity[Math.min(pPos, N - 1)], 2.0);
-    const gap = -Math.log(1 - Math.random()) / rateHz;
-    pPos += Math.max(1, Math.floor(gap * SR));
-    if (pPos >= N) break;
-    const len = Math.floor(SR * rand(0.03, 0.12));
-    const amp = 0.052 * Math.exp(0.45 * randn());
-    const f0 = rand(180, 520);
-    const beta = rand(0.12, 0.42);
-    const tau = rand(4.8, 9.2);
-    const phase = rand(0, Math.PI * 2);
-    for (let i = 0; i < len && pPos + i < N; i++) {
-      const t = i / SR;
-      const e = Math.exp(-tau * (i / len));
-      const f = f0 * (1 - beta * (i / len));
-      const tone = Math.sin(2 * Math.PI * f * t + phase);
-      const noisy = tone * 0.7 + (Math.random() * 2 - 1) * 0.3;
-      pops[pPos + i] += noisy * e * amp;
-    }
-  }
-  bp2(pops, 360, 1.5);
-
-  const embers = new Float32Array(N);
-  let ePos = 0;
-  while (ePos < N) {
-    const rateHz = 10 + 26 * intensity[Math.min(ePos, N - 1)];
-    const gap = -Math.log(1 - Math.random()) / rateHz;
-    ePos += Math.max(1, Math.floor(gap * SR));
-    if (ePos >= N) break;
-    const len = Math.floor(SR * rand(0.0012, 0.0045));
-    const amp = rand(0.002, 0.013);
-    for (let i = 0; i < len && ePos + i < N; i++) {
-      embers[ePos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
-    }
-  }
-  hp1(embers, 2600);
-
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const swell = 0.72 + 0.28 * intensity[i];
-    mix[i] =
-      body[i] * 0.78 * swell +
-      hiss[i] * 0.28 * (0.6 + 0.4 * intensity[i]) +
-      crackles[i] * 0.95 +
-      pops[i] * 0.82 +
-      embers[i] * 0.85;
-  }
-
-  lp1(mix, 6400);
-  hp1(mix, 45);
-  return gen(mix, 0.68);
-}
-
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -525,7 +427,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
-  { id: 'fire',        name: 'Fire',        category: 'Nature', url: genFire() },
+  { id: 'fire',        name: 'Fire',        category: 'Nature', url: '' },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },

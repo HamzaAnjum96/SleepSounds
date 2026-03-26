@@ -9,24 +9,27 @@ const createInitialState = (sounds: Sound[]) =>
     return acc;
   }, {});
 
-// ── Toggle fade constants ───────────────────────────────────────────────────
-
 const FADE_MS = 700;
 const FADE_STEPS = 28;
 
-// ── CrossfadeAudio — dual-element seamless loop with crossfade ──────────────
-// Uses two HTMLAudioElements and swaps them at the loop point with a smooth
-// overlap so the hard cut at the end of each loop is never heard.
+const LOOP_XFADE_MS = 1400;
+const LOOP_XFADE_S = LOOP_XFADE_MS / 1000;
+const LOOP_STEPS = 40;
 
-const LOOP_XFADE_MS = 1400; // crossfade duration at loop boundary
-const LOOP_XFADE_S  = LOOP_XFADE_MS / 1000;
-const LOOP_STEPS    = 40;
+interface MixerSource {
+  volume: number;
+  readonly paused: boolean;
+  play(): Promise<void>;
+  pause(): void;
+  stop(): void;
+  destroy(): void;
+}
 
-class CrossfadeAudio {
+class CrossfadeAudio implements MixerSource {
   private _url: string;
   private _els: [HTMLAudioElement, HTMLAudioElement];
-  private _cur = 0;        // index of currently playing element
-  private _targetVol = 0;  // logical volume (0-1), pre-master
+  private _cur = 0;
+  private _targetVol = 0;
   private _xfading = false;
   private _xfadeTimer: ReturnType<typeof setInterval> | null = null;
   private _timeupdateA: () => void;
@@ -47,18 +50,19 @@ class CrossfadeAudio {
     return el;
   }
 
-  private get _primary()   { return this._els[this._cur]; }
-  private get _secondary() { return this._els[1 - this._cur]; }
+  private get _primary() {
+    return this._els[this._cur];
+  }
+  private get _secondary() {
+    return this._els[1 - this._cur];
+  }
 
   private _check(idx: number) {
-    // Only the playing element triggers crossfade
     if (idx !== this._cur || this._xfading) return;
     const el = this._els[idx];
     if (el.paused || !isFinite(el.duration) || el.duration <= 0) return;
     const timeLeft = el.duration - el.currentTime;
-    if (timeLeft <= LOOP_XFADE_S) {
-      this._startXfade();
-    }
+    if (timeLeft <= LOOP_XFADE_S) this._startXfade();
   }
 
   private _startXfade() {
@@ -66,10 +70,10 @@ class CrossfadeAudio {
     this._xfading = true;
 
     const outEl = this._primary;
-    const inEl  = this._secondary;
+    const inEl = this._secondary;
     inEl.currentTime = 0;
     inEl.volume = 0;
-    inEl.play().catch(() => {});
+    void inEl.play();
 
     const startOutVol = outEl.volume;
     const targetInVol = this._targetVol;
@@ -78,11 +82,8 @@ class CrossfadeAudio {
     this._xfadeTimer = setInterval(() => {
       step++;
       const t = Math.min(1, step / LOOP_STEPS);
-      // Equal-power (sqrt) curves maintain constant perceived loudness across the
-      // crossfade — linear curves create a -3 dB amplitude dip at the midpoint
-      // that is audible as a brief quiet pulse on every loop boundary.
       outEl.volume = Math.max(0, startOutVol * Math.sqrt(Math.max(0, 1 - t)));
-      inEl.volume  = Math.min(1, targetInVol  * Math.sqrt(t));
+      inEl.volume = Math.min(1, targetInVol * Math.sqrt(t));
 
       if (step >= LOOP_STEPS) {
         clearInterval(this._xfadeTimer!);
@@ -103,20 +104,22 @@ class CrossfadeAudio {
     this._xfading = false;
   }
 
-  // ── Public interface ────────────────────────────────────────────────────
+  get volume() {
+    return this._targetVol;
+  }
 
-  get volume()         { return this._targetVol; }
   set volume(v: number) {
     this._targetVol = v;
     if (!this._xfading) this._primary.volume = v;
-    // During xfade the timer manages volumes; let it finish
   }
 
-  get paused() { return this._primary.paused; }
+  get paused() {
+    return this._primary.paused;
+  }
 
   async play() {
     this._primary.volume = this._targetVol;
-    return this._primary.play();
+    await this._primary.play();
   }
 
   pause() {
@@ -127,7 +130,10 @@ class CrossfadeAudio {
 
   stop() {
     this._clearXfade();
-    this._els.forEach((el) => { el.pause(); el.currentTime = 0; });
+    this._els.forEach((el) => {
+      el.pause();
+      el.currentTime = 0;
+    });
     this._cur = 0;
   }
 
@@ -135,11 +141,114 @@ class CrossfadeAudio {
     this._clearXfade();
     this._els[0].removeEventListener('timeupdate', this._timeupdateA);
     this._els[1].removeEventListener('timeupdate', this._timeupdateB);
-    this._els.forEach((el) => { el.pause(); (el as HTMLAudioElement & { src: string }).src = ''; });
+    this._els.forEach((el) => {
+      el.pause();
+      (el as HTMLAudioElement & { src: string }).src = '';
+    });
   }
 }
 
-// ── Hook ────────────────────────────────────────────────────────────────────
+class FireWorkletSource implements MixerSource {
+  private static ctx: AudioContext | null = null;
+  private static modulePromise: Promise<void> | null = null;
+
+  private gainNode: GainNode | null = null;
+  private outNode: GainNode | null = null;
+  private node: AudioWorkletNode | null = null;
+  private _volume = 0;
+  private started = false;
+  private playing = false;
+
+  private static getContext() {
+    if (!this.ctx) this.ctx = new AudioContext();
+    return this.ctx;
+  }
+
+  private async ensureNode() {
+    const ctx = FireWorkletSource.getContext();
+    if (!FireWorkletSource.modulePromise) {
+      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+    }
+    await FireWorkletSource.modulePromise;
+
+    if (this.node) return;
+
+    this.node = new AudioWorkletNode(ctx, 'fire-synth', {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      parameterData: {
+        intensity: 0.62,
+        dryness: 0.55,
+        wind: 0.22,
+        size: 0.45,
+        distance: 0.2,
+        crackleBias: 0.5,
+        running: 0,
+      },
+    });
+
+    this.gainNode = new GainNode(ctx, { gain: 0 });
+    this.outNode = new GainNode(ctx, { gain: 0.95 });
+
+    this.node.connect(this.gainNode);
+    this.gainNode.connect(this.outNode);
+    this.outNode.connect(ctx.destination);
+  }
+
+  get volume() {
+    return this._volume;
+  }
+
+  set volume(v: number) {
+    this._volume = v;
+    if (!this.gainNode) return;
+    const ctx = FireWorkletSource.getContext();
+    this.gainNode.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
+  }
+
+  get paused() {
+    return !this.playing;
+  }
+
+  async play() {
+    await this.ensureNode();
+    const ctx = FireWorkletSource.getContext();
+    await ctx.resume();
+    this.started = true;
+    this.playing = true;
+    this.node?.parameters.get('running')?.setTargetAtTime(1, ctx.currentTime, 0.01);
+    this.gainNode?.gain.setTargetAtTime(this._volume, ctx.currentTime, 0.05);
+  }
+
+  pause() {
+    if (!this.started) return;
+    const ctx = FireWorkletSource.getContext();
+    this.playing = false;
+    this.node?.parameters.get('running')?.setTargetAtTime(0, ctx.currentTime, 0.02);
+    this.gainNode?.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+  }
+
+  stop() {
+    this.pause();
+  }
+
+  destroy() {
+    this.pause();
+    this.node?.disconnect();
+    this.gainNode?.disconnect();
+    this.outNode?.disconnect();
+    this.node = null;
+    this.gainNode = null;
+    this.outNode = null;
+    this.started = false;
+  }
+}
+
+const makeSource = (sound: Sound): MixerSource => {
+  if (sound.id === 'fire') return new FireWorkletSource();
+  return new CrossfadeAudio(sound.url);
+};
 
 export const useAudioMixer = (sounds: Sound[]) => {
   const [soundState, setSoundState] = useState<Record<string, SoundState>>(() => createInitialState(sounds));
@@ -150,24 +259,26 @@ export const useAudioMixer = (sounds: Sound[]) => {
     }, {}),
   );
   const [masterVolume, setMasterVolume] = useState(0.8);
-  const audioMapRef    = useRef<Record<string, CrossfadeAudio>>({});
-  const fadeTimersRef  = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+  const audioMapRef = useRef<Record<string, MixerSource>>({});
+  const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   useEffect(() => {
-    const map: Record<string, CrossfadeAudio> = {};
+    const map: Record<string, MixerSource> = {};
     sounds.forEach((sound) => {
-      const cfa = new CrossfadeAudio(sound.url);
-      audioMapRef.current[sound.id] = cfa;
-      map[sound.id] = cfa;
+      const source = makeSource(sound);
+      audioMapRef.current[sound.id] = source;
+      map[sound.id] = source;
     });
-    return () => { Object.values(map).forEach((cfa) => cfa.destroy()); };
+    return () => {
+      Object.values(map).forEach((source) => source.destroy());
+    };
   }, [sounds]);
 
   const applyVolume = useCallback(
     (soundId: string, volume: number) => {
-      const cfa = audioMapRef.current[soundId];
-      if (!cfa) return;
-      cfa.volume = Math.min(1, Math.max(0, volume * masterVolume));
+      const source = audioMapRef.current[soundId];
+      if (!source) return;
+      source.volume = Math.min(1, Math.max(0, volume * masterVolume));
     },
     [masterVolume],
   );
@@ -185,33 +296,38 @@ export const useAudioMixer = (sounds: Sound[]) => {
     }
   }, []);
 
-  // ── Toggle fade helpers ─────────────────────────────────────────────────
+  const doFadeIn = useCallback(
+    (soundId: string, targetVol: number) => {
+      const source = audioMapRef.current[soundId];
+      if (!source) return;
+      source.volume = 0;
+      let step = 0;
+      fadeTimersRef.current[soundId] = setInterval(() => {
+        step++;
+        source.volume = Math.min(1, (step / FADE_STEPS) * targetVol);
+        if (step >= FADE_STEPS) clearFade(soundId);
+      }, FADE_MS / FADE_STEPS);
+    },
+    [clearFade],
+  );
 
-  const doFadeIn = useCallback((soundId: string, targetVol: number) => {
-    const cfa = audioMapRef.current[soundId];
-    if (!cfa) return;
-    cfa.volume = 0;
-    let step = 0;
-    fadeTimersRef.current[soundId] = setInterval(() => {
-      step++;
-      cfa.volume = Math.min(1, (step / FADE_STEPS) * targetVol);
-      if (step >= FADE_STEPS) clearFade(soundId);
-    }, FADE_MS / FADE_STEPS);
-  }, [clearFade]);
-
-  const doFadeOut = useCallback((soundId: string, onDone: () => void) => {
-    const cfa = audioMapRef.current[soundId];
-    if (!cfa) return;
-    const start = cfa.volume;
-    let step = 0;
-    fadeTimersRef.current[soundId] = setInterval(() => {
-      step++;
-      cfa.volume = Math.max(0, start * (1 - step / FADE_STEPS));
-      if (step >= FADE_STEPS) { clearFade(soundId); onDone(); }
-    }, FADE_MS / FADE_STEPS);
-  }, [clearFade]);
-
-  // ── Public actions ──────────────────────────────────────────────────────
+  const doFadeOut = useCallback(
+    (soundId: string, onDone: () => void) => {
+      const source = audioMapRef.current[soundId];
+      if (!source) return;
+      const start = source.volume;
+      let step = 0;
+      fadeTimersRef.current[soundId] = setInterval(() => {
+        step++;
+        source.volume = Math.max(0, start * (1 - step / FADE_STEPS));
+        if (step >= FADE_STEPS) {
+          clearFade(soundId);
+          onDone();
+        }
+      }, FADE_MS / FADE_STEPS);
+    },
+    [clearFade],
+  );
 
   const toggleSound = useCallback(
     async (soundId: string) => {
@@ -221,16 +337,16 @@ export const useAudioMixer = (sounds: Sound[]) => {
         [soundId]: { ...prev[soundId], enabled: nextEnabled },
       }));
 
-      const cfa = audioMapRef.current[soundId];
-      if (!cfa) return;
+      const source = audioMapRef.current[soundId];
+      if (!source) return;
 
       if (nextEnabled) {
         clearFade(soundId);
         const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume));
         try {
           setLoadingState((prev) => ({ ...prev, [soundId]: true }));
-          cfa.volume = 0;
-          await cfa.play();
+          source.volume = 0;
+          await source.play();
           doFadeIn(soundId, targetVol);
         } catch {
           setSoundState((prev) => ({
@@ -243,7 +359,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
       } else {
         clearFade(soundId);
         setLoadingState((prev) => ({ ...prev, [soundId]: false }));
-        doFadeOut(soundId, () => cfa.stop());
+        doFadeOut(soundId, () => source.stop());
       }
     },
     [clearFade, doFadeIn, doFadeOut, masterVolume, soundState],
@@ -262,7 +378,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
   const pauseAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
-    Object.values(audioMapRef.current).forEach((cfa) => cfa.pause());
+    Object.values(audioMapRef.current).forEach((source) => source.pause());
     setLoadingState((prev) => {
       const next: Record<string, boolean> = {};
       for (const key of Object.keys(prev)) next[key] = false;
@@ -273,14 +389,14 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const playAllActive = useCallback(async () => {
     for (const [soundId, state] of Object.entries(soundState)) {
       if (!state.enabled) continue;
-      const cfa = audioMapRef.current[soundId];
-      if (!cfa) continue;
+      const source = audioMapRef.current[soundId];
+      if (!source) continue;
       clearFade(soundId);
       setLoadingState((prev) => ({ ...prev, [soundId]: true }));
       const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume));
-      cfa.volume = 0;
+      source.volume = 0;
       try {
-        await cfa.play();
+        await source.play();
         doFadeIn(soundId, targetVol);
       } catch {
         // ignore transient autoplay failures
@@ -292,14 +408,15 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
   const stopAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
-    Object.values(audioMapRef.current).forEach((cfa) => cfa.stop());
-    // Single state update instead of one per active sound — avoids batching jank
+    Object.values(audioMapRef.current).forEach((source) => source.stop());
     setSoundState((prev) => {
       const next: Record<string, SoundState> = {};
       let changed = false;
       for (const [id, s] of Object.entries(prev)) {
-        if (s.enabled) { next[id] = { ...s, enabled: false }; changed = true; }
-        else next[id] = s;
+        if (s.enabled) {
+          next[id] = { ...s, enabled: false };
+          changed = true;
+        } else next[id] = s;
       }
       return changed ? next : prev;
     });
@@ -310,47 +427,39 @@ export const useAudioMixer = (sounds: Sound[]) => {
     });
   }, [clearFade]);
 
-  const restoreMixerState = useCallback(async (
-    nextState: Record<string, SoundState>,
-    nextMasterVolume?: number,
-    shouldPlay = false,
-  ) => {
-    const effectiveMaster = nextMasterVolume ?? masterVolume;
-    stopAll();
-    setSoundState(nextState);
-    if (nextMasterVolume != null) setMasterVolume(nextMasterVolume);
-    if (shouldPlay) {
-      // Play all enabled sounds in parallel to minimise the async window.
-      // After each play() resolves we guard against a race where the user
-      // toggled the sound off while the Promise was pending: if a fade-out
-      // timer is already running for that sound we skip the fade-in so the
-      // toggle-off wins cleanly.
-      await Promise.all(
-        Object.entries(nextState)
-          .filter(([, s]) => s.enabled)
-          .map(async ([soundId, state]) => {
-            const cfa = audioMapRef.current[soundId];
-            if (!cfa) return;
-            setLoadingState((prev) => ({ ...prev, [soundId]: true }));
-            const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster));
-            cfa.volume = 0;
-            try {
-              await cfa.play();
-              if (fadeTimersRef.current[soundId] != null) return; // toggled off during await
-              doFadeIn(soundId, targetVol);
-            } catch { /* ignore autoplay constraints */ }
-            finally {
-              setLoadingState((prev) => ({ ...prev, [soundId]: false }));
-            }
-          }),
-      );
-    }
-  }, [doFadeIn, masterVolume, stopAll]);
-
-  const activeSounds = useMemo(
-    () => sounds.filter((sound) => soundState[sound.id]?.enabled),
-    [soundState, sounds],
+  const restoreMixerState = useCallback(
+    async (nextState: Record<string, SoundState>, nextMasterVolume?: number, shouldPlay = false) => {
+      const effectiveMaster = nextMasterVolume ?? masterVolume;
+      stopAll();
+      setSoundState(nextState);
+      if (nextMasterVolume != null) setMasterVolume(nextMasterVolume);
+      if (shouldPlay) {
+        await Promise.all(
+          Object.entries(nextState)
+            .filter(([, s]) => s.enabled)
+            .map(async ([soundId, state]) => {
+              const source = audioMapRef.current[soundId];
+              if (!source) return;
+              setLoadingState((prev) => ({ ...prev, [soundId]: true }));
+              const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster));
+              source.volume = 0;
+              try {
+                await source.play();
+                if (fadeTimersRef.current[soundId] != null) return;
+                doFadeIn(soundId, targetVol);
+              } catch {
+                // ignore autoplay constraints
+              } finally {
+                setLoadingState((prev) => ({ ...prev, [soundId]: false }));
+              }
+            }),
+        );
+      }
+    },
+    [doFadeIn, masterVolume, stopAll],
   );
+
+  const activeSounds = useMemo(() => sounds.filter((sound) => soundState[sound.id]?.enabled), [soundState, sounds]);
 
   return {
     soundState,
