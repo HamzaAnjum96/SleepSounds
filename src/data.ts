@@ -420,6 +420,38 @@ function genWind(): string {
   return gen(mix, 0.68);
 }
 
+function genFire(): string {
+  // Fire fallback loop: warm low roar + airy hiss + sparse crackle bursts.
+  const body = pinkNoise();
+  hp1(body, 120);
+  lp1(body, 1600);
+
+  const hiss = whiteNoise();
+  hp1(hiss, 1700);
+  lp1(hiss, 7800);
+
+  const crackles = new Float32Array(N);
+  let pos = Math.floor(SR * 0.1);
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.0025, 0.012));
+    const amp = rand(0.06, 0.22);
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const env = Math.exp(-8 * (i / Math.max(1, len)));
+      crackles[pos + i] += (Math.random() * 2 - 1) * env * amp;
+    }
+    pos += Math.floor(SR * rand(0.04, 0.4));
+  }
+  hp1(crackles, 900);
+  lp1(crackles, 5600);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const swell = 0.84 + 0.16 * Math.sin((2 * Math.PI * 0.08 * i) / SR + 0.5);
+    mix[i] = body[i] * 0.8 * swell + hiss[i] * 0.18 + crackles[i] * 0.2;
+  }
+  return gen(mix, 0.62);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -427,7 +459,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
-  { id: 'fire',        name: 'Fire',        category: 'Nature', url: '' },
+  { id: 'fire',        name: 'Fire',        category: 'Nature', url: genFire() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
