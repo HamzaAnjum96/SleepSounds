@@ -12,7 +12,7 @@ const SOUND_ICONS: Record<string, string> = {
   night:           'bedtime',
   thunder:         'thunderstorm',
   stream:          'stream',
-  waterfall:       'waterfall',
+  waterfall:       'water',
   'tent-rain':     'camping',
   'tin-roof-rain': 'roofing',
   space:           'public',
