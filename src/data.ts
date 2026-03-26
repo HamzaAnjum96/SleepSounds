@@ -519,12 +519,12 @@ function genBirdsong(): string {
   // The frequency modulator adds harmonic jitter; a loud breath burst at onset
   // simulates syrinx turbulence at the start of each note.
   function renderNote(pos: number, f0: number, f1: number, len: number, amp: number): void {
-    const modRatio = rand(1.8, 3.4);        // FM modulator ratio (inharmonic spread)
-    const modIdx   = rand(0.5, 2.2);        // FM index — higher = richer/buzzier
+    const modRatio = rand(1.9, 2.6);        // FM modulator ratio — narrower range, less R2-D2
+    const modIdx   = rand(0.12, 0.42);      // FM index — subtle jitter only, not laser-sweep
     const vibRate  = rand(5, 11);
     const vibDepth = rand(0.004, 0.014);
     const phase    = rand(0, Math.PI * 2);
-    const breathAmt = rand(0.30, 0.55);     // breathiness — much louder than before
+    const breathAmt = rand(0.18, 0.34);     // breathiness — present but not overwhelming
     const riseN    = Math.max(2, Math.floor(SR * 0.003)); // 3 ms onset rise
     for (let i = 0; i < len && pos + i < N; i++) {
       const t = i / SR;
@@ -840,10 +840,10 @@ function genFrogs(): string {
         const len = Math.floor(SR * rand(0.04, 0.14));
         const pulseGap = Math.floor(SR * rand(0.022, 0.065));
         const freq = baseFreq * rand(0.93, 1.07);
-        const pitchDropAmt = rand(0.10, 0.32);
-        // Membrane flutter AM: 30–80 Hz, simulates nonlinear vocal sac vibration
-        const flutterRate  = rand(30, 80);
-        const flutterDepth = rand(0.32, 0.58);
+        const pitchDropAmt = rand(0.04, 0.14); // less sweep = less laser
+        // Membrane flutter AM: gentle 18–40 Hz buzz, not laser-sweep
+        const flutterRate  = rand(18, 40);
+        const flutterDepth = rand(0.12, 0.26);
         const riseN = Math.max(2, Math.floor(SR * 0.002)); // 2ms onset rise
         for (let i = 0; i < len && eventPos + i < N; i++) {
           const t = i / SR;
@@ -858,8 +858,7 @@ function genFrogs(): string {
           const sac  = freq * sacRatio * pitchDrop;
           // Membrane flutter gate — the buzzy rattling character
           const flutter = 1 - flutterDepth + flutterDepth * Math.abs(Math.sin(2 * Math.PI * flutterRate * t));
-          // More onset noise (was sp.nz * exp(-12*frac), now 2× louder with slower decay)
-          const onsetNoise = (Math.random() * 2 - 1) * sp.nz * 2.0 * Math.exp(-6 * frac);
+          const onsetNoise = (Math.random() * 2 - 1) * sp.nz * 1.2 * Math.exp(-8 * frac);
           croaks[eventPos + i] += (
             0.52 * Math.sin(2 * Math.PI * tone * t) * flutter +
             0.20 * Math.sin(2 * Math.PI * sac  * t + 0.4) +
@@ -971,9 +970,10 @@ function genTinRoofRain(): string {
     const len = Math.floor(SR * rand(0.002, 0.01));
     const amp = rand(0.09, 0.30);
     const hitF = rand(1400, 5200);
+    const riseN = Math.max(2, Math.floor(SR * 0.001));
     for (let i = 0; i < len && pos + i < N; i++) {
       const t = i / SR;
-      const env = Math.exp(-9 * (i / len));
+      const env = Math.exp(-9 * (i / len)) * Math.min(1, i / riseN);
       ping[pos + i] += Math.sin(2 * Math.PI * hitF * t) * env * amp;
     }
     const panelModes = Array.from({ length: 8 }, (_, idx) => rand(180, 260) * (1 + idx * rand(0.32, 0.56)) * rand(0.96, 1.05));
@@ -985,7 +985,7 @@ function genTinRoofRain(): string {
         const decay = 2.5 + m * 0.45;
         s += Math.sin(2 * Math.PI * panelModes[m] * t + m * 0.7) * Math.exp(-(i / ringLen) * decay) * rand(0.08, 0.22);
       }
-      reson[pos + i] += s * amp * 0.45;
+      reson[pos + i] += s * amp * 0.45 * Math.min(1, i / riseN);
     }
     pos += Math.floor(SR * rand(0.005, 0.028));
   }
@@ -1030,7 +1030,7 @@ function genHeartbeat(): string {
       // Inharmonic ratio (1.72×) makes it feel like a resonant cavity, not a sine
       const tonal = Math.sin(2 * Math.PI * s1F * (i / SR)) * 0.40
                   + Math.sin(2 * Math.PI * s1F * 1.72 * (i / SR)) * 0.20;
-      const thump = (Math.random() * 2 - 1) * 0.40; // blood turbulence
+      const thump = chestNoise[c + i] * 1.50; // filtered low — no click
       beat[c + i] += (tonal + thump) * env * amp1;
     }
 
