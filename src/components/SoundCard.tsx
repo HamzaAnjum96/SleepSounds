@@ -5,6 +5,7 @@ const SOUND_ICONS: Record<string, string> = {
   ocean:           'waves',
   wind:            'air',
   forest:          'forest',
+  fire:            'fireplace',
   fireplace:       'local_fire_department',
   'white-noise':   'graphic_eq',
   'pink-noise':    'equalizer',
