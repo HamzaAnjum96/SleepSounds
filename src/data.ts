@@ -8,16 +8,16 @@ const N = SR * SECS;
 const EDGE_FADE_S = 0.02;
 const LOOP_BLEND_S = 1.2;
 
-function makeWav(i16: Int16Array, sr: number, channels = 1): string {
+function makeWav(i16: Int16Array, sr: number): string {
   const dataLen = i16.byteLength;
   const buf = new ArrayBuffer(44 + dataLen);
   const v = new DataView(buf);
   const s = (o: number, t: string) =>
     [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
   s(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); s(8, 'WAVE');
-  s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, channels, true);
-  v.setUint32(24, sr, true); v.setUint32(28, sr * 2 * channels, true);
-  v.setUint16(32, 2 * channels, true); v.setUint16(34, 16, true);
+  s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
   s(36, 'data'); v.setUint32(40, dataLen, true);
   new Int16Array(buf, 44).set(i16);
   return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
@@ -28,33 +28,12 @@ function gen(f32: Float32Array, gain = 0.7): string {
   let max = 0;
   for (let i = 0; i < f32.length; i++) max = Math.max(max, Math.abs(f32[i]));
   const scale = max > 0 ? (gain * 32767) / max : 32767;
-
-  // Pseudo-stereo via M/S encoding: L = M + S, R = M − S.
-  // S = bandpass-filtered independent white noise (≈200 Hz–3.6 kHz) at low level.
-  // Mono-compatible: L + R = 2 × M.  Gives spatial depth and reduces loop fatigue,
-  // especially on headphones (key perceptual cue per auditory texture research).
-  const side = new Float32Array(f32.length);
-  const sideScale = 0.25; // ~−18 dB L-R difference at 0 dBFS
-  let lpS = 0, hpLP = 0;
+  const i16 = new Int16Array(f32.length);
   for (let i = 0; i < f32.length; i++) {
-    const x = Math.random() * 2 - 1;
-    lpS  += 0.70  * (x   - lpS);   // LP ≈ 3.6 kHz
-    hpLP += 0.040 * (lpS - hpLP);  // very-low-freq tracker
-    side[i] = (lpS - hpLP) * sideScale; // HP ≈ 200 Hz
+    const dither = (Math.random() - 0.5) + (Math.random() - 0.5);
+    i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * scale + dither)));
   }
-
-  // Interleaved stereo Int16Array
-  const i16 = new Int16Array(f32.length * 2);
-  for (let i = 0; i < f32.length; i++) {
-    const m  = f32[i] * scale;
-    const s  = side[i] * scale;
-    // TPDF dither per channel: decorrelates quantisation error from signal
-    const dL = (Math.random() - 0.5) + (Math.random() - 0.5);
-    const dR = (Math.random() - 0.5) + (Math.random() - 0.5);
-    i16[i * 2]     = Math.max(-32768, Math.min(32767, Math.round(m + s + dL)));
-    i16[i * 2 + 1] = Math.max(-32768, Math.min(32767, Math.round(m - s + dR)));
-  }
-  return makeWav(i16, SR, 2);
+  return makeWav(i16, SR);
 }
 
 function normalizeForLoop(buf: Float32Array): void {
