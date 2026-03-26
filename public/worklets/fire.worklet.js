@@ -20,7 +20,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
 
     this.lpBody = 0;
     this.hpBody = 0;
-    this.lpHiss = 0;
+    this.roarEnv = 0.3;
 
     this.crackleEvents = [];
     this.popEvents = [];
@@ -134,20 +134,16 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       this.stress = this.ou(this.stress, 0.18 + 0.85 * dryness, 0.0009, 0.0035);
       this.embers = this.ou(this.embers, 0.14 + 0.5 * intensity, 0.0005, 0.0016);
 
-      const crackleRate = 0.5 + 16 * this.energy + 24 * this.stress + 7 * this.embers + 8 * crackleBias;
+      const crackleRate = 3.0 + 20 * this.energy + 28 * this.stress + 8 * this.embers + 9 * crackleBias;
       const popRate = Math.max(0, -0.6 + 3.6 * this.stress + 1.2 * this.energy);
       if (this.rnd() < crackleRate / sampleRate) this.triggerCrackle(intensity, crackleBias);
       if (this.rnd() < popRate / sampleRate) this.triggerPop(intensity);
 
+      // Rolling thunder roar: deep LP + very slow independent envelope (~0.75 s time constant)
       const n = this.rnd() * 2 - 1;
-      this.lpBody += 0.022 * (n - this.lpBody); // ~155 Hz cutoff — audible low-mid roar
-      this.hpBody = n - this.lpBody;
-      const body = this.lpBody * (0.7 + 0.4 * this.energy); // roar breathes with flame energy
-
-      const hissNoise = this.rnd() * 2 - 1;
-      const hissGate = Math.max(0, 0.25 + 0.85 * this.turbulence + 0.2 * this.randn());
-      this.lpHiss += 0.06 * (hissNoise - this.lpHiss);
-      const hiss = (hissNoise - this.lpHiss) * hissGate * (0.03 + 0.08 * this.turbulence * this.energy);
+      this.lpBody += 0.005 * (n - this.lpBody); // ~35 Hz — deep sub-bass
+      this.roarEnv = this.ou(this.roarEnv, 0.4, 0.00003, 0.0008); // slow swell/fade
+      const body = this.lpBody * Math.max(0, this.roarEnv);
 
       const crackles = this.renderCrackles();
       const pops = this.renderPops();
@@ -155,7 +151,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       const emberRate = Math.max(0, (this.embers - 0.15) * 14);
       const ember = this.rnd() < emberRate / sampleRate ? (this.rnd() * 2 - 1) * (0.01 + 0.02 * this.embers) : 0;
 
-      let mix = body * 0.65 + hiss * 0.06 + crackles * 2.0 + pops * 1.2 + ember;
+      let mix = body * 0.40 + crackles * 2.8 + pops * 1.2 + ember;
 
       const nearness = 1 - distance;
       const lp = 0.018 + 0.04 * nearness;

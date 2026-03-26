@@ -1,5 +1,12 @@
 import type { Sound } from '../types';
 
+const ELEMENT_MARKS: Record<string, string> = {
+  Fire:  'local_fire_department',
+  Water: 'water_drop',
+  Air:   'air',
+  Earth: 'landscape',
+};
+
 const SOUND_ICONS: Record<string, string> = {
   rain:            'rainy',
   ocean:           'waves',
@@ -73,6 +80,11 @@ export default function SoundCard({ sound, enabled, playing, loading = false, vo
         </div>
       </div>
 
+      {ELEMENT_MARKS[sound.category] && (
+        <span className="material-symbols-rounded element-mark" aria-hidden="true">
+          {ELEMENT_MARKS[sound.category]}
+        </span>
+      )}
       <div className="card-name">{sound.name}</div>
 
       <div
