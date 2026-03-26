@@ -29,8 +29,15 @@ function gen(f32: Float32Array, gain = 0.7): string {
   for (let i = 0; i < f32.length; i++) max = Math.max(max, Math.abs(f32[i]));
   const scale = max > 0 ? (gain * 32767) / max : 32767;
   const i16 = new Int16Array(f32.length);
-  for (let i = 0; i < f32.length; i++)
-    i16[i] = Math.max(-32767, Math.min(32767, f32[i] * scale));
+  for (let i = 0; i < f32.length; i++) {
+    // TPDF dither: sum of two independent uniform[-0.5, +0.5] random values gives a
+    // triangular PDF spanning [-1, +1] with zero mean and variance 1/6.  Adding this
+    // before rounding decorrelates the quantisation error from the signal, trading
+    // signal-correlated distortion (audible "digital" artefacts / buzziness) for
+    // spectrally flat noise that sits below the noise floor.
+    const dither = (Math.random() - 0.5) + (Math.random() - 0.5);
+    i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * scale + dither)));
+  }
   return makeWav(i16, SR);
 }
 
@@ -116,8 +123,13 @@ function applyLoopBlend(buf: Float32Array, blendSamples: number): void {
   const n = Math.max(1, Math.min(blendSamples, Math.floor(buf.length / 3)));
   for (let i = 0; i < n; i++) {
     const t = i / n;
-    const a = Math.sqrt(1 - t);
-    const b = Math.sqrt(t);
+    // Cosine equal-power crossfade: a² + b² = cos² + sin² = 1 (constant power).
+    // Unlike the previous sqrt curves (which have slope -0.5 at t=0), the cosine
+    // curves have zero slope at t=0, giving C¹ continuity at the blend boundary
+    // and eliminating the gain-rate kink that produced subtle amplitude modulation
+    // artefacts at the loop start/end edges.
+    const a = Math.cos(0.5 * Math.PI * t);  // 1 → 0, zero slope at t=0
+    const b = Math.sin(0.5 * Math.PI * t);  // 0 → 1, zero slope at t=0
     const s = buf[i];
     const e = buf[buf.length - n + i];
     const blended = s * a + e * b;
@@ -231,22 +243,29 @@ function genStream(): string {
     const g3 = 0.93 + 0.07 * Math.sin((2 * Math.PI * 3.1  * i) / SR + 1.5);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
-  // Bubbles: each is a damped bandpassed noise burst at a fixed ring frequency,
-  // not a sine sweep — real bubbles resonate at one frequency set by their radius.
+  // Bubbles: each is a damped noise burst resonating at its own unique frequency,
+  // determined by the bubble's radius (small bubbles → high pitch, large → low).
+  // Previously a single bp2 was applied to the entire accumulated bubble buffer,
+  // which forced every bubble to ring at the same pitch — a single-frequency tonal
+  // artefact that made the stream sound robotic.  Now each grain gets its own bp2
+  // call with an independently drawn centre frequency, matching the physical model.
   const bubbles = new Float32Array(N);
   let pos = Math.floor(SR * 0.05);
   while (pos < N) {
-    const len = Math.floor(SR * rand(0.006, 0.018));
-    const amp = rand(0.02, 0.10);
+    const len    = Math.floor(SR * rand(0.006, 0.018));
+    const amp    = rand(0.02, 0.10);
     const riseN2 = Math.max(2, Math.floor(SR * 0.0008));
-    for (let i = 0; i < len && pos + i < N; i++) {
+    const bFreq  = rand(600, 1600);   // unique resonance per bubble
+    const bQ     = rand(4, 9);
+    const grain  = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
       const riseGain = Math.min(1, i / riseN2);
-      bubbles[pos + i] += (Math.random() * 2 - 1) * Math.exp(-8 * (i / len)) * amp * riseGain;
+      grain[i] = (Math.random() * 2 - 1) * Math.exp(-8 * (i / len)) * amp * riseGain;
     }
+    bp2(grain, bFreq, bQ);
+    for (let i = 0; i < len && pos + i < N; i++) bubbles[pos + i] += grain[i];
     pos += Math.floor(SR * rand(0.02, 0.09));
   }
-  // Per-band filter pass: each bubble gets a resonant ring (applied to whole buffer)
-  bp2(bubbles, rand(600, 1600), rand(4, 9));
   lp2(bubbles, 2000);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.86 + bubbles[i] * 0.14;
@@ -341,7 +360,20 @@ function genWhite(): string {
 }
 
 function genBrown(): string {
-  const buf = brownNoise();
+  // Leaky-integrator brown noise with α = 0.998, giving a −3 dB cutoff of ≈ 10 Hz
+  // instead of the ≈ 100 Hz cutoff from the brownNoise() helper (α ≈ 0.98).
+  // With the higher α the spectrum rolls off at −6 dB/oct from 10 Hz upward —
+  // a near-true 1/f² (red-noise) density throughout the audible range — which
+  // produces a significantly deeper, more subsonic rumble than the helper alone.
+  // The brownNoise() helper keeps its original coefficient so other generators
+  // (thunder base, fireplace roar, heartbeat chest) that use it in a mix are
+  // not affected.
+  const buf = new Float32Array(N);
+  let last = 0;
+  for (let i = 0; i < N; i++) {
+    last = 0.998 * last + 0.002 * (Math.random() * 2 - 1);
+    buf[i] = last;
+  }
   return gen(buf, 0.65);
 }
 
@@ -1149,11 +1181,15 @@ function genRain(): string {
         const f0 = rand(650, 1700);
         const f1 = f0 * rand(0.75, 0.92);
         const bAmp = rand(0.015, 0.055);
+        // Phase accumulator: ph += 2π·f/SR avoids the sin(2π·f(t)·t) "chirp" artefact
+        // where f and t both vary and their product creates an audible laser-sweep tone.
+        let bPh = 0;
         for (let i = 0; i < bLen && pos + i < N; i++) {
           const p = i / Math.max(1, bLen - 1);
           const env = Math.exp(-5.5 * p);
           const f = f0 + (f1 - f0) * p;
-          bubbles[pos + i] += Math.sin(2 * Math.PI * f * (i / SR)) * env * bAmp;
+          bPh += (2 * Math.PI * f) / SR;
+          bubbles[pos + i] += Math.sin(bPh) * env * bAmp;
         }
       }
       pos += Math.floor(SR * rand(0.004, 0.03));
