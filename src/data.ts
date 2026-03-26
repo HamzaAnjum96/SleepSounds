@@ -575,18 +575,18 @@ function genFire(): string {
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
-  { id: 'rain',        name: 'Rain',        category: 'Nature', url: genRain() },
-  { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
-  { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
-  { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
-  { id: 'fire',        name: 'Fire',        category: 'Nature', url: genFire() },
-  { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
-  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
-  { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
-  { id: 'fan',         name: 'Fan',         category: 'Noise',  url: genFan() },
+  { id: 'rain',        name: 'Rain',        category: 'Water', url: genRain() },
+  { id: 'ocean',       name: 'Ocean',       category: 'Water', url: genOcean() },
+  { id: 'wind',        name: 'Wind',        category: 'Air',   url: genWind() },
+  { id: 'forest',      name: 'Forest',      category: 'Earth', url: genForest() },
+  { id: 'fire',        name: 'Fire',        category: 'Fire',  url: genFire() },
+  { id: 'white-noise', name: 'White Noise', category: 'Air',   url: genWhite() },
+  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Air',   url: genPink() },
+  { id: 'brown-noise', name: 'Brown Noise', category: 'Earth', url: genBrown() },
+  { id: 'fan',         name: 'Fan',         category: 'Air',   url: genFan() },
 ];
 
-export const CATEGORIES = ['All', 'Nature', 'Noise'] as const;
+export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';
