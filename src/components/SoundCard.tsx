@@ -1,30 +1,10 @@
-import type { ReactNode } from 'react';
 import type { Sound } from '../types';
 
-// Classical element triangle symbols (alchemical: △ Fire, ▽ Water, △— Air, ▽— Earth)
-const ELEMENT_MARKS: Record<string, ReactNode> = {
-  Fire: (
-    <svg viewBox="0 0 40 36" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round">
-      <polygon points="20,2 38,34 2,34" />
-    </svg>
-  ),
-  Water: (
-    <svg viewBox="0 0 40 36" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round">
-      <polygon points="20,34 38,2 2,2" />
-    </svg>
-  ),
-  Air: (
-    <svg viewBox="0 0 40 36" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round">
-      <polygon points="20,2 38,34 2,34" />
-      <line x1="8" y1="22" x2="32" y2="22" />
-    </svg>
-  ),
-  Earth: (
-    <svg viewBox="0 0 40 36" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round">
-      <polygon points="20,34 38,2 2,2" />
-      <line x1="8" y1="14" x2="32" y2="14" />
-    </svg>
-  ),
+const ELEMENT_MARKS: Record<string, string> = {
+  Fire:  'local_fire_department',
+  Water: 'water_drop',
+  Air:   'air',
+  Earth: 'landscape',
 };
 
 const SOUND_ICONS: Record<string, string> = {
@@ -101,7 +81,9 @@ export default function SoundCard({ sound, enabled, playing, loading = false, vo
       </div>
 
       {ELEMENT_MARKS[sound.category] && (
-        <div className="element-mark" aria-hidden="true">{ELEMENT_MARKS[sound.category]}</div>
+        <span className="material-symbols-rounded element-mark" aria-hidden="true">
+          {ELEMENT_MARKS[sound.category]}
+        </span>
       )}
       <div className="card-name">{sound.name}</div>
 
