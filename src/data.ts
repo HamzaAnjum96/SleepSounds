@@ -8,16 +8,16 @@ const N = SR * SECS;
 const EDGE_FADE_S = 0.02;
 const LOOP_BLEND_S = 1.2;
 
-function makeWav(i16: Int16Array, sr: number): string {
+function makeWav(i16: Int16Array, sr: number, channels = 1): string {
   const dataLen = i16.byteLength;
   const buf = new ArrayBuffer(44 + dataLen);
   const v = new DataView(buf);
   const s = (o: number, t: string) =>
     [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
   s(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); s(8, 'WAVE');
-  s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, channels, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2 * channels, true);
+  v.setUint16(32, 2 * channels, true); v.setUint16(34, 16, true);
   s(36, 'data'); v.setUint32(40, dataLen, true);
   new Int16Array(buf, 44).set(i16);
   return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
@@ -28,17 +28,33 @@ function gen(f32: Float32Array, gain = 0.7): string {
   let max = 0;
   for (let i = 0; i < f32.length; i++) max = Math.max(max, Math.abs(f32[i]));
   const scale = max > 0 ? (gain * 32767) / max : 32767;
-  const i16 = new Int16Array(f32.length);
+
+  // Pseudo-stereo via M/S encoding: L = M + S, R = M − S.
+  // S = bandpass-filtered independent white noise (≈200 Hz–3.6 kHz) at low level.
+  // Mono-compatible: L + R = 2 × M.  Gives spatial depth and reduces loop fatigue,
+  // especially on headphones (key perceptual cue per auditory texture research).
+  const side = new Float32Array(f32.length);
+  const sideScale = 0.25; // ~−18 dB L-R difference at 0 dBFS
+  let lpS = 0, hpLP = 0;
   for (let i = 0; i < f32.length; i++) {
-    // TPDF dither: sum of two independent uniform[-0.5, +0.5] random values gives a
-    // triangular PDF spanning [-1, +1] with zero mean and variance 1/6.  Adding this
-    // before rounding decorrelates the quantisation error from the signal, trading
-    // signal-correlated distortion (audible "digital" artefacts / buzziness) for
-    // spectrally flat noise that sits below the noise floor.
-    const dither = (Math.random() - 0.5) + (Math.random() - 0.5);
-    i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * scale + dither)));
+    const x = Math.random() * 2 - 1;
+    lpS  += 0.70  * (x   - lpS);   // LP ≈ 3.6 kHz
+    hpLP += 0.040 * (lpS - hpLP);  // very-low-freq tracker
+    side[i] = (lpS - hpLP) * sideScale; // HP ≈ 200 Hz
   }
-  return makeWav(i16, SR);
+
+  // Interleaved stereo Int16Array
+  const i16 = new Int16Array(f32.length * 2);
+  for (let i = 0; i < f32.length; i++) {
+    const m  = f32[i] * scale;
+    const s  = side[i] * scale;
+    // TPDF dither per channel: decorrelates quantisation error from signal
+    const dL = (Math.random() - 0.5) + (Math.random() - 0.5);
+    const dR = (Math.random() - 0.5) + (Math.random() - 0.5);
+    i16[i * 2]     = Math.max(-32768, Math.min(32767, Math.round(m + s + dL)));
+    i16[i * 2 + 1] = Math.max(-32768, Math.min(32767, Math.round(m - s + dR)));
+  }
+  return makeWav(i16, SR, 2);
 }
 
 function normalizeForLoop(buf: Float32Array): void {
@@ -1037,18 +1053,24 @@ function genTinRoofRain(): string {
         0.12 * Math.sin(ph3)
       ) * env * amp;
     }
-    // Panel modes in 400–2000 Hz range for clearly metallic ring
-    const baseF = rand(380, 580);
-    const panelModes = Array.from({ length: 8 }, (_, idx) => baseF * (1 + idx * rand(0.38, 0.62)) * rand(0.97, 1.03));
+    // Panel modes spanning 400–4000 Hz (report: 14–22 modes, Q 8–40, decay 80–350 ms).
+    // Two clusters: low-mid (400–900 Hz, "thud bloom") + high-mid (1–4 kHz, "tink ring").
+    const baseLo = rand(380, 580);
+    const baseHi = rand(900, 1400);
+    const panelModes = [
+      ...Array.from({ length: 7 }, (_, idx) => baseLo * (1 + idx * rand(0.34, 0.58)) * rand(0.97, 1.03)),
+      ...Array.from({ length: 7 }, (_, idx) => baseHi * (1 + idx * rand(0.28, 0.50)) * rand(0.97, 1.03)),
+    ];
     const ringLen = Math.floor(SR * rand(0.10, 0.35));
     for (let i = 0; i < ringLen && pos + i < N; i++) {
       const t = i / SR;
       let s = 0;
       for (let m = 0; m < panelModes.length; m++) {
-        const decay = 2.0 + m * 0.35;
-        s += Math.sin(2 * Math.PI * panelModes[m] * t + m * 0.7) * Math.exp(-(i / ringLen) * decay) * rand(0.08, 0.22);
+        // Higher modes damp faster (shorter decay) — physically motivated
+        const decay = 1.8 + m * 0.22;
+        s += Math.sin(2 * Math.PI * panelModes[m] * t + m * 0.7) * Math.exp(-(i / ringLen) * decay) * rand(0.06, 0.18);
       }
-      reson[pos + i] += s * amp * 0.55 * Math.min(1, i / riseN);
+      reson[pos + i] += s * amp * 0.50 * Math.min(1, i / riseN);
     }
     pos += Math.floor(SR * rand(0.005, 0.028));
   }
@@ -1170,7 +1192,8 @@ function genUnderwater(): string {
 function genRain(): string {
   // Rain: diffuse bed + clustered impacts + tonal bubble-like micro-events
   const bed = pinkNoise();
-  hp1(bed, 260);
+  // HP at 180 Hz (not 260) to preserve the 200–250 Hz "moderate" energy band per report
+  hp1(bed, 180);
   lp1(bed, 5600);
   const density = smoothRandomLfo(0.65, 1.35, 0.8, 3.2);
   for (let i = 0; i < N; i++) bed[i] *= (0.76 + 0.24 * density[i]);
@@ -1183,7 +1206,9 @@ function genRain(): string {
     const clusterEnd = Math.min(N, pos + clusterDur);
     while (pos < clusterEnd) {
       const len = Math.floor(SR * rand(0.002, 0.009));
-      const amp = rand(0.02, 0.11);
+      // Log-normal amplitude: many quiet drops, occasional loud ones.
+      // exp(uniform(−4.8, −1.6)) spans ~0.008–0.20 with geometric mean ~0.045.
+      const amp = Math.exp(rand(-4.8, -1.6));
       // 1ms rise ramp — eliminates instant-on click
       const riseN = Math.max(2, Math.floor(SR * 0.001));
       for (let i = 0; i < len && pos + i < N; i++) {
