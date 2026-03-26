@@ -545,7 +545,11 @@ function genBirdsong(): string {
 
   const buf = new Float32Array(N);
   // Activity LFO: creates genuine quiet periods of 10–20s
-  const activityLfo = smoothRandomLfo(0.0, 1.0, 8.0, 20.0);
+  // Activity LFO minimum raised to 0.25 so the skip condition (activity < 0.25) is
+  // never satisfied: all call positions are rendered, only amplitude varies.  The old
+  // min of 0.0 with 8–20 s hold times frequently kept activity below 0.25 for the
+  // entire 32 s loop, causing 80 % of positions to be skipped and producing silence.
+  const activityLfo = smoothRandomLfo(0.25, 1.0, 4.0, 12.0);
 
   // Render one note — phase accumulator so gliding pitch stays clean.
   // sin(2π·f(t)·t) is WRONG for a glide: as t grows the phase term f(t)·t
@@ -874,7 +878,7 @@ function genFrogs(): string {
         // Phase accumulators: sin(2π·freq·t) is WRONG when freq changes —
         // the product freq·t creates a chirp/laser sweep. Integrate instead.
         const pitchDropAmt = rand(0.03, 0.10);
-        const flutterRate  = rand(18, 38);
+        const flutterRate  = rand(10, 22);   // was 18–38 Hz: double that with abs(sin) → 36–76 Hz electronic buzz
         const flutterDepth = rand(0.10, 0.22);
         const riseN = Math.max(2, Math.floor(SR * 0.002));
         const decayAmt = rand(0.28, 0.65);
@@ -895,14 +899,21 @@ function genFrogs(): string {
           phSac  += (2 * Math.PI * pitchNow * sacRatio) / SR;
           ph2h   += (2 * Math.PI * pitchNow * 2.0) / SR;
           phSub  += (2 * Math.PI * pitchNow * 0.5) / SR;
-          const flutter = 1 - flutterDepth + flutterDepth * Math.abs(Math.sin(2 * Math.PI * flutterRate * t));
-          const onsetNoise = (Math.random() * 2 - 1) * sp.nz * 1.2 * Math.exp(-8 * frac);
+          // Regular sine flutter: 1 ± depth, centred at 1.0.  The previous
+          // Math.abs(sin) doubled the effective modulation frequency (rectified
+          // sine) producing 36–76 Hz electronic buzz.
+          const flutter = 1.0 + flutterDepth * Math.sin(2 * Math.PI * flutterRate * t);
+          // Onset attack noise (exponential burst at start of each pulse)
+          const onsetNoise   = (Math.random() * 2 - 1) * sp.nz * 1.2 * Math.exp(-8 * frac);
+          // Sustained breath noise: adds organic texture throughout the call body
+          // instead of a pure-sine sustain which sounds electronic.
+          const sustainNoise = (Math.random() * 2 - 1) * sp.nz * 0.30;
           croaks[eventPos + i] += (
             0.52 * Math.sin(phTone) * flutter +
             0.20 * Math.sin(phSac  + 0.4) +
-            0.12 * Math.sin(ph2h   + 0.65) * flutter +
+            0.07 * Math.sin(ph2h   + 0.65) * flutter +   // reduced from 0.12: 2× harmonic was adding electronic brightness
             sp.sub * Math.sin(phSub + 0.2) +
-            onsetNoise
+            onsetNoise + sustainNoise
           ) * env * sp.amp;
         }
         eventPos += len + pulseGap;
@@ -1005,38 +1016,53 @@ function genTinRoofRain(): string {
   const reson = new Float32Array(N);
   let pos = Math.floor(SR * 0.04);
   while (pos < N) {
-    const len = Math.floor(SR * rand(0.002, 0.01));
+    // Longer pings (15–50 ms) with slower decay so they register as pitched taps
+    const len = Math.floor(SR * rand(0.015, 0.050));
     const amp = rand(0.09, 0.30);
     const hitF = rand(1400, 5200);
     const riseN = Math.max(2, Math.floor(SR * 0.001));
+    // Inharmonic partials (ratios 1, 2.27, 3.73) give metallic "tin" character
+    const h2 = hitF * 2.27;
+    const h3 = hitF * 3.73;
+    let ph1 = 0, ph2 = 0, ph3 = 0;
     for (let i = 0; i < len && pos + i < N; i++) {
-      const t = i / SR;
-      const env = Math.exp(-9 * (i / len)) * Math.min(1, i / riseN);
-      ping[pos + i] += Math.sin(2 * Math.PI * hitF * t) * env * amp;
+      ph1 += (2 * Math.PI * hitF) / SR;
+      ph2 += (2 * Math.PI * h2)   / SR;
+      ph3 += (2 * Math.PI * h3)   / SR;
+      // Slower decay (factor 4 vs old 9) so ping lasts long enough to sound metallic
+      const env = Math.exp(-4 * (i / len)) * Math.min(1, i / riseN);
+      ping[pos + i] += (
+        0.60 * Math.sin(ph1) +
+        0.28 * Math.sin(ph2) +
+        0.12 * Math.sin(ph3)
+      ) * env * amp;
     }
-    const panelModes = Array.from({ length: 8 }, (_, idx) => rand(180, 260) * (1 + idx * rand(0.32, 0.56)) * rand(0.96, 1.05));
-    const ringLen = Math.floor(SR * rand(0.06, 0.24));
+    // Panel modes in 400–2000 Hz range for clearly metallic ring
+    const baseF = rand(380, 580);
+    const panelModes = Array.from({ length: 8 }, (_, idx) => baseF * (1 + idx * rand(0.38, 0.62)) * rand(0.97, 1.03));
+    const ringLen = Math.floor(SR * rand(0.10, 0.35));
     for (let i = 0; i < ringLen && pos + i < N; i++) {
       const t = i / SR;
       let s = 0;
       for (let m = 0; m < panelModes.length; m++) {
-        const decay = 2.5 + m * 0.45;
+        const decay = 2.0 + m * 0.35;
         s += Math.sin(2 * Math.PI * panelModes[m] * t + m * 0.7) * Math.exp(-(i / ringLen) * decay) * rand(0.08, 0.22);
       }
-      reson[pos + i] += s * amp * 0.45 * Math.min(1, i / riseN);
+      reson[pos + i] += s * amp * 0.55 * Math.min(1, i / riseN);
     }
     pos += Math.floor(SR * rand(0.005, 0.028));
   }
 
   hp1(ping, 900);
-  lp1(ping, 7600);
-  hp1(reson, 90);
-  lp1(reson, 2400);
+  lp1(ping, 9000);
+  hp1(reson, 200);
+  lp1(reson, 3500);
 
   const mix = new Float32Array(N);
   const gust = smoothRandomLfo(0.84, 1.2, 0.9, 3.2);
   for (let i = 0; i < N; i++) {
-    mix[i] = bed[i] * 0.60 * gust[i] + ping[i] * 0.27 + reson[i] * 0.13;
+    // Increase reson share (0.13 → 0.22) and trim bed to compensate
+    mix[i] = bed[i] * 0.51 * gust[i] + ping[i] * 0.27 + reson[i] * 0.22;
   }
   return gen(mix, 0.70);
 }
