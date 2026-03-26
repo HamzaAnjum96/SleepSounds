@@ -20,7 +20,6 @@ class FireSynthProcessor extends AudioWorkletProcessor {
 
     this.lpBody = 0;
     this.hpBody = 0;
-    this.lpHiss = 0;
 
     this.crackleEvents = [];
     this.popEvents = [];
@@ -140,14 +139,8 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       if (this.rnd() < popRate / sampleRate) this.triggerPop(intensity);
 
       const n = this.rnd() * 2 - 1;
-      this.lpBody += 0.006 * (n - this.lpBody); // lower cutoff → warmer, darker rumble
-      this.hpBody = n - this.lpBody;
-      const body = this.lpBody * (0.7 + 0.25 * this.energy); // dropped hpBody term (broadband noise)
-
-      const hissNoise = this.rnd() * 2 - 1;
-      const hissGate = Math.max(0, 0.25 + 0.85 * this.turbulence + 0.2 * this.randn());
-      this.lpHiss += 0.02 * (hissNoise - this.lpHiss); // heavy LP → warm brown-noise texture
-      const hiss = this.lpHiss * hissGate * (0.2 + 0.3 * this.turbulence * this.energy);
+      this.lpBody += 0.018 * (n - this.lpBody); // ~126 Hz — thunder-range low rumble
+      const body = this.lpBody * (0.4 + 0.2 * this.energy); // slow swell, faint under crackles
 
       const crackles = this.renderCrackles();
       const pops = this.renderPops();
@@ -155,7 +148,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       const emberRate = Math.max(0, (this.embers - 0.15) * 14);
       const ember = this.rnd() < emberRate / sampleRate ? (this.rnd() * 2 - 1) * (0.01 + 0.02 * this.embers) : 0;
 
-      let mix = body * 0.45 + hiss * 0.08 + crackles * 2.0 + pops * 1.2 + ember;
+      let mix = body * 0.30 + crackles * 2.0 + pops * 1.2 + ember;
 
       const nearness = 1 - distance;
       const lp = 0.018 + 0.04 * nearness;
