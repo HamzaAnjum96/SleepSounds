@@ -147,6 +147,13 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
+function randn(): number {
+  // Box–Muller transform
+  const u1 = Math.max(1e-12, Math.random());
+  const u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
 function chance(p: number): boolean {
   return Math.random() < p;
 }
@@ -391,6 +398,117 @@ function genWind(): string {
   return gen(mix, 0.68);
 }
 
+function genFire(): string {
+  // Fireplace synthesis: correlated low-mid turbulent bed + transient detail
+  const intensity = smoothRandomLfo(0.55, 1.0, 0.35, 1.8);
+
+  // Background body: pink + brown gives correlated "air movement" instead of flat white hiss.
+  const pink = pinkNoise();
+  const brown = brownNoise();
+  lp1(pink, 1800);
+  hp1(pink, 110);
+  lp1(brown, 260);
+  hp1(brown, 35);
+  const bodyLfo = smoothRandomLfo(0.72, 1.0, 0.12, 0.9);
+  const body = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const base = pink[i] * 0.72 + brown[i] * 0.58;
+    body[i] = base * bodyLfo[i] * (0.66 + 0.34 * intensity[i]);
+  }
+
+  // Brighter turbulence tied to the same latent intensity so layers stay coherent.
+  const hiss = whiteNoise();
+  bp2(hiss, 2800, 0.75);
+  const hissLfo = smoothRandomLfo(0.15, 1.0, 0.02, 0.11);
+  for (let i = 0; i < N; i++) {
+    hiss[i] *= (0.18 + 0.82 * hissLfo[i]) * (0.42 + 0.58 * intensity[i]);
+  }
+
+  // Crackles: non-homogeneous Poisson events with short filtered bursts.
+  const crackles = new Float32Array(N);
+  let cPos = 0;
+  while (cPos < N) {
+    const iNow = intensity[Math.min(cPos, N - 1)];
+    const rateHz = 4.8 + 28 * Math.pow(iNow, 1.9);
+    cPos += Math.max(1, Math.floor((-Math.log(1 - Math.random()) / rateHz) * SR));
+    if (cPos >= N) break;
+
+    const len = Math.floor(SR * rand(0.0025, 0.016));
+    const amp = 0.018 * Math.exp(0.9 * randn());
+    const burst = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      const env = Math.exp(-9.2 * (i / len));
+      burst[i] = (Math.random() * 2 - 1) * env * amp;
+    }
+    bp2(burst, rand(1400, 6200), rand(1.3, 5.6));
+    for (let i = 0; i < len && cPos + i < N; i++) crackles[cPos + i] += burst[i];
+
+    // Refractory gap prevents "machine-gun" chatter.
+    cPos += Math.floor(SR * rand(0.003, 0.018));
+  }
+
+  // Pops/snaps: resonant woody events excited by noisy impulses with light down-glide.
+  const pops = new Float32Array(N);
+  let pPos = 0;
+  while (pPos < N) {
+    const iNow = intensity[Math.min(pPos, N - 1)];
+    const rateHz = 0.25 + 1.8 * Math.pow(iNow, 2.1);
+    pPos += Math.max(1, Math.floor((-Math.log(1 - Math.random()) / rateHz) * SR));
+    if (pPos >= N) break;
+
+    const len = Math.floor(SR * rand(0.02, 0.09));
+    const amp = 0.04 * Math.exp(0.5 * randn());
+    const fStart = rand(180, 460);
+    const glide = rand(0.09, 0.34);
+    const damp = rand(5.5, 10.5);
+    const burst = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      const p = i / len;
+      const t = i / SR;
+      const f = fStart * (1 - glide * p);
+      const env = Math.exp(-damp * p);
+      const tone = Math.sin(2 * Math.PI * f * t);
+      const exc = (Math.random() * 2 - 1) * 0.42;
+      burst[i] = (tone * 0.62 + exc * 0.38) * env * amp;
+    }
+    bp2(burst, rand(220, 620), rand(0.9, 2.1));
+    for (let i = 0; i < len && pPos + i < N; i++) pops[pPos + i] += burst[i];
+  }
+
+  // Embers: tiny bright ticks related to crackle density but decorrelated in timing.
+  const embers = new Float32Array(N);
+  let ePos = 0;
+  while (ePos < N) {
+    const rateHz = 8 + 20 * intensity[Math.min(ePos, N - 1)];
+    ePos += Math.max(1, Math.floor((-Math.log(1 - Math.random()) / rateHz) * SR));
+    if (ePos >= N) break;
+    const len = Math.floor(SR * rand(0.0008, 0.0036));
+    const amp = rand(0.0012, 0.008);
+    for (let i = 0; i < len && ePos + i < N; i++) {
+      embers[ePos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-11 * (i / len));
+    }
+  }
+  hp1(embers, 3200);
+  lp1(embers, 7600);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const iNow = intensity[i];
+    mix[i] =
+      body[i] * (0.86 + 0.08 * iNow) +
+      hiss[i] * (0.18 + 0.12 * iNow) +
+      crackles[i] * 0.94 +
+      pops[i] * 0.88 +
+      embers[i] * 0.72;
+  }
+
+  // Final fireplace tone: mid-forward, not sub-heavy or overly bright.
+  lp1(mix, 5600);
+  hp1(mix, 60);
+  bp2(mix, 980, 0.72);
+  return gen(mix, 0.66);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -398,6 +516,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'ocean',       name: 'Ocean',       category: 'Nature', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Nature', url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Nature', url: genForest() },
+  { id: 'fire',        name: 'Fire',        category: 'Nature', url: genFire() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',  url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',  url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',  url: genBrown() },
@@ -421,4 +540,5 @@ function builtinState(active: Array<[string, number]>): Record<string, SoundStat
 export const BUILTIN_PRESETS: Preset[] = [
   { id: 'builtin-fan-rain',      name: 'Fan & Rain',    createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
   { id: 'builtin-windy-forest',  name: 'Windy Forest',  createdAt: '', masterVolume: 0.8, state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
+  { id: 'builtin-campfire-night', name: 'Campfire Night', createdAt: '', masterVolume: 0.8, state: builtinState([['fire', 0.68], ['forest', 0.28]]) },
 ];
