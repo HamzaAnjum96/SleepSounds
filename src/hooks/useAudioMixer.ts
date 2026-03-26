@@ -245,8 +245,63 @@ class FireWorkletSource implements MixerSource {
   }
 }
 
+class FireSourceWithFallback implements MixerSource {
+  private primary = new FireWorkletSource();
+  private fallback: CrossfadeAudio;
+  private active: MixerSource = this.primary;
+  private _volume = 0;
+  private failedOver = false;
+
+  constructor(fallbackUrl: string) {
+    this.fallback = new CrossfadeAudio(fallbackUrl);
+  }
+
+  get volume() {
+    return this._volume;
+  }
+
+  set volume(v: number) {
+    this._volume = v;
+    this.active.volume = v;
+  }
+
+  get paused() {
+    return this.active.paused;
+  }
+
+  async play() {
+    this.active.volume = this._volume;
+    if (this.failedOver) {
+      await this.active.play();
+      return;
+    }
+    try {
+      await this.primary.play();
+    } catch {
+      this.failedOver = true;
+      this.primary.destroy();
+      this.active = this.fallback;
+      this.active.volume = this._volume;
+      await this.active.play();
+    }
+  }
+
+  pause() {
+    this.active.pause();
+  }
+
+  stop() {
+    this.active.stop();
+  }
+
+  destroy() {
+    this.primary.destroy();
+    this.fallback.destroy();
+  }
+}
+
 const makeSource = (sound: Sound): MixerSource => {
-  if (sound.id === 'fire') return new FireWorkletSource();
+  if (sound.id === 'fire') return new FireSourceWithFallback(sound.url);
   return new CrossfadeAudio(sound.url);
 };
 
