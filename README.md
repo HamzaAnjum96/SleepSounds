@@ -95,6 +95,9 @@ npm run preview
 
 ## Changelog
 
+### 0.1.10
+- Fix SoundBuilder play button: reuse `FireWorkletSource` shared AudioContext instead of creating a new one, which caused suspend/resume failures on iOS Safari
+
 ### 0.1.9
 - Renamed fire sound label back to "Fire"
 - Slowed EQ bar animation from 0.9 s to 1.6 s per cycle
