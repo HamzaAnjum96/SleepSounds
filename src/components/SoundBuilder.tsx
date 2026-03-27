@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { openFireContext } from '../hooks/useAudioMixer';
 
 interface ParamDef {
   key: string;
@@ -65,9 +66,7 @@ export default function SoundBuilder() {
 
   const startFire = useCallback(async () => {
     try {
-      const ctx = new AudioContext();
-      await ctx.resume();
-      await ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+      const ctx = await openFireContext();
       const node = new AudioWorkletNode(ctx, 'fire-synth', {
         numberOfInputs: 0,
         numberOfOutputs: 1,
@@ -89,7 +88,6 @@ export default function SoundBuilder() {
 
   const stopFire = useCallback(() => {
     nodeRef.current?.disconnect();
-    ctxRef.current?.close();
     nodeRef.current = null;
     ctxRef.current  = null;
     setPlaying(false);
@@ -116,8 +114,8 @@ export default function SoundBuilder() {
     if (!open && playing) stopFire();
   }, [open, playing, stopFire]);
 
-  // Cleanup on unmount
-  useEffect(() => () => { ctxRef.current?.close(); }, []);
+  // Cleanup on unmount — only disconnect the node, never close the shared context
+  useEffect(() => () => { nodeRef.current?.disconnect(); }, []);
 
   const configText = useMemo(() => JSON.stringify(values, null, 2), [values]);
 
