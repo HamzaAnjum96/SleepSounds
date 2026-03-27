@@ -95,6 +95,16 @@ npm run preview
 
 ## Changelog
 
+### 0.1.9
+- Renamed fire sound label back to "Fire"
+- Slowed EQ bar animation from 0.9 s to 1.6 s per cycle
+- Replaced fire background hiss with a rolling thunder roar: deep LP (~35 Hz) modulated by a slow OU envelope (~0.75 s time constant) for a distant-thunder swell/fade effect
+- Crackles louder (mix weight 2.0 → 2.8) and more frequent (base rate 0.5 → 3.0)
+- Exposed 8 new real-time AudioWorklet k-rate params on fire-synth processor (bodyVol, bodyLp, roarMean, roarSpeed, roarSigma, crackleBase, crackleVol, popVol)
+- Added Sound Builder dev tool: collapsible section at bottom of app with grouped sliders for all fire parameters and a copy-to-clipboard config output
+- Reclassified sounds into elemental categories: Water, Fire, Air, Earth
+- Added faint element icon watermark to each sound card (Material Symbols); brightens when active
+
 ### 0.1.8
 - Rewrote `genFire` with a 9-layer architecture: deep brown roar, pink body, flame hiss, ember sizzle, air whoosh, clustered crackle bursts with resin pings, spit crackles, pops, and log-shift rumble events
 - Fixed fire sounding like white noise — lowered hiss/ember filter cutoffs, boosted roar/body weights, reduced continuous high-freq layer contributions

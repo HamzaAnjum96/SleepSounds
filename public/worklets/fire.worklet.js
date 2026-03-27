@@ -1,13 +1,24 @@
 class FireSynthProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
-      { name: 'intensity', defaultValue: 0.62, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'dryness', defaultValue: 0.55, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'wind', defaultValue: 0.22, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'size', defaultValue: 0.45, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'distance', defaultValue: 0.2, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'crackleBias', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'running', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // ── Core behaviour ────────────────────────────────────────────────
+      { name: 'intensity',    defaultValue: 0.62,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'dryness',     defaultValue: 0.55,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'wind',        defaultValue: 0.22,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'size',        defaultValue: 0.45,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'distance',    defaultValue: 0.2,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'crackleBias', defaultValue: 0.5,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'running',     defaultValue: 1,       minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      // ── Roar / thunder background ─────────────────────────────────────
+      { name: 'bodyVol',     defaultValue: 0.40,    minValue: 0,       maxValue: 2,      automationRate: 'k-rate' },
+      { name: 'bodyLp',      defaultValue: 0.005,   minValue: 0.001,   maxValue: 0.05,   automationRate: 'k-rate' },
+      { name: 'roarMean',    defaultValue: 0.4,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'roarSpeed',   defaultValue: 0.00003, minValue: 0.000005,maxValue: 0.0002, automationRate: 'k-rate' },
+      { name: 'roarSigma',   defaultValue: 0.0008,  minValue: 0,       maxValue: 0.005,  automationRate: 'k-rate' },
+      // ── Mix levels ───────────────────────────────────────────────────
+      { name: 'crackleBase', defaultValue: 3.0,     minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
+      { name: 'crackleVol',  defaultValue: 2.8,     minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
+      { name: 'popVol',      defaultValue: 1.2,     minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
     ];
   }
 
@@ -120,38 +131,47 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const left = output[0];
     const right = output[1] || left;
 
-    const running = parameters.running[0] || 0;
-    const intensity = parameters.intensity[0] || 0.6;
-    const dryness = parameters.dryness[0] || 0.5;
-    const wind = parameters.wind[0] || 0.2;
-    const size = parameters.size[0] || 0.45;
-    const distance = parameters.distance[0] || 0.2;
-    const crackleBias = parameters.crackleBias[0] || 0.5;
+    const running     = parameters.running[0]     ?? 1;
+    const intensity   = parameters.intensity[0]   ?? 0.62;
+    const dryness     = parameters.dryness[0]     ?? 0.55;
+    const wind        = parameters.wind[0]         ?? 0.22;
+    const size        = parameters.size[0]         ?? 0.45;
+    const distance    = parameters.distance[0]     ?? 0.2;
+    const crackleBias = parameters.crackleBias[0]  ?? 0.5;
+
+    const bodyVol     = parameters.bodyVol[0]      ?? 0.40;
+    const bodyLp      = parameters.bodyLp[0]       ?? 0.005;
+    const roarMean    = parameters.roarMean[0]     ?? 0.4;
+    const roarSpeed   = parameters.roarSpeed[0]    ?? 0.00003;
+    const roarSigma   = parameters.roarSigma[0]    ?? 0.0008;
+
+    const crackleBase = parameters.crackleBase[0]  ?? 3.0;
+    const crackleVol  = parameters.crackleVol[0]   ?? 2.8;
+    const popVol      = parameters.popVol[0]        ?? 1.2;
 
     for (let i = 0; i < left.length; i++) {
-      this.energy = this.ou(this.energy, 0.25 + 0.75 * intensity, 0.00055, 0.0028);
-      this.turbulence = this.ou(this.turbulence, 0.2 + 0.8 * wind, 0.0018, 0.01);
-      this.stress = this.ou(this.stress, 0.18 + 0.85 * dryness, 0.0009, 0.0035);
-      this.embers = this.ou(this.embers, 0.14 + 0.5 * intensity, 0.0005, 0.0016);
+      this.energy     = this.ou(this.energy,     0.25 + 0.75 * intensity, 0.00055, 0.0028);
+      this.turbulence = this.ou(this.turbulence, 0.2  + 0.8  * wind,      0.0018,  0.01);
+      this.stress     = this.ou(this.stress,     0.18 + 0.85 * dryness,   0.0009,  0.0035);
+      this.embers     = this.ou(this.embers,     0.14 + 0.5  * intensity, 0.0005,  0.0016);
 
-      const crackleRate = 3.0 + 20 * this.energy + 28 * this.stress + 8 * this.embers + 9 * crackleBias;
+      const crackleRate = crackleBase + 20 * this.energy + 28 * this.stress + 8 * this.embers + 9 * crackleBias;
       const popRate = Math.max(0, -0.6 + 3.6 * this.stress + 1.2 * this.energy);
       if (this.rnd() < crackleRate / sampleRate) this.triggerCrackle(intensity, crackleBias);
       if (this.rnd() < popRate / sampleRate) this.triggerPop(intensity);
 
-      // Rolling thunder roar: deep LP + very slow independent envelope (~0.75 s time constant)
       const n = this.rnd() * 2 - 1;
-      this.lpBody += 0.005 * (n - this.lpBody); // ~35 Hz — deep sub-bass
-      this.roarEnv = this.ou(this.roarEnv, 0.4, 0.00003, 0.0008); // slow swell/fade
-      const body = this.lpBody * Math.max(0, this.roarEnv);
+      this.lpBody  += bodyLp * (n - this.lpBody);
+      this.roarEnv  = this.ou(this.roarEnv, roarMean, roarSpeed, roarSigma);
+      const body    = this.lpBody * Math.max(0, this.roarEnv);
 
       const crackles = this.renderCrackles();
-      const pops = this.renderPops();
+      const pops     = this.renderPops();
 
       const emberRate = Math.max(0, (this.embers - 0.15) * 14);
       const ember = this.rnd() < emberRate / sampleRate ? (this.rnd() * 2 - 1) * (0.01 + 0.02 * this.embers) : 0;
 
-      let mix = body * 0.40 + crackles * 2.8 + pops * 1.2 + ember;
+      let mix = body * bodyVol + crackles * crackleVol + pops * popVol + ember;
 
       const nearness = 1 - distance;
       const lp = 0.018 + 0.04 * nearness;
@@ -167,7 +187,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       const r = mix * (1 + panJitter) * active;
 
       this.prevR += 0.02 * (r - this.prevR);
-      left[i] = l;
+      left[i]  = l;
       right[i] = this.prevR;
     }
 
