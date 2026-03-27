@@ -35,9 +35,9 @@ const PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
   {
     label: 'Mix',
     params: [
-      { key: 'crackleBase', label: 'Crackle Rate (base)', min: 0, max: 15, step: 0.5,  def: 13.5, fmt: v => v.toFixed(1) },
-      { key: 'crackleVol',  label: 'Crackle Volume',      min: 0, max: 6,  step: 0.1,  def: 5.4,  fmt: v => v.toFixed(1) },
-      { key: 'popVol',      label: 'Pop Volume',          min: 0, max: 3,  step: 0.05, def: 1.35, fmt: v => v.toFixed(2) },
+      { key: 'crackleBase', label: 'Crackle Rate (base)', min: 0, max: 15, step: 0.5,  def: 15,   fmt: v => v.toFixed(1) },
+      { key: 'crackleVol',  label: 'Crackle Volume',      min: 0, max: 6,  step: 0.1,  def: 6,    fmt: v => v.toFixed(1) },
+      { key: 'popVol',      label: 'Pop Volume',          min: 0, max: 3,  step: 0.05, def: 0,    fmt: v => v.toFixed(2) },
     ],
   },
 ];

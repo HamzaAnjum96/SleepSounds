@@ -16,9 +16,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       { name: 'roarSpeed',   defaultValue: 0.00005, minValue: 0.000005,maxValue: 0.0002, automationRate: 'k-rate' },
       { name: 'roarSigma',   defaultValue: 0.0015,  minValue: 0,       maxValue: 0.005,  automationRate: 'k-rate' },
       // ── Mix levels ───────────────────────────────────────────────────
-      { name: 'crackleBase', defaultValue: 13.5,    minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
-      { name: 'crackleVol',  defaultValue: 5.4,     minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
-      { name: 'popVol',      defaultValue: 1.35,    minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
+      { name: 'crackleBase', defaultValue: 15,      minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
+      { name: 'crackleVol',  defaultValue: 6,       minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
+      { name: 'popVol',      defaultValue: 0,       minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
     ];
   }
 
@@ -145,9 +145,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const roarSpeed   = parameters.roarSpeed[0]    ?? 0.00005;
     const roarSigma   = parameters.roarSigma[0]    ?? 0.0015;
 
-    const crackleBase = parameters.crackleBase[0]  ?? 13.5;
-    const crackleVol  = parameters.crackleVol[0]   ?? 5.4;
-    const popVol      = parameters.popVol[0]        ?? 1.35;
+    const crackleBase = parameters.crackleBase[0]  ?? 15;
+    const crackleVol  = parameters.crackleVol[0]   ?? 6;
+    const popVol      = parameters.popVol[0]        ?? 0;
 
     for (let i = 0; i < left.length; i++) {
       this.energy     = this.ou(this.energy,     0.25 + 0.75 * intensity, 0.00055, 0.0028);

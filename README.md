@@ -95,6 +95,10 @@ npm run preview
 
 ## Changelog
 
+### 0.1.15
+- Disable pop renderer (popVol → 0) — pops were the sole source of the bubble sound; crackles alone sound clean
+- Update crackleBase → 15, crackleVol → 6 to compensate for removed pops
+
 ### 0.1.14
 - Bake in user-tested optimal fire settings as new defaults (bodyVol 1.4, bodyLp 0.007, roarMean 0.81, roarSpeed 0.00005, roarSigma 0.0015, crackleBase 13.5, crackleVol 5.4, popVol 1.35)
 - Fix bubble sound in pop renderer: remove descending pitch chirp and increase noise ratio to 70%; update SoundBuilder default values to match
