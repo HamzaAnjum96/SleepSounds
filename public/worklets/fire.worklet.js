@@ -68,11 +68,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
   }
 
   triggerPop(intensity) {
-    const life = Math.floor(sampleRate * (0.025 + this.rnd() * 0.09));
+    const life = Math.floor(sampleRate * (0.018 + this.rnd() * 0.05));
     const amp = (0.05 + 0.08 * this.rnd()) * (0.65 + 0.35 * intensity);
-    const f1 = 180 + this.rnd() * 380;
-    const f2 = f1 * (1.9 + this.rnd() * 0.7);
-    this.popEvents.push({ age: 0, life, amp, f1, f2, phase1: this.rnd() * Math.PI * 2, phase2: this.rnd() * Math.PI * 2 });
+    this.popEvents.push({ age: 0, life, amp });
     this.stress = Math.max(0, this.stress - (0.2 + 0.15 * this.rnd()));
     this.embers = Math.min(1.2, this.embers + 0.16 + 0.2 * this.rnd());
   }
@@ -114,12 +112,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
         this.popEvents.splice(i, 1);
         continue;
       }
-      const env = Math.exp(-9 * p); // faster snap — less bubble tail
-      // No pitch sweep: descending chirp was the main source of bubble character
-      ev.phase1 += (2 * Math.PI * ev.f1) / sampleRate;
-      ev.phase2 += (2 * Math.PI * ev.f2) / sampleRate;
-      // More noise, less tone — sounds like a wood crack rather than a bubble pop
-      const burst = 0.2 * Math.sin(ev.phase1) + 0.1 * Math.sin(ev.phase2) + 0.7 * (this.rnd() * 2 - 1);
+      const env = Math.exp(-12 * p); // sharp snap envelope
+      // Pure noise burst — no tonal components that create bubble character
+      const burst = this.rnd() * 2 - 1;
       out += burst * ev.amp * env;
       ev.age++;
     }
