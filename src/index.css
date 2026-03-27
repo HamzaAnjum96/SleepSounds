@@ -416,6 +416,7 @@ header {
 /* ── Sound Card ──────────────────────────────────────────────────── */
 
 .sound-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -429,6 +430,7 @@ header {
   text-align: left;
   width: 100%;
   animation: fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) both;
+  overflow: hidden;
 }
 .sound-card:hover {
   background: var(--surface-hover);
@@ -537,13 +539,14 @@ header {
 
 .element-mark {
   position: absolute;
-  bottom: 6px;
-  right: 6px;
-  font-size: 36px;
-  color: rgba(255, 255, 255, 0.07);
+  top: 8px;
+  right: 8px;
+  font-size: 32px;
+  color: rgba(255, 255, 255, 0.05);
   pointer-events: none;
   transition: color 0.3s;
   user-select: none;
+  z-index: 0;
 }
 .sound-card.active .element-mark {
   color: rgba(255, 255, 255, 0.13);
@@ -862,6 +865,46 @@ header {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.sb-sound-select {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sb-sound-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+}
+.sb-sound-btn .material-symbols-rounded { font-size: 15px; }
+.sb-sound-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text-primary); }
+.sb-sound-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(123,167,232,0.08);
+}
+
+.sb-info {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(123,167,232,0.06);
+  border: 1px solid rgba(123,167,232,0.15);
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .sb-controls {

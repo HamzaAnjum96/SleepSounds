@@ -57,9 +57,15 @@ function sbSliderBg(value: number, min: number, max: number) {
 let _sbCtx: AudioContext | null = null;
 let _sbModule: Promise<void> | null = null;
 
+const SOUND_TYPES = [
+  { id: 'fire',     label: 'Fire',     icon: 'local_fire_department', hasWorklet: true },
+  { id: 'birdsong', label: 'Birdsong', icon: 'raven',                hasWorklet: false },
+] as const;
+
 export default function SoundBuilder() {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [selectedSound, setSelectedSound] = useState<string>('fire');
   const [values, setValues] = useState<Record<string, number>>(DEFAULT_VALUES);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,14 +157,29 @@ export default function SoundBuilder() {
 
       {open && (
         <div className="sb-panel">
+          <div className="sb-sound-select">
+            {SOUND_TYPES.map(st => (
+              <button
+                key={st.id}
+                type="button"
+                className={`sb-sound-btn${selectedSound === st.id ? ' active' : ''}`}
+                onClick={() => { if (playing) stopFire(); setSelectedSound(st.id); }}
+              >
+                <span className="material-symbols-rounded">{st.icon}</span>
+                {st.label}
+              </button>
+            ))}
+          </div>
+
           <div className="sb-controls">
             <button
               type="button"
               className={`sb-play-btn${playing ? ' active' : ''}`}
               onClick={playing ? stopFire : startFire}
+              disabled={!SOUND_TYPES.find(s => s.id === selectedSound)?.hasWorklet}
             >
               <span className="material-symbols-rounded">{playing ? 'stop' : 'play_arrow'}</span>
-              {playing ? 'stop' : 'play fire'}
+              {playing ? 'stop' : `play ${selectedSound}`}
             </button>
             <button type="button" className="sb-reset-btn" onClick={handleReset}>
               <span className="material-symbols-rounded">restart_alt</span>
@@ -166,9 +187,13 @@ export default function SoundBuilder() {
             </button>
           </div>
 
+          {!SOUND_TYPES.find(s => s.id === selectedSound)?.hasWorklet && (
+            <div className="sb-info">Real-time parameter tuning not yet available for {selectedSound}. Use the sound card to preview.</div>
+          )}
+
           {error && <div className="sb-error">{error}</div>}
 
-          {PARAM_GROUPS.map(group => (
+          {selectedSound === 'fire' && PARAM_GROUPS.map(group => (
             <div key={group.label} className="sb-group">
               <div className="sb-group-label">{group.label}</div>
               {group.params.map(p => (
@@ -192,16 +217,18 @@ export default function SoundBuilder() {
             </div>
           ))}
 
-          <div className="sb-output">
-            <div className="sb-output-header">
-              <span className="sb-output-label">config values</span>
-              <button type="button" className="sb-copy-btn" onClick={handleCopy}>
-                <span className="material-symbols-rounded">{copied ? 'check' : 'content_copy'}</span>
-                {copied ? 'copied' : 'copy'}
-              </button>
+          {selectedSound === 'fire' && (
+            <div className="sb-output">
+              <div className="sb-output-header">
+                <span className="sb-output-label">config values</span>
+                <button type="button" className="sb-copy-btn" onClick={handleCopy}>
+                  <span className="material-symbols-rounded">{copied ? 'check' : 'content_copy'}</span>
+                  {copied ? 'copied' : 'copy'}
+                </button>
+              </div>
+              <pre className="sb-pre">{configText}</pre>
             </div>
-            <pre className="sb-pre">{configText}</pre>
-          </div>
+          )}
         </div>
       )}
     </div>
