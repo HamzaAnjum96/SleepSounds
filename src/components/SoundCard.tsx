@@ -1,10 +1,12 @@
 import type { Sound } from '../types';
 
 const ELEMENT_MARKS: Record<string, string> = {
-  Fire:  'local_fire_department',
-  Water: 'water_drop',
-  Air:   'air',
-  Earth: 'landscape',
+  Fire:     'local_fire_department',
+  Water:    'water_drop',
+  Air:      'air',
+  Earth:    'landscape',
+  Noise:    'music_note',
+  Wildlife: 'raven',
 };
 
 const SOUND_ICONS: Record<string, string> = {

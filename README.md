@@ -92,8 +92,18 @@ npm run preview
 
 - All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime (mono 16-bit PCM).
 - No backend is required.
+- The version number (from `package.json`) is displayed as a tiny fixed label in the bottom-right corner of the screen. It is rendered in `src/App.tsx` inside the `.app-footer` as a `.footer-version` element, styled in `src/index.css` with `position: fixed; bottom: 6px; right: 8px` at 8px font size and low opacity so it stays unobtrusive.
 
 ## Changelog
+
+### 0.1.17
+- Move version number from header superscript to a tiny fixed label in the bottom-right corner of the screen
+
+### 0.1.16
+- Fix element watermark overlapping volume slider: repositioned to top-right of card with smaller size
+- Add "Noise" category (music note icon) for White Noise, Pink Noise, Brown Noise
+- Add "Wildlife" category (raven icon) with new Birdsong sound (chirps, trills, and peeps over gentle forest bed)
+- Add sound selection buttons to Sound Builder (Fire, Birdsong) for choosing which sound to tune
 
 ### 0.1.15
 - Fix persistent bubble/stream character in fire pops: remove all sine-wave components (f1/f2 oscillators at 180–560 Hz were the root cause) and replace with a 100% noise burst; shorten max pop life from 115 ms to 68 ms and tighten envelope (exp(-12p)) for a sharper crack with no tonal tail

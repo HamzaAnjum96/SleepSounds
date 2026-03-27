@@ -572,6 +572,98 @@ function genFire(): string {
   return gen(mix, 0.64);
 }
 
+function genBirdsong(): string {
+  // Birdsong: gentle forest ambience bed + varied bird calls with chirps and trills
+
+  // ── 1. Ambient bed: soft filtered pink noise for distant forest air ──
+  const bed = pinkNoise();
+  hp1(bed, 150);
+  lp1(bed, 1800);
+  const bedBreath = smoothRandomLfo(0.7, 1.0, 2.5, 6.0);
+  for (let i = 0; i < N; i++) bed[i] *= bedBreath[i] * 0.35;
+
+  // ── 2. Bird calls: short melodic chirps at varied pitches ──
+  const calls = new Float32Array(N);
+  let callPos = Math.floor(SR * rand(0.3, 1.2));
+  while (callPos < N) {
+    // Each bird call is a series of 2–6 chirps
+    const numChirps = Math.floor(rand(2, 7));
+    const baseFreq = rand(1800, 4200);
+    const chirpGap = rand(0.06, 0.14);
+    const callAmp = rand(0.08, 0.25);
+
+    let chirpPos = callPos;
+    for (let c = 0; c < numChirps && chirpPos < N; c++) {
+      const chirpLen = Math.floor(SR * rand(0.03, 0.09));
+      const freq = baseFreq * rand(0.85, 1.25);
+      const freqEnd = freq * rand(0.7, 1.4); // pitch glide
+      let ph = 0;
+      for (let i = 0; i < chirpLen && chirpPos + i < N; i++) {
+        const p = i / chirpLen;
+        // Bell-shaped envelope: smooth attack and decay
+        const env = Math.sin(Math.PI * p) * callAmp;
+        const f = freq + (freqEnd - freq) * p;
+        ph += (2 * Math.PI * f) / SR;
+        calls[chirpPos + i] += Math.sin(ph) * env;
+      }
+      chirpPos += Math.floor(SR * (chirpLen / SR + chirpGap));
+    }
+
+    // Gap between bird calls: 0.8–4.0 seconds
+    callPos = chirpPos + Math.floor(SR * rand(0.8, 4.0));
+  }
+  hp1(calls, 1200);
+  lp1(calls, 8000);
+
+  // ── 3. Trills: rapid warbling sequences ──
+  const trills = new Float32Array(N);
+  let trillPos = Math.floor(SR * rand(1.5, 4.0));
+  while (trillPos < N) {
+    const trillLen = Math.floor(SR * rand(0.3, 0.8));
+    const trillFreq = rand(2400, 5000);
+    const trillRate = rand(18, 35); // warble rate in Hz
+    const trillAmp = rand(0.06, 0.16);
+    let ph = 0;
+    for (let i = 0; i < trillLen && trillPos + i < N; i++) {
+      const p = i / trillLen;
+      // Fade in/out envelope
+      const env = Math.sin(Math.PI * p) * trillAmp;
+      // Frequency modulation for warble effect
+      const fMod = trillFreq + Math.sin(2 * Math.PI * trillRate * (i / SR)) * trillFreq * 0.15;
+      ph += (2 * Math.PI * fMod) / SR;
+      trills[trillPos + i] += Math.sin(ph) * env;
+    }
+    trillPos += trillLen + Math.floor(SR * rand(2.5, 8.0));
+  }
+  hp1(trills, 1800);
+  lp1(trills, 9000);
+
+  // ── 4. Distant soft peeps: very quiet background birds ──
+  const peeps = new Float32Array(N);
+  let peepPos = Math.floor(SR * rand(0.5, 2.0));
+  while (peepPos < N) {
+    const peepLen = Math.floor(SR * rand(0.015, 0.04));
+    const peepFreq = rand(3000, 6000);
+    const peepAmp = rand(0.02, 0.06);
+    let ph = 0;
+    for (let i = 0; i < peepLen && peepPos + i < N; i++) {
+      const p = i / peepLen;
+      const env = Math.sin(Math.PI * p) * peepAmp;
+      ph += (2 * Math.PI * peepFreq) / SR;
+      peeps[peepPos + i] += Math.sin(ph) * env;
+    }
+    peepPos += Math.floor(SR * rand(0.3, 1.8));
+  }
+  lp1(peeps, 7000);
+
+  // ── Mix ──
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = bed[i] + calls[i] * 0.55 + trills[i] * 0.30 + peeps[i] * 0.15;
+  }
+  return gen(mix, 0.62);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -580,13 +672,14 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'wind',        name: 'Wind',        category: 'Air',   url: genWind() },
   { id: 'forest',      name: 'Forest',      category: 'Earth', url: genForest() },
   { id: 'fire',        name: 'Fire',        category: 'Fire',  url: genFire() },
-  { id: 'white-noise', name: 'White Noise', category: 'Air',   url: genWhite() },
-  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Air',   url: genPink() },
-  { id: 'brown-noise', name: 'Brown Noise', category: 'Earth', url: genBrown() },
-  { id: 'fan',         name: 'Fan',         category: 'Air',   url: genFan() },
+  { id: 'white-noise', name: 'White Noise', category: 'Noise',    url: genWhite() },
+  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',    url: genPink() },
+  { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',    url: genBrown() },
+  { id: 'fan',         name: 'Fan',         category: 'Air',      url: genFan() },
+  { id: 'birdsong',    name: 'Birdsong',    category: 'Wildlife', url: genBirdsong() },
 ];
 
-export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth'] as const;
+export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Wildlife'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';

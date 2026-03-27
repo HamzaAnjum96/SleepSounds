@@ -245,7 +245,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
 
       <div className="app" onScroll={handleAppScroll}>
         <header>
-          <div className="wordmark">drift<sup style={{fontSize:'0.35em', verticalAlign:'super', marginLeft:'0.3em', opacity:0.55, fontFamily:'sans-serif', fontWeight:400, letterSpacing:'0.02em'}}>v{version}</sup></div>
+          <div className="wordmark">drift</div>
           <div className="tagline">sleep sounds</div>
         </header>
 
@@ -410,6 +410,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           {(activeSounds.length > 0 || isPaused) && (
             <div className="footer-rest">rest well</div>
           )}
+          <div className="footer-version">v{version}</div>
         </div>
       </div>
     </>
