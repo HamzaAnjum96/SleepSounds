@@ -168,7 +168,7 @@ class FireWorkletSource implements MixerSource {
   static async openContext(): Promise<AudioContext> {
     const ctx = FireWorkletSource.getContext();
     if (!FireWorkletSource.modulePromise) {
-      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/fire.worklet.js`);
     }
     await FireWorkletSource.modulePromise;
     await ctx.resume();
@@ -178,7 +178,7 @@ class FireWorkletSource implements MixerSource {
   private async ensureNode() {
     const ctx = FireWorkletSource.getContext();
     if (!FireWorkletSource.modulePromise) {
-      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/fire.worklet.js`);
     }
     await FireWorkletSource.modulePromise;
 
