@@ -380,6 +380,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           <div className="cat-pills">
             {CATEGORIES.map((cat) => {
               const n = activeInCategory(cat);
+              const hasCount = n > 0;
               return (
                 <button
                   key={cat}
@@ -389,7 +390,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                 >
                   {CATEGORY_ICONS[cat] && <span className="material-symbols-rounded cat-icon">{CATEGORY_ICONS[cat]}</span>}
                   {cat}
-                  {n > 0 && <span className="cat-count">{n}</span>}
+                  <span className={`cat-count${hasCount ? ' active' : ''}`}>{hasCount ? n : ''}</span>
                 </button>
               );
             })}
