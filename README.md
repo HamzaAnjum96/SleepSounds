@@ -95,6 +95,9 @@ npm run preview
 
 ## Changelog
 
+### 0.1.15
+- Fix permanent stream/bubble artifact in fire sound: remove asymmetric right-channel low-pass filter (`prevR`, coeff 0.02 ≈ 140 Hz) that was baked into the output stage and unremovable by any slider; raise pop frequencies from 180–560 Hz to 500–1200 Hz and reduce tonal content to 10% so pops crack like wood rather than bloop like water bubbles
+
 ### 0.1.14
 - Bake in user-tested optimal fire settings as new defaults (bodyVol 1.4, bodyLp 0.007, roarMean 0.81, roarSpeed 0.00005, roarSigma 0.0015, crackleBase 13.5, crackleVol 5.4, popVol 1.35)
 - Fix bubble sound in pop renderer: remove descending pitch chirp and increase noise ratio to 70%; update SoundBuilder default values to match

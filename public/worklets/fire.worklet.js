@@ -37,7 +37,6 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     this.popEvents = [];
 
     this.prevL = 0;
-    this.prevR = 0;
 
     this.randState = 22222;
   }
@@ -70,7 +69,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
   triggerPop(intensity) {
     const life = Math.floor(sampleRate * (0.025 + this.rnd() * 0.09));
     const amp = (0.05 + 0.08 * this.rnd()) * (0.65 + 0.35 * intensity);
-    const f1 = 180 + this.rnd() * 380;
+    const f1 = 500 + this.rnd() * 700;
     const f2 = f1 * (1.9 + this.rnd() * 0.7);
     this.popEvents.push({ age: 0, life, amp, f1, f2, phase1: this.rnd() * Math.PI * 2, phase2: this.rnd() * Math.PI * 2 });
     this.stress = Math.max(0, this.stress - (0.2 + 0.15 * this.rnd()));
@@ -119,7 +118,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       ev.phase1 += (2 * Math.PI * ev.f1) / sampleRate;
       ev.phase2 += (2 * Math.PI * ev.f2) / sampleRate;
       // More noise, less tone — sounds like a wood crack rather than a bubble pop
-      const burst = 0.2 * Math.sin(ev.phase1) + 0.1 * Math.sin(ev.phase2) + 0.7 * (this.rnd() * 2 - 1);
+      const burst = 0.08 * Math.sin(ev.phase1) + 0.02 * Math.sin(ev.phase2) + 0.9 * (this.rnd() * 2 - 1);
       out += burst * ev.amp * env;
       ev.age++;
     }
@@ -186,9 +185,8 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       const l = mix * (1 - panJitter) * active;
       const r = mix * (1 + panJitter) * active;
 
-      this.prevR += 0.02 * (r - this.prevR);
       left[i]  = l;
-      right[i] = this.prevR;
+      right[i] = r;
     }
 
     return true;
