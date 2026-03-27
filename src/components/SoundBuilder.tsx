@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { openFireContext } from '../hooks/useAudioMixer';
 
 interface ParamDef {
   key: string;
@@ -53,11 +52,17 @@ function sbSliderBg(value: number, min: number, max: number) {
   };
 }
 
+// Module-level singletons so the AudioContext and module load persist across
+// component re-mounts and don't get recreated on every play press.
+let _sbCtx: AudioContext | null = null;
+let _sbModule: Promise<void> | null = null;
+
 export default function SoundBuilder() {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [values, setValues] = useState<Record<string, number>>(DEFAULT_VALUES);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const ctxRef  = useRef<AudioContext | null>(null);
   const nodeRef = useRef<AudioWorkletNode | null>(null);
@@ -65,14 +70,22 @@ export default function SoundBuilder() {
   useEffect(() => { valRef.current = values; }, [values]);
 
   const startFire = useCallback(async () => {
+    setError(null);
+    // ── Synchronous section — must stay before the first await ──────────
+    // AudioContext creation and resume() both need to be within the user
+    // gesture call stack, or iOS Safari will leave the context suspended.
+    if (!_sbCtx) _sbCtx = new AudioContext();
+    const ctx = _sbCtx;
+    const resumeP = ctx.resume();
+    if (!_sbModule) _sbModule = ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+    // ────────────────────────────────────────────────────────────────────
     try {
-      const ctx = await openFireContext();
+      await Promise.all([resumeP, _sbModule]);
       const node = new AudioWorkletNode(ctx, 'fire-synth', {
         numberOfInputs: 0,
         numberOfOutputs: 1,
         outputChannelCount: [2],
       });
-      // Apply current slider values
       for (const [key, val] of Object.entries(valRef.current)) {
         node.parameters.get(key)?.setValueAtTime(val, ctx.currentTime);
       }
@@ -82,7 +95,9 @@ export default function SoundBuilder() {
       nodeRef.current = node;
       setPlaying(true);
     } catch (err) {
-      console.error('[SoundBuilder] failed to start fire:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      console.error('[SoundBuilder]', err);
     }
   }, []);
 
@@ -150,6 +165,8 @@ export default function SoundBuilder() {
               reset
             </button>
           </div>
+
+          {error && <div className="sb-error">{error}</div>}
 
           {PARAM_GROUPS.map(group => (
             <div key={group.label} className="sb-group">
