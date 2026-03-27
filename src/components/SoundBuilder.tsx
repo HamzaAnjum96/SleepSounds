@@ -10,7 +10,7 @@ interface ParamDef {
   fmt: (v: number) => string;
 }
 
-const PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
+const FIRE_PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
   {
     label: 'Core',
     params: [
@@ -42,8 +42,56 @@ const PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
   },
 ];
 
-const ALL_PARAMS = PARAM_GROUPS.flatMap(g => g.params);
-const DEFAULT_VALUES = Object.fromEntries(ALL_PARAMS.map(p => [p.key, p.def]));
+const BIRDSONG_PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
+  {
+    label: 'Ambience',
+    params: [
+      { key: 'bedVol',    label: 'Bed Volume',    min: 0,   max: 1,   step: 0.01, def: 0.35, fmt: v => v.toFixed(2) },
+      { key: 'bedTone',   label: 'Bed Tone',      min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'bedBreath', label: 'Bed Breathing',  min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+    ],
+  },
+  {
+    label: 'Calls',
+    params: [
+      { key: 'callRate',    label: 'Call Density',     min: 0.1, max: 8,   step: 0.1,  def: 2.0,  fmt: v => v.toFixed(1) },
+      { key: 'callPitch',   label: 'Call Pitch',       min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'callVol',     label: 'Call Volume',      min: 0,   max: 1,   step: 0.01, def: 0.55, fmt: v => v.toFixed(2) },
+      { key: 'callVariety', label: 'Pitch Variety',    min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+    ],
+  },
+  {
+    label: 'Trills',
+    params: [
+      { key: 'trillRate',  label: 'Trill Density',    min: 0,   max: 1,   step: 0.01, def: 0.30, fmt: v => v.toFixed(2) },
+      { key: 'trillPitch', label: 'Trill Pitch',      min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'trillVol',   label: 'Trill Volume',     min: 0,   max: 1,   step: 0.01, def: 0.30, fmt: v => v.toFixed(2) },
+      { key: 'trillSpeed', label: 'Warble Speed',     min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+    ],
+  },
+  {
+    label: 'Peeps & Master',
+    params: [
+      { key: 'peepRate',   label: 'Peep Density',     min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'peepVol',    label: 'Peep Volume',      min: 0,   max: 0.5, step: 0.01, def: 0.15, fmt: v => v.toFixed(2) },
+      { key: 'gain',       label: 'Output Gain',      min: 0,   max: 2,   step: 0.01, def: 0.62, fmt: v => v.toFixed(2) },
+    ],
+  },
+];
+
+const SOUND_PARAM_GROUPS: Record<string, { label: string; params: ParamDef[] }[]> = {
+  fire: FIRE_PARAM_GROUPS,
+  birdsong: BIRDSONG_PARAM_GROUPS,
+};
+
+const ALL_FIRE_PARAMS = FIRE_PARAM_GROUPS.flatMap(g => g.params);
+const ALL_BIRDSONG_PARAMS = BIRDSONG_PARAM_GROUPS.flatMap(g => g.params);
+const FIRE_DEFAULTS = Object.fromEntries(ALL_FIRE_PARAMS.map(p => [p.key, p.def]));
+const BIRDSONG_DEFAULTS = Object.fromEntries(ALL_BIRDSONG_PARAMS.map(p => [p.key, p.def]));
+const SOUND_DEFAULTS: Record<string, Record<string, number>> = {
+  fire: FIRE_DEFAULTS,
+  birdsong: BIRDSONG_DEFAULTS,
+};
 
 function sbSliderBg(value: number, min: number, max: number) {
   const pct = ((value - min) / (max - min)) * 100;
@@ -55,18 +103,18 @@ function sbSliderBg(value: number, min: number, max: number) {
 // Module-level singletons so the AudioContext and module load persist across
 // component re-mounts and don't get recreated on every play press.
 let _sbCtx: AudioContext | null = null;
-let _sbModule: Promise<void> | null = null;
+let _sbModules: Record<string, Promise<void>> = {};
 
 const SOUND_TYPES = [
-  { id: 'fire',     label: 'Fire',     icon: 'local_fire_department', hasWorklet: true },
-  { id: 'birdsong', label: 'Birdsong', icon: 'raven',                hasWorklet: false },
+  { id: 'fire',     label: 'Fire',     icon: 'local_fire_department', worklet: 'fire.worklet.js',     processor: 'fire-synth' },
+  { id: 'birdsong', label: 'Birdsong', icon: 'raven',                worklet: 'birdsong.worklet.js', processor: 'birdsong-synth' },
 ] as const;
 
 export default function SoundBuilder() {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [selectedSound, setSelectedSound] = useState<string>('fire');
-  const [values, setValues] = useState<Record<string, number>>(DEFAULT_VALUES);
+  const [values, setValues] = useState<Record<string, number>>(SOUND_DEFAULTS['fire']);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,19 +123,21 @@ export default function SoundBuilder() {
   const valRef  = useRef(values);
   useEffect(() => { valRef.current = values; }, [values]);
 
-  const startFire = useCallback(async () => {
+  const startSound = useCallback(async () => {
     setError(null);
+    const st = SOUND_TYPES.find(s => s.id === selectedSound);
+    if (!st) return;
     // ── Synchronous section — must stay before the first await ──────────
     // AudioContext creation and resume() both need to be within the user
     // gesture call stack, or iOS Safari will leave the context suspended.
     if (!_sbCtx) _sbCtx = new AudioContext();
     const ctx = _sbCtx;
     const resumeP = ctx.resume();
-    if (!_sbModule) _sbModule = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/fire.worklet.js`);
+    if (!_sbModules[st.id]) _sbModules[st.id] = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/${st.worklet}`);
     // ────────────────────────────────────────────────────────────────────
     try {
-      await Promise.all([resumeP, _sbModule]);
-      const node = new AudioWorkletNode(ctx, 'fire-synth', {
+      await Promise.all([resumeP, _sbModules[st.id]]);
+      const node = new AudioWorkletNode(ctx, st.processor, {
         numberOfInputs: 0,
         numberOfOutputs: 1,
         outputChannelCount: [2],
@@ -105,9 +155,9 @@ export default function SoundBuilder() {
       setError(msg);
       console.error('[SoundBuilder]', err);
     }
-  }, []);
+  }, [selectedSound]);
 
-  const stopFire = useCallback(() => {
+  const stopSound = useCallback(() => {
     nodeRef.current?.disconnect();
     nodeRef.current = null;
     ctxRef.current  = null;
@@ -122,18 +172,19 @@ export default function SoundBuilder() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setValues(DEFAULT_VALUES);
+    const defaults = SOUND_DEFAULTS[selectedSound] ?? {};
+    setValues(defaults);
     if (nodeRef.current && ctxRef.current) {
-      for (const [key, val] of Object.entries(DEFAULT_VALUES)) {
+      for (const [key, val] of Object.entries(defaults)) {
         nodeRef.current.parameters.get(key)?.setValueAtTime(val, ctxRef.current.currentTime);
       }
     }
-  }, []);
+  }, [selectedSound]);
 
   // Stop when section is collapsed
   useEffect(() => {
-    if (!open && playing) stopFire();
-  }, [open, playing, stopFire]);
+    if (!open && playing) stopSound();
+  }, [open, playing, stopSound]);
 
   // Cleanup on unmount — only disconnect the node, never close the shared context
   useEffect(() => () => { nodeRef.current?.disconnect(); }, []);
@@ -163,7 +214,7 @@ export default function SoundBuilder() {
                 key={st.id}
                 type="button"
                 className={`sb-sound-btn${selectedSound === st.id ? ' active' : ''}`}
-                onClick={() => { if (playing) stopFire(); setSelectedSound(st.id); }}
+                onClick={() => { if (playing) stopSound(); setSelectedSound(st.id); setValues(SOUND_DEFAULTS[st.id] ?? {}); }}
               >
                 <span className="material-symbols-rounded">{st.icon}</span>
                 {st.label}
@@ -175,8 +226,7 @@ export default function SoundBuilder() {
             <button
               type="button"
               className={`sb-play-btn${playing ? ' active' : ''}`}
-              onClick={playing ? stopFire : startFire}
-              disabled={!SOUND_TYPES.find(s => s.id === selectedSound)?.hasWorklet}
+              onClick={playing ? stopSound : startSound}
             >
               <span className="material-symbols-rounded">{playing ? 'stop' : 'play_arrow'}</span>
               {playing ? 'stop' : `play ${selectedSound}`}
@@ -187,20 +237,16 @@ export default function SoundBuilder() {
             </button>
           </div>
 
-          {!SOUND_TYPES.find(s => s.id === selectedSound)?.hasWorklet && (
-            <div className="sb-info">Real-time parameter tuning not yet available for {selectedSound}. Use the sound card to preview.</div>
-          )}
-
           {error && <div className="sb-error">{error}</div>}
 
-          {selectedSound === 'fire' && PARAM_GROUPS.map(group => (
+          {(SOUND_PARAM_GROUPS[selectedSound] ?? []).map(group => (
             <div key={group.label} className="sb-group">
               <div className="sb-group-label">{group.label}</div>
               {group.params.map(p => (
                 <div key={p.key} className="sb-row">
                   <div className="sb-row-header">
                     <span className="sb-param-label">{p.label}</span>
-                    <span className="sb-param-val">{p.fmt(values[p.key])}</span>
+                    <span className="sb-param-val">{p.fmt(values[p.key] ?? p.def)}</span>
                   </div>
                   <input
                     type="range"
@@ -208,8 +254,8 @@ export default function SoundBuilder() {
                     min={p.min}
                     max={p.max}
                     step={p.step}
-                    value={values[p.key]}
-                    style={sbSliderBg(values[p.key], p.min, p.max)}
+                    value={values[p.key] ?? p.def}
+                    style={sbSliderBg(values[p.key] ?? p.def, p.min, p.max)}
                     onChange={e => handleChange(p.key, Number(e.target.value))}
                   />
                 </div>
@@ -217,18 +263,16 @@ export default function SoundBuilder() {
             </div>
           ))}
 
-          {selectedSound === 'fire' && (
-            <div className="sb-output">
-              <div className="sb-output-header">
-                <span className="sb-output-label">config values</span>
-                <button type="button" className="sb-copy-btn" onClick={handleCopy}>
-                  <span className="material-symbols-rounded">{copied ? 'check' : 'content_copy'}</span>
-                  {copied ? 'copied' : 'copy'}
-                </button>
-              </div>
-              <pre className="sb-pre">{configText}</pre>
+          <div className="sb-output">
+            <div className="sb-output-header">
+              <span className="sb-output-label">config values</span>
+              <button type="button" className="sb-copy-btn" onClick={handleCopy}>
+                <span className="material-symbols-rounded">{copied ? 'check' : 'content_copy'}</span>
+                {copied ? 'copied' : 'copy'}
+              </button>
             </div>
-          )}
+            <pre className="sb-pre">{configText}</pre>
+          </div>
         </div>
       )}
     </div>
