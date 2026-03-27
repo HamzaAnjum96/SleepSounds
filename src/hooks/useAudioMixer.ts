@@ -386,11 +386,25 @@ function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
       gainMultiplier = mapRange(waveSize, 0.74, 1.36) + foam * 0.12;
       break;
     }
+    case 'stream': {
+      const flow = v('flow', 0.58);
+      const sparkle = v('sparkle', 0.44);
+      playbackRate = mapRange(flow, 0.76, 1.46) + sparkle * 0.18;
+      gainMultiplier = mapRange(flow, 0.78, 1.34) + sparkle * 0.10;
+      break;
+    }
     case 'wind': {
       const gusts = v('gusts', 0.52);
       const airTone = v('airTone', 0.46);
       playbackRate = mapRange(gusts, 0.68, 1.66) + airTone * 0.08;
       gainMultiplier = mapRange(airTone, 0.74, 1.28) + gusts * 0.18;
+      break;
+    }
+    case 'thunder': {
+      const storm = v('storm', 0.63);
+      const presence = v('presence', 0.39);
+      playbackRate = mapRange(storm, 0.64, 1.24) + presence * 0.08;
+      gainMultiplier = mapRange(storm, 0.80, 1.42) + presence * 0.18;
       break;
     }
     case 'forest': {
@@ -405,6 +419,20 @@ function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
       const hum = v('hum', 0.41);
       playbackRate = mapRange(speed, 0.60, 1.70) + hum * 0.06;
       gainMultiplier = mapRange(hum, 0.72, 1.28) + speed * 0.16;
+      break;
+    }
+    case 'train': {
+      const pace = v('pace', 0.52);
+      const metal = v('metal', 0.36);
+      playbackRate = mapRange(pace, 0.66, 1.48) + metal * 0.10;
+      gainMultiplier = mapRange(metal, 0.76, 1.28) + pace * 0.16;
+      break;
+    }
+    case 'night': {
+      const crickets = v('crickets', 0.46);
+      const hush = v('hush', 0.58);
+      playbackRate = mapRange(crickets, 0.80, 1.36) - hush * 0.18;
+      gainMultiplier = mapRange(hush, 0.82, 1.34) + crickets * 0.08;
       break;
     }
     case 'white-noise': {

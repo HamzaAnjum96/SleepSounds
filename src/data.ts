@@ -657,22 +657,141 @@ function genBirdsong(): string {
   return gen(mix, 0.62);
 }
 
+function genStream(): string {
+  // Gentle stream: broad watery bed with bright ripples.
+  const bed = pinkNoise();
+  hp1(bed, 180);
+  lp1(bed, 2600);
+
+  const ripples = whiteNoise();
+  hp1(ripples, 1200);
+  lp1(ripples, 7600);
+
+  const flow = smoothRandomLfo(0.72, 1.24, 0.5, 2.4);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const rippleEnv = Math.pow(Math.max(0, flow[i]), 1.8);
+    mix[i] = bed[i] * 0.78 * flow[i] + ripples[i] * 0.22 * rippleEnv;
+  }
+  return gen(mix, 0.66);
+}
+
+function genThunder(): string {
+  // Distant thunder roll with occasional low booms.
+  const roll = brownNoise();
+  hp1(roll, 24);
+  lp1(roll, 420);
+
+  const hiss = pinkNoise();
+  hp1(hiss, 1800);
+  lp1(hiss, 5200);
+
+  const booms = new Float32Array(N);
+  let pos = Math.floor(SR * rand(1.5, 4.5));
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.7, 2.2));
+    const amp = rand(0.12, 0.34);
+    const f0 = rand(36, 95);
+    let ph = 0;
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const p = i / Math.max(1, len - 1);
+      const env = Math.exp(-4.6 * p);
+      const f = f0 * (1 - p * 0.35);
+      ph += (2 * Math.PI * f) / SR;
+      booms[pos + i] += Math.sin(ph) * env * amp;
+    }
+    pos += Math.floor(SR * rand(4.0, 10.0));
+  }
+  hp1(booms, 24);
+  lp1(booms, 240);
+
+  const swell = smoothRandomLfo(0.64, 1.26, 1.4, 6.2);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = roll[i] * 0.74 * swell[i] + hiss[i] * 0.10 + booms[i] * 0.16;
+  }
+  return gen(mix, 0.7);
+}
+
+function genNight(): string {
+  // Calm night ambience: low rustle + sparse insect chirps.
+  const bed = pinkNoise();
+  hp1(bed, 110);
+  lp1(bed, 2600);
+
+  const chirps = new Float32Array(N);
+  let pos = Math.floor(SR * rand(0.2, 0.9));
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.035, 0.11));
+    const f0 = rand(2600, 4200);
+    const amp = rand(0.012, 0.045);
+    let ph = 0;
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const p = i / Math.max(1, len - 1);
+      const env = Math.sin(Math.PI * p);
+      ph += (2 * Math.PI * (f0 + 120 * Math.sin(2 * Math.PI * p * 3))) / SR;
+      chirps[pos + i] += Math.sin(ph) * env * amp;
+    }
+    pos += Math.floor(SR * rand(0.4, 1.9));
+  }
+  lp1(chirps, 6200);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = bed[i] * 0.9 + chirps[i] * 0.1;
+  return gen(mix, 0.6);
+}
+
+function genTrain(): string {
+  // Distant train cabin: wheel rhythm + broad mechanical rumble.
+  const rumble = brownNoise();
+  hp1(rumble, 40);
+  lp1(rumble, 460);
+
+  const carriage = pinkNoise();
+  hp1(carriage, 180);
+  lp1(carriage, 1900);
+
+  const clicks = new Float32Array(N);
+  let pos = Math.floor(SR * 0.25);
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.003, 0.012));
+    const amp = rand(0.025, 0.085);
+    for (let i = 0; i < len && pos + i < N; i++) {
+      clicks[pos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-10 * (i / len));
+    }
+    pos += Math.floor(SR * rand(0.18, 0.62));
+  }
+  hp1(clicks, 1200);
+  lp1(clicks, 5200);
+
+  const sway = smoothRandomLfo(0.78, 1.18, 0.8, 3.8);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = rumble[i] * 0.57 * sway[i] + carriage[i] * 0.33 + clicks[i] * 0.1;
+  }
+  return gen(mix, 0.68);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
   { id: 'rain',        name: 'Rain',        category: 'Water', url: genRain() },
+  { id: 'stream',      name: 'Stream',      category: 'Water', url: genStream() },
   { id: 'ocean',       name: 'Ocean',       category: 'Water', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Air',   url: genWind() },
+  { id: 'thunder',     name: 'Thunder',     category: 'Air',   url: genThunder() },
   { id: 'forest',      name: 'Forest',      category: 'Earth', url: genForest() },
   { id: 'fire',        name: 'Fire',        category: 'Fire',  url: genFire() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',    url: genWhite() },
   { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',    url: genPink() },
   { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',    url: genBrown() },
+  { id: 'train',       name: 'Train',       category: 'Urban',    url: genTrain() },
   { id: 'fan',         name: 'Fan',         category: 'Air',      url: genFan() },
+  { id: 'night',       name: 'Night',       category: 'Wildlife', url: genNight() },
   { id: 'birdsong',    name: 'Birdsong',    category: 'Wildlife', url: genBirdsong() },
 ];
 
-export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Wildlife'] as const;
+export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';
@@ -690,4 +809,5 @@ export const BUILTIN_PRESETS: Preset[] = [
   { id: 'builtin-fan-rain',      name: 'Fan & Rain',    createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
   { id: 'builtin-windy-forest',  name: 'Windy Forest',  createdAt: '', masterVolume: 0.8, state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
   { id: 'builtin-campfire-night', name: 'Campfire Night', createdAt: '', masterVolume: 0.8, state: builtinState([['fire', 0.68], ['forest', 0.28]]) },
+  { id: 'builtin-rainy-train', name: 'Rainy Train', createdAt: '', masterVolume: 0.78, state: builtinState([['rain', 0.62], ['train', 0.44], ['thunder', 0.34]]) },
 ];

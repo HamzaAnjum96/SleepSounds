@@ -16,6 +16,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   Air:      'air',
   Earth:    'landscape',
   Noise:    'music_note',
+  Urban:    'location_city',
   Wildlife: 'raven',
 };
 
