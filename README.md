@@ -92,8 +92,12 @@ npm run preview
 
 - All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime (mono 16-bit PCM).
 - No backend is required.
+- The version number (from `package.json`) is displayed as a tiny fixed label in the bottom-right corner of the screen. It is rendered in `src/App.tsx` inside the `.app-footer` as a `.footer-version` element, styled in `src/index.css` with `position: fixed; bottom: 6px; right: 8px` at 8px font size and low opacity so it stays unobtrusive.
 
 ## Changelog
+
+### 0.1.17
+- Move version number from header superscript to a tiny fixed label in the bottom-right corner of the screen
 
 ### 0.1.16
 - Fix element watermark overlapping volume slider: repositioned to top-right of card with smaller size
