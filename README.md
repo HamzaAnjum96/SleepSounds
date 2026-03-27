@@ -96,6 +96,10 @@ npm run preview
 
 ## Changelog
 
+### 0.1.18
+- Reduce audible loop-gap risk while preserving sound character: keep crossfade timing based on sound end, but add a lightweight playback monitor (120 ms cadence) so crossfades still trigger smoothly even when browser `timeupdate` events are sparse
+- Prevent category chip layout shift: always reserve the count circle space and show an inactive grey placeholder when the active count is zero
+
 ### 0.1.17
 - Move version number from header superscript to a tiny fixed label in the bottom-right corner of the screen
 

@@ -34,6 +34,8 @@ class CrossfadeAudio implements MixerSource {
   private _xfadeTimer: ReturnType<typeof setInterval> | null = null;
   private _timeupdateA: () => void;
   private _timeupdateB: () => void;
+  private _monitorTimer: ReturnType<typeof setTimeout> | null = null;
+  private _active = false;
 
   constructor(url: string) {
     this._url = url;
@@ -55,6 +57,25 @@ class CrossfadeAudio implements MixerSource {
   }
   private get _secondary() {
     return this._els[1 - this._cur];
+  }
+
+  private _startMonitor() {
+    if (this._monitorTimer !== null) return;
+    const loop = () => {
+      if (!this._active) {
+        this._monitorTimer = null;
+        return;
+      }
+      this._check(this._cur);
+      this._monitorTimer = setTimeout(loop, 120);
+    };
+    loop();
+  }
+
+  private _stopMonitor() {
+    if (this._monitorTimer === null) return;
+    clearTimeout(this._monitorTimer);
+    this._monitorTimer = null;
   }
 
   private _check(idx: number) {
@@ -118,17 +139,23 @@ class CrossfadeAudio implements MixerSource {
   }
 
   async play() {
+    this._active = true;
+    this._startMonitor();
     this._primary.volume = this._targetVol;
     await this._primary.play();
   }
 
   pause() {
+    this._active = false;
+    this._stopMonitor();
     this._clearXfade();
     this._primary.pause();
     this._secondary.pause();
   }
 
   stop() {
+    this._active = false;
+    this._stopMonitor();
     this._clearXfade();
     this._els.forEach((el) => {
       el.pause();
@@ -138,6 +165,8 @@ class CrossfadeAudio implements MixerSource {
   }
 
   destroy() {
+    this._active = false;
+    this._stopMonitor();
     this._clearXfade();
     this._els[0].removeEventListener('timeupdate', this._timeupdateA);
     this._els[1].removeEventListener('timeupdate', this._timeupdateB);
