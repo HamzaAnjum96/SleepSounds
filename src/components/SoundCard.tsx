@@ -1,8 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
 import type { Sound } from '../types';
 import { EDITABLE_SOUND_IDS } from './soundEditorDefs';
-
-const LazySoundEditor = lazy(() => import('./SoundEditor'));
 
 const SOUND_ICONS: Record<string, string> = {
   rain:            'rainy',
@@ -39,6 +36,8 @@ interface SoundCardProps {
   loading?: boolean;
   volume: number;
   cardIndex?: number;
+  editorOpen?: boolean;
+  onToggleEditor?: () => void;
   onToggle: () => void;
   onVolumeChange: (value: number) => void;
 }
@@ -50,10 +49,20 @@ function sliderBg(value: number) {
   };
 }
 
-export default function SoundCard({ sound, enabled, playing, loading = false, volume, cardIndex, onToggle, onVolumeChange }: SoundCardProps) {
+export default function SoundCard({
+  sound,
+  enabled,
+  playing,
+  loading = false,
+  volume,
+  cardIndex,
+  editorOpen = false,
+  onToggleEditor,
+  onToggle,
+  onVolumeChange,
+}: SoundCardProps) {
   const icon = SOUND_ICONS[sound.id] ?? 'music_note';
-  const canEdit = EDITABLE_SOUND_IDS.includes(sound.id as 'fire' | 'birdsong');
-  const [editorOpen, setEditorOpen] = useState(false);
+  const canEdit = EDITABLE_SOUND_IDS.includes(sound.id);
 
   return (
     <div
@@ -98,22 +107,17 @@ export default function SoundCard({ sound, enabled, playing, loading = false, vo
       </div>
 
       {canEdit && (
-        <div className="card-editor-wrap" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            className={`sb-toggle card-editor-toggle${editorOpen ? ' active' : ''}`}
-            onClick={() => setEditorOpen((v) => !v)}
-          >
-            <span className="material-symbols-rounded">tune</span>
-            edit {sound.name.toLowerCase()}
-            <span className="material-symbols-rounded sb-chevron">{editorOpen ? 'expand_less' : 'expand_more'}</span>
-          </button>
-          {editorOpen && (
-            <Suspense fallback={<div className="sb-panel">Loading editor…</div>}>
-              <LazySoundEditor soundId={sound.id as 'fire' | 'birdsong'} />
-            </Suspense>
-          )}
-        </div>
+        <button
+          type="button"
+          className={`card-editor-icon${editorOpen ? ' active' : ''}`}
+          aria-label={`Edit ${sound.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleEditor?.();
+          }}
+        >
+          <span className="material-symbols-rounded">tune</span>
+        </button>
       )}
     </div>
   );

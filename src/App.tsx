@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { version } from '../package.json';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
+import { EDITABLE_SOUND_IDS } from './components/soundEditorDefs';
+
+const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 
 const CATEGORY_ICONS: Record<string, string> = {
   All:      'apps',
@@ -77,6 +80,7 @@ export default function App() {
 
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
+  const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
 
   const makeDefaultState = useCallback(() => (
     SOUND_LIBRARY.reduce<Record<string, { enabled: boolean; volume: number }>>((acc, sound) => {
@@ -236,10 +240,24 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     ? SOUND_LIBRARY
     : SOUND_LIBRARY.filter((s) => s.category === category);
 
+  const openEditorIndex = openEditorSoundId
+    ? visibleSounds.findIndex((sound) => sound.id === openEditorSoundId)
+    : -1;
+  const editorInsertAfter = openEditorIndex < 0
+    ? -1
+    : Math.min(visibleSounds.length - 1, openEditorIndex % 2 === 0 ? openEditorIndex + 1 : openEditorIndex);
+
   const activeInCategory = (cat: Category) =>
     cat === 'All'
       ? activeSounds.length
       : activeSounds.filter((s) => s.category === cat).length;
+
+  useEffect(() => {
+    if (!openEditorSoundId) return;
+    if (!visibleSounds.some((sound) => sound.id === openEditorSoundId)) {
+      setOpenEditorSoundId(null);
+    }
+  }, [openEditorSoundId, visibleSounds]);
 
   const handleAppScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const scrollY = (e.target as HTMLDivElement).scrollTop;
@@ -398,17 +416,30 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
 
         <div className="sounds-grid">
           {visibleSounds.map((sound, i) => (
-            <SoundCard
-              key={sound.id}
-              sound={sound}
-              enabled={soundState[sound.id]?.enabled ?? false}
-              playing={(soundState[sound.id]?.enabled ?? false) && !isPaused && !(loadingState[sound.id] ?? false)}
-              loading={loadingState[sound.id] ?? false}
-              volume={soundState[sound.id]?.volume ?? 0.5}
-              cardIndex={i}
-              onToggle={() => handleSoundToggle(sound.id)}
-              onVolumeChange={(v) => setSoundVolume(sound.id, v)}
-            />
+            <Fragment key={sound.id}>
+              <SoundCard
+                sound={sound}
+                enabled={soundState[sound.id]?.enabled ?? false}
+                playing={(soundState[sound.id]?.enabled ?? false) && !isPaused && !(loadingState[sound.id] ?? false)}
+                loading={loadingState[sound.id] ?? false}
+                volume={soundState[sound.id]?.volume ?? 0.5}
+                cardIndex={i}
+                editorOpen={openEditorSoundId === sound.id}
+                onToggleEditor={() => {
+                  if (!EDITABLE_SOUND_IDS.includes(sound.id)) return;
+                  setOpenEditorSoundId((prev) => (prev === sound.id ? null : sound.id));
+                }}
+                onToggle={() => handleSoundToggle(sound.id)}
+                onVolumeChange={(v) => setSoundVolume(sound.id, v)}
+              />
+              {i === editorInsertAfter && openEditorSoundId && (
+                <div className="sound-editor-inline">
+                  <Suspense fallback={<div className="sb-panel">Loading editor…</div>}>
+                    <LazySoundEditor soundId={openEditorSoundId} />
+                  </Suspense>
+                </div>
+              )}
+            </Fragment>
           ))}
         </div>
 

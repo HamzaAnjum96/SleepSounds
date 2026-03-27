@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BIRDSONG_PARAM_GROUPS, FIRE_PARAM_GROUPS } from './soundEditorDefs';
-
-const SOUND_TYPES = {
-  fire: { label: 'Fire', worklet: 'fire.worklet.js', processor: 'fire-synth', groups: FIRE_PARAM_GROUPS },
-  birdsong: { label: 'Birdsong', worklet: 'birdsong.worklet.js', processor: 'birdsong-synth', groups: BIRDSONG_PARAM_GROUPS },
-} as const;
+import { SOUND_EDITOR_MODELS } from './soundEditorDefs';
 
 function sbSliderBg(value: number, min: number, max: number) {
   const pct = ((value - min) / (max - min)) * 100;
@@ -17,11 +12,12 @@ let editorCtx: AudioContext | null = null;
 let modules: Record<string, Promise<void>> = {};
 
 interface SoundEditorProps {
-  soundId: 'fire' | 'birdsong';
+  soundId: string;
 }
 
 export default function SoundEditor({ soundId }: SoundEditorProps) {
-  const soundType = SOUND_TYPES[soundId];
+  const soundType = SOUND_EDITOR_MODELS[soundId];
+  if (!soundType) return null;
   const defaults = useMemo(
     () => Object.fromEntries(soundType.groups.flatMap(g => g.params).map(p => [p.key, p.def])),
     [soundType.groups],
@@ -50,6 +46,7 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
     if (!editorCtx) editorCtx = new AudioContext();
     const ctx = editorCtx;
     const resumeP = ctx.resume();
+    if (soundType.mode !== 'worklet' || !soundType.worklet || !soundType.processor) return;
     if (!modules[soundId]) {
       modules[soundId] = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/${soundType.worklet}`);
     }
@@ -73,7 +70,7 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
       setError(msg);
       console.error('[SoundEditor]', err);
     }
-  }, [soundId, soundType.processor, soundType.worklet]);
+  }, [soundId, soundType.mode, soundType.processor, soundType.worklet]);
 
   const handleChange = useCallback((key: string, value: number) => {
     setValues(prev => ({ ...prev, [key]: value }));
@@ -104,14 +101,16 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
   return (
     <div className="sb-panel">
       <div className="sb-controls">
-        <button
-          type="button"
-          className={`sb-play-btn${playing ? ' active' : ''}`}
-          onClick={playing ? stopSound : startSound}
-        >
-          <span className="material-symbols-rounded">{playing ? 'stop' : 'play_arrow'}</span>
-          {playing ? 'stop' : `play ${soundType.label.toLowerCase()}`}
-        </button>
+        {soundType.mode === 'worklet' && (
+          <button
+            type="button"
+            className={`sb-play-btn${playing ? ' active' : ''}`}
+            onClick={playing ? stopSound : startSound}
+          >
+            <span className="material-symbols-rounded">{playing ? 'stop' : 'play_arrow'}</span>
+            {playing ? 'stop' : `play ${soundType.label.toLowerCase()}`}
+          </button>
+        )}
         <button type="button" className="sb-reset-btn" onClick={handleReset}>
           <span className="material-symbols-rounded">restart_alt</span>
           reset
@@ -144,7 +143,7 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
         </div>
       ))}
 
-      <div className="sb-output">
+      <div className="sb-output compact">
         <div className="sb-output-header">
           <span className="sb-output-label">config values</span>
           <button type="button" className="sb-copy-btn" onClick={handleCopy}>
