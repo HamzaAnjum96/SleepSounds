@@ -1,0 +1,72 @@
+export interface ParamDef {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  def: number;
+  fmt: (v: number) => string;
+}
+
+export const FIRE_PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
+  {
+    label: 'Core',
+    params: [
+      { key: 'intensity',   label: 'Intensity',         min: 0,       max: 1,      step: 0.01,     def: 0.39,    fmt: v => v.toFixed(2) },
+      { key: 'dryness',     label: 'Dryness',           min: 0,       max: 1,      step: 0.01,     def: 0.47,    fmt: v => v.toFixed(2) },
+      { key: 'crackleBias', label: 'Crackle Bias',      min: 0,       max: 1,      step: 0.01,     def: 1.0,     fmt: v => v.toFixed(2) },
+      { key: 'size',        label: 'Size / Saturation', min: 0,       max: 1,      step: 0.01,     def: 1.0,     fmt: v => v.toFixed(2) },
+      { key: 'distance',    label: 'Distance',          min: 0,       max: 1,      step: 0.01,     def: 0.54,    fmt: v => v.toFixed(2) },
+      { key: 'wind',        label: 'Wind',              min: 0,       max: 1,      step: 0.01,     def: 0.5,     fmt: v => v.toFixed(2) },
+    ],
+  },
+  {
+    label: 'Roar',
+    params: [
+      { key: 'bodyVol',   label: 'Roar Volume',       min: 0,       max: 2,      step: 0.05,     def: 1.4,     fmt: v => v.toFixed(2) },
+      { key: 'bodyLp',    label: 'Roar Freq (LP α)',  min: 0.001,   max: 0.05,   step: 0.001,    def: 0.007,   fmt: v => v.toFixed(3) },
+      { key: 'roarMean',  label: 'Roar Level',        min: 0,       max: 1,      step: 0.01,     def: 0.81,    fmt: v => v.toFixed(2) },
+      { key: 'roarSpeed', label: 'Roll Speed (OU θ)', min: 0.000005,max: 0.0002, step: 0.000005, def: 0.00005, fmt: v => v.toFixed(6) },
+      { key: 'roarSigma', label: 'Roar Variation',    min: 0,       max: 0.005,  step: 0.0001,   def: 0.0015,  fmt: v => v.toFixed(4) },
+    ],
+  },
+  {
+    label: 'Mix',
+    params: [
+      { key: 'crackleBase', label: 'Crackle Rate (base)', min: 0, max: 15, step: 0.5,  def: 13.5, fmt: v => v.toFixed(1) },
+      { key: 'crackleVol',  label: 'Crackle Volume',      min: 0, max: 6,  step: 0.1,  def: 5.4,  fmt: v => v.toFixed(1) },
+      { key: 'popVol',      label: 'Pop Volume',          min: 0, max: 3,  step: 0.05, def: 1.35, fmt: v => v.toFixed(2) },
+    ],
+  },
+];
+
+export const BIRDSONG_PARAM_GROUPS: { label: string; params: ParamDef[] }[] = [
+  {
+    label: 'Calls',
+    params: [
+      { key: 'callRate',    label: 'Call Density',  min: 0.1, max: 8,   step: 0.1,  def: 2.0,  fmt: v => v.toFixed(1) },
+      { key: 'callPitch',   label: 'Call Pitch',    min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'callVol',     label: 'Call Volume',   min: 0,   max: 1,   step: 0.01, def: 0.55, fmt: v => v.toFixed(2) },
+      { key: 'callVariety', label: 'Pitch Variety', min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+    ],
+  },
+  {
+    label: 'Trills',
+    params: [
+      { key: 'trillRate',  label: 'Trill Density', min: 0,   max: 1,   step: 0.01, def: 0.30, fmt: v => v.toFixed(2) },
+      { key: 'trillPitch', label: 'Trill Pitch',   min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'trillVol',   label: 'Trill Volume',  min: 0,   max: 1,   step: 0.01, def: 0.30, fmt: v => v.toFixed(2) },
+      { key: 'trillSpeed', label: 'Warble Speed',  min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+    ],
+  },
+  {
+    label: 'Peeps & Master',
+    params: [
+      { key: 'peepRate', label: 'Peep Density', min: 0,   max: 1,   step: 0.01, def: 0.50, fmt: v => v.toFixed(2) },
+      { key: 'peepVol',  label: 'Peep Volume',  min: 0,   max: 0.5, step: 0.01, def: 0.15, fmt: v => v.toFixed(2) },
+      { key: 'gain',     label: 'Output Gain',  min: 0,   max: 2,   step: 0.01, def: 0.62, fmt: v => v.toFixed(2) },
+    ],
+  },
+];
+
+export const EDITABLE_SOUND_IDS = ['fire', 'birdsong'] as const;

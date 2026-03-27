@@ -1,4 +1,8 @@
+import { lazy, Suspense, useState } from 'react';
 import type { Sound } from '../types';
+import { EDITABLE_SOUND_IDS } from './soundEditorDefs';
+
+const LazySoundEditor = lazy(() => import('./SoundEditor'));
 
 const SOUND_ICONS: Record<string, string> = {
   rain:            'rainy',
@@ -48,32 +52,33 @@ function sliderBg(value: number) {
 
 export default function SoundCard({ sound, enabled, playing, loading = false, volume, cardIndex, onToggle, onVolumeChange }: SoundCardProps) {
   const icon = SOUND_ICONS[sound.id] ?? 'music_note';
+  const canEdit = EDITABLE_SOUND_IDS.includes(sound.id as 'fire' | 'birdsong');
+  const [editorOpen, setEditorOpen] = useState(false);
 
   return (
-    <button
-      type="button"
+    <div
       style={cardIndex !== undefined ? { animationDelay: `${0.34 + cardIndex * 0.025}s` } : undefined}
       className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}`}
-      onClick={onToggle}
-      aria-pressed={enabled}
     >
-      <div className="card-top">
-        <span className="material-symbols-rounded card-icon">{icon}</span>
-        <div className="card-indicator">
-          {loading ? (
-            <div className="card-loader" aria-hidden="true" />
-          ) : (
-            <>
-              <div className={`card-dot${enabled ? ' active' : ''}`} />
-              <div className="eq-bars">
-                <span /><span /><span />
-              </div>
-            </>
-          )}
+      <button type="button" className="sound-card-toggle" onClick={onToggle} aria-pressed={enabled}>
+        <div className="card-top">
+          <span className="material-symbols-rounded card-icon">{icon}</span>
+          <div className="card-indicator">
+            {loading ? (
+              <div className="card-loader" aria-hidden="true" />
+            ) : (
+              <>
+                <div className={`card-dot${enabled ? ' active' : ''}`} />
+                <div className="eq-bars">
+                  <span /><span /><span />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="card-name">{sound.name}</div>
+        <div className="card-name">{sound.name}</div>
+      </button>
 
       <div
         className="card-vol"
@@ -91,6 +96,25 @@ export default function SoundCard({ sound, enabled, playing, loading = false, vo
           onChange={(e) => onVolumeChange(Number(e.target.value))}
         />
       </div>
-    </button>
+
+      {canEdit && (
+        <div className="card-editor-wrap" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={`sb-toggle card-editor-toggle${editorOpen ? ' active' : ''}`}
+            onClick={() => setEditorOpen((v) => !v)}
+          >
+            <span className="material-symbols-rounded">tune</span>
+            edit {sound.name.toLowerCase()}
+            <span className="material-symbols-rounded sb-chevron">{editorOpen ? 'expand_less' : 'expand_more'}</span>
+          </button>
+          {editorOpen && (
+            <Suspense fallback={<div className="sb-panel">Loading editor…</div>}>
+              <LazySoundEditor soundId={sound.id as 'fire' | 'birdsong'} />
+            </Suspense>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
