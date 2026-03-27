@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { version } from '../package.json';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
@@ -82,9 +82,8 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
-  const [isSingleColumnLayout, setIsSingleColumnLayout] = useState(() => (
-    typeof window !== 'undefined' ? window.matchMedia('(max-width: 420px)').matches : false
-  ));
+  const soundsGridRef = useRef<HTMLDivElement | null>(null);
+  const [soundsGridColumns, setSoundsGridColumns] = useState(2);
   const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
     Object.fromEntries(
       Object.entries(SOUND_EDITOR_MODELS).map(([id, model]) => ([
@@ -257,11 +256,10 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     : -1;
   const editorInsertAfter = useMemo(() => {
     if (openEditorIndex < 0) return -1;
-    const targetIndex = isSingleColumnLayout
-      ? (openEditorIndex % 2 === 0 ? openEditorIndex + 1 : openEditorIndex + 2)
-      : (openEditorIndex % 2 === 0 ? openEditorIndex + 1 : openEditorIndex);
+    const columns = Math.max(1, soundsGridColumns);
+    const targetIndex = Math.ceil((openEditorIndex + 1) / columns) * columns - 1;
     return Math.min(visibleSounds.length - 1, targetIndex);
-  }, [isSingleColumnLayout, openEditorIndex, visibleSounds.length]);
+  }, [openEditorIndex, soundsGridColumns, visibleSounds.length]);
 
   const activeInCategory = (cat: Category) =>
     cat === 'All'
@@ -276,11 +274,23 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   }, [openEditorSoundId, visibleSounds]);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 420px)');
-    const updateLayout = () => setIsSingleColumnLayout(mq.matches);
+    const grid = soundsGridRef.current;
+    if (!grid) return;
+
+    const updateLayout = () => {
+      const template = window.getComputedStyle(grid).gridTemplateColumns;
+      const columns = template.split(' ').filter(Boolean).length;
+      setSoundsGridColumns(Math.max(1, columns));
+    };
+
     updateLayout();
-    mq.addEventListener('change', updateLayout);
-    return () => mq.removeEventListener('change', updateLayout);
+    const observer = new ResizeObserver(updateLayout);
+    observer.observe(grid);
+    window.addEventListener('resize', updateLayout);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateLayout);
+    };
   }, []);
 
   const handleAppScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -438,7 +448,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           </div>
         </div>
 
-        <div className="sounds-grid">
+        <div ref={soundsGridRef} className="sounds-grid">
           {visibleSounds.map((sound, i) => (
             <Fragment key={sound.id}>
               <SoundCard
