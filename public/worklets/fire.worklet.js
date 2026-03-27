@@ -16,9 +16,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       { name: 'roarSpeed',   defaultValue: 0.00005, minValue: 0.000005,maxValue: 0.0002, automationRate: 'k-rate' },
       { name: 'roarSigma',   defaultValue: 0.0015,  minValue: 0,       maxValue: 0.005,  automationRate: 'k-rate' },
       // ── Mix levels ───────────────────────────────────────────────────
-      { name: 'crackleBase', defaultValue: 15,      minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
-      { name: 'crackleVol',  defaultValue: 6,       minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
-      { name: 'popVol',      defaultValue: 0,       minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
+      { name: 'crackleBase', defaultValue: 13.5,    minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
+      { name: 'crackleVol',  defaultValue: 5.4,     minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
+      { name: 'popVol',      defaultValue: 1.35,    minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
     ];
   }
 
@@ -68,11 +68,12 @@ class FireSynthProcessor extends AudioWorkletProcessor {
   }
 
   triggerPop(intensity) {
-    const life = Math.floor(sampleRate * (0.025 + this.rnd() * 0.09));
-    const amp = (0.05 + 0.08 * this.rnd()) * (0.65 + 0.35 * intensity);
-    const f1 = 180 + this.rnd() * 380;
-    const f2 = f1 * (1.9 + this.rnd() * 0.7);
-    this.popEvents.push({ age: 0, life, amp, f1, f2, phase1: this.rnd() * Math.PI * 2, phase2: this.rnd() * Math.PI * 2 });
+    const life = Math.floor(sampleRate * (0.012 + this.rnd() * 0.025));
+    const amp = (0.12 + 0.14 * this.rnd()) * (0.65 + 0.35 * intensity);
+    // Lower freq band than crackles — heavier snap, noise-based, no tonal sine
+    const tone = 400 + this.rnd() * 900;
+    const q = 0.8 + this.rnd() * 1.5;
+    this.popEvents.push({ age: 0, life, amp, tone, q, z1: 0, z2: 0 });
     this.stress = Math.max(0, this.stress - (0.2 + 0.15 * this.rnd()));
     this.embers = Math.min(1.2, this.embers + 0.16 + 0.2 * this.rnd());
   }
@@ -114,13 +115,20 @@ class FireSynthProcessor extends AudioWorkletProcessor {
         this.popEvents.splice(i, 1);
         continue;
       }
-      const env = Math.exp(-9 * p); // faster snap — less bubble tail
-      // No pitch sweep: descending chirp was the main source of bubble character
-      ev.phase1 += (2 * Math.PI * ev.f1) / sampleRate;
-      ev.phase2 += (2 * Math.PI * ev.f2) / sampleRate;
-      // More noise, less tone — sounds like a wood crack rather than a bubble pop
-      const burst = 0.2 * Math.sin(ev.phase1) + 0.1 * Math.sin(ev.phase2) + 0.7 * (this.rnd() * 2 - 1);
-      out += burst * ev.amp * env;
+      const env = Math.exp(-12 * p);
+      const n = (this.rnd() * 2 - 1) * ev.amp * env;
+      const omega = 2 * Math.PI * ev.tone / sampleRate;
+      const alpha = Math.sin(omega) / (2 * ev.q);
+      const b0 = alpha;
+      const b1 = 0;
+      const b2 = -alpha;
+      const a0 = 1 + alpha;
+      const a1 = -2 * Math.cos(omega);
+      const a2 = 1 - alpha;
+      const y = (b0 / a0) * n + ev.z1;
+      ev.z1 = (b1 / a0) * n - (a1 / a0) * y + ev.z2;
+      ev.z2 = (b2 / a0) * n - (a2 / a0) * y;
+      out += y;
       ev.age++;
     }
     return out;
@@ -145,9 +153,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const roarSpeed   = parameters.roarSpeed[0]    ?? 0.00005;
     const roarSigma   = parameters.roarSigma[0]    ?? 0.0015;
 
-    const crackleBase = parameters.crackleBase[0]  ?? 15;
-    const crackleVol  = parameters.crackleVol[0]   ?? 6;
-    const popVol      = parameters.popVol[0]        ?? 0;
+    const crackleBase = parameters.crackleBase[0]  ?? 13.5;
+    const crackleVol  = parameters.crackleVol[0]   ?? 5.4;
+    const popVol      = parameters.popVol[0]        ?? 1.35;
 
     for (let i = 0; i < left.length; i++) {
       this.energy     = this.ou(this.energy,     0.25 + 0.75 * intensity, 0.00055, 0.0028);

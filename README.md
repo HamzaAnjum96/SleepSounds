@@ -95,6 +95,10 @@ npm run preview
 
 ## Changelog
 
+### 0.1.16
+- Rewrite pop renderer: replace sine-wave oscillators (180–560 Hz tonal pops = bubble sound) with bandpass-filtered noise at 400–1300 Hz — produces a heavy wood-snap instead of a water-bubble character
+- Restore popVol 1.35, crackleBase 13.5, crackleVol 5.4 defaults
+
 ### 0.1.15
 - Disable pop renderer (popVol → 0) — pops were the sole source of the bubble sound; crackles alone sound clean
 - Update crackleBase → 15, crackleVol → 6 to compensate for removed pops
