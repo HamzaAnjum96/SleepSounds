@@ -95,6 +95,9 @@ npm run preview
 
 ## Changelog
 
+### 0.1.11
+- Fix SoundBuilder play button: use a module-level AudioContext singleton and call `ctx.resume()` synchronously before first `await`, ensuring it runs within the user gesture on iOS Safari; add visible error display so failures surface in the UI
+
 ### 0.1.10
 - Fix SoundBuilder play button: reuse `FireWorkletSource` shared AudioContext instead of creating a new one, which caused suspend/resume failures on iOS Safari
 
