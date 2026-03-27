@@ -1001,7 +1001,8 @@ header {
 }
 
 .sb-play-btn,
-.sb-reset-btn {
+.sb-reset-btn,
+.sb-close-btn {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -1018,10 +1019,13 @@ header {
   outline: none;
 }
 .sb-play-btn .material-symbols-rounded,
-.sb-reset-btn .material-symbols-rounded { font-size: 15px; }
+.sb-reset-btn .material-symbols-rounded,
+.sb-close-btn .material-symbols-rounded { font-size: 15px; }
 .sb-play-btn:hover  { border-color: var(--accent); color: var(--accent); }
 .sb-play-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(123,167,232,0.08); }
 .sb-reset-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); }
+.sb-close-btn { margin-left: auto; }
+.sb-close-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); }
 
 .sb-error {
   padding: 8px 12px;

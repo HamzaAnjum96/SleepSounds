@@ -5,7 +5,7 @@ import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from '
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
-import { EDITABLE_SOUND_IDS } from './components/soundEditorDefs';
+import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 
 const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 
@@ -69,6 +69,7 @@ export default function App() {
     setMasterVolume,
     toggleSound,
     setSoundVolume,
+    setSoundTuning,
     pauseAll,
     playAllActive,
     stopAll,
@@ -81,6 +82,17 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
+  const [isSingleColumnLayout, setIsSingleColumnLayout] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 420px)').matches : false
+  ));
+  const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
+    Object.fromEntries(
+      Object.entries(SOUND_EDITOR_MODELS).map(([id, model]) => ([
+        id,
+        Object.fromEntries(model.groups.flatMap((group) => group.params).map((param) => [param.key, param.def])),
+      ])),
+    )
+  ));
 
   const makeDefaultState = useCallback(() => (
     SOUND_LIBRARY.reduce<Record<string, { enabled: boolean; volume: number }>>((acc, sound) => {
@@ -243,9 +255,13 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   const openEditorIndex = openEditorSoundId
     ? visibleSounds.findIndex((sound) => sound.id === openEditorSoundId)
     : -1;
-  const editorInsertAfter = openEditorIndex < 0
-    ? -1
-    : Math.min(visibleSounds.length - 1, openEditorIndex % 2 === 0 ? openEditorIndex + 1 : openEditorIndex);
+  const editorInsertAfter = useMemo(() => {
+    if (openEditorIndex < 0) return -1;
+    const targetIndex = isSingleColumnLayout
+      ? (openEditorIndex % 2 === 0 ? openEditorIndex + 1 : openEditorIndex + 2)
+      : (openEditorIndex % 2 === 0 ? openEditorIndex + 1 : openEditorIndex);
+    return Math.min(visibleSounds.length - 1, targetIndex);
+  }, [isSingleColumnLayout, openEditorIndex, visibleSounds.length]);
 
   const activeInCategory = (cat: Category) =>
     cat === 'All'
@@ -258,6 +274,14 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       setOpenEditorSoundId(null);
     }
   }, [openEditorSoundId, visibleSounds]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 420px)');
+    const updateLayout = () => setIsSingleColumnLayout(mq.matches);
+    updateLayout();
+    mq.addEventListener('change', updateLayout);
+    return () => mq.removeEventListener('change', updateLayout);
+  }, []);
 
   const handleAppScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const scrollY = (e.target as HTMLDivElement).scrollTop;
@@ -435,7 +459,17 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
               {i === editorInsertAfter && openEditorSoundId && (
                 <div className="sound-editor-inline">
                   <Suspense fallback={<div className="sb-panel">Loading editor…</div>}>
-                    <LazySoundEditor soundId={openEditorSoundId} />
+                    <LazySoundEditor
+                      soundId={openEditorSoundId}
+                      initialValues={editorValuesBySound[openEditorSoundId]}
+                      onValuesChange={(values) => {
+                        setEditorValuesBySound((prev) => ({ ...prev, [openEditorSoundId]: values }));
+                        if (SOUND_EDITOR_MODELS[openEditorSoundId]?.mode === 'simple') {
+                          setSoundTuning(openEditorSoundId, values);
+                        }
+                      }}
+                      onClose={() => setOpenEditorSoundId(null)}
+                    />
                   </Suspense>
                 </div>
               )}

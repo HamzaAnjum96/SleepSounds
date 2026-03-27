@@ -19,6 +19,7 @@ const LOOP_STEPS = 40;
 interface MixerSource {
   volume: number;
   readonly paused: boolean;
+  applyTuning?: (tuning: { playbackRate: number; gainMultiplier: number }) => void;
   play(): Promise<void>;
   pause(): void;
   stop(): void;
@@ -36,6 +37,8 @@ class CrossfadeAudio implements MixerSource {
   private _timeupdateB: () => void;
   private _monitorTimer: ReturnType<typeof setTimeout> | null = null;
   private _active = false;
+  private _playbackRate = 1;
+  private _gainMultiplier = 1;
 
   constructor(url: string) {
     this._url = url;
@@ -97,7 +100,7 @@ class CrossfadeAudio implements MixerSource {
     void inEl.play();
 
     const startOutVol = outEl.volume;
-    const targetInVol = this._targetVol;
+    const targetInVol = Math.min(1, this._targetVol * this._gainMultiplier);
     let step = 0;
 
     this._xfadeTimer = setInterval(() => {
@@ -131,7 +134,7 @@ class CrossfadeAudio implements MixerSource {
 
   set volume(v: number) {
     this._targetVol = v;
-    if (!this._xfading) this._primary.volume = v;
+    if (!this._xfading) this._primary.volume = Math.min(1, v * this._gainMultiplier);
   }
 
   get paused() {
@@ -141,8 +144,20 @@ class CrossfadeAudio implements MixerSource {
   async play() {
     this._active = true;
     this._startMonitor();
-    this._primary.volume = this._targetVol;
+    this._primary.volume = Math.min(1, this._targetVol * this._gainMultiplier);
     await this._primary.play();
+  }
+
+  applyTuning(tuning: { playbackRate: number; gainMultiplier: number }) {
+    this._playbackRate = Math.min(1.7, Math.max(0.6, tuning.playbackRate));
+    this._gainMultiplier = Math.min(1.45, Math.max(0.6, tuning.gainMultiplier));
+    this._els.forEach((el) => {
+      el.playbackRate = this._playbackRate;
+      el.defaultPlaybackRate = this._playbackRate;
+    });
+    if (!this._xfading) {
+      this._primary.volume = Math.min(1, this._targetVol * this._gainMultiplier);
+    }
   }
 
   pause() {
@@ -345,6 +360,83 @@ const makeSource = (sound: Sound): MixerSource => {
   return new CrossfadeAudio(sound.url);
 };
 
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+const toNum = (value: unknown, fallback = 0.5) => (
+  typeof value === 'number' ? clamp01(value) : fallback
+);
+
+function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
+  const v = (key: string, fallback = 0.5) => toNum(raw[key], fallback);
+  let playbackRate = 1;
+  let gainMultiplier = 1;
+
+  switch (soundId) {
+    case 'rain': {
+      const density = v('density', 0.68);
+      const softness = v('softness', 0.62);
+      playbackRate = 0.72 + density * 0.84 - softness * 0.16;
+      gainMultiplier = 0.88 + density * 0.22 + softness * 0.12;
+      break;
+    }
+    case 'ocean': {
+      const waveSize = v('waveSize', 0.58);
+      const foam = v('foam', 0.47);
+      playbackRate = 0.78 + foam * 0.38 - waveSize * 0.18;
+      gainMultiplier = 0.86 + waveSize * 0.20 + foam * 0.18;
+      break;
+    }
+    case 'wind': {
+      const gusts = v('gusts', 0.52);
+      const airTone = v('airTone', 0.46);
+      playbackRate = 0.8 + gusts * 0.68 + airTone * 0.12;
+      gainMultiplier = 0.85 + gusts * 0.12 + airTone * 0.24;
+      break;
+    }
+    case 'forest': {
+      const leaves = v('leaves', 0.64);
+      const twigs = v('twigs', 0.33);
+      playbackRate = 0.84 + leaves * 0.34 + twigs * 0.18;
+      gainMultiplier = 0.86 + leaves * 0.20 + twigs * 0.22;
+      break;
+    }
+    case 'fan': {
+      const speed = v('speed', 0.49);
+      const hum = v('hum', 0.41);
+      playbackRate = 0.62 + speed * 1.02 + hum * 0.08;
+      gainMultiplier = 0.82 + speed * 0.12 + hum * 0.32;
+      break;
+    }
+    case 'white-noise': {
+      const brightness = v('brightness', 0.54);
+      const air = v('air', 0.36);
+      playbackRate = 0.9 + brightness * 0.34 + air * 0.16;
+      gainMultiplier = 0.82 + brightness * 0.08 + air * 0.22;
+      break;
+    }
+    case 'pink-noise': {
+      const warmth = v('warmth', 0.61);
+      const focus = v('focus', 0.43);
+      playbackRate = 0.86 + focus * 0.26 - warmth * 0.12;
+      gainMultiplier = 0.86 + warmth * 0.20 + focus * 0.08;
+      break;
+    }
+    case 'brown-noise': {
+      const depth = v('depth', 0.72);
+      const rumble = v('rumble', 0.38);
+      playbackRate = 0.76 + rumble * 0.26 - depth * 0.12;
+      gainMultiplier = 0.9 + depth * 0.24 + rumble * 0.14;
+      break;
+    }
+    default:
+      break;
+  }
+
+  return {
+    playbackRate: Math.min(1.7, Math.max(0.6, playbackRate)),
+    gainMultiplier: Math.min(1.45, Math.max(0.6, gainMultiplier)),
+  };
+}
+
 export const useAudioMixer = (sounds: Sound[]) => {
   const [soundState, setSoundState] = useState<Record<string, SoundState>>(() => createInitialState(sounds));
   const [loadingState, setLoadingState] = useState<Record<string, boolean>>(() =>
@@ -471,6 +563,13 @@ export const useAudioMixer = (sounds: Sound[]) => {
     [applyVolume],
   );
 
+  const setSoundTuning = useCallback((soundId: string, values: Record<string, number>) => {
+    if (soundId === 'fire' || soundId === 'birdsong') return;
+    const source = audioMapRef.current[soundId];
+    if (!source?.applyTuning) return;
+    source.applyTuning(mapSimpleTuning(soundId, values));
+  }, []);
+
   const pauseAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
     Object.values(audioMapRef.current).forEach((source) => source.pause());
@@ -563,6 +662,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
     setMasterVolume,
     toggleSound,
     setSoundVolume,
+    setSoundTuning,
     pauseAll,
     playAllActive,
     stopAll,

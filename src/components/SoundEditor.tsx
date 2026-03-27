@@ -13,9 +13,17 @@ let modules: Record<string, Promise<void>> = {};
 
 interface SoundEditorProps {
   soundId: string;
+  onClose?: () => void;
+  initialValues?: Record<string, number>;
+  onValuesChange?: (values: Record<string, number>) => void;
 }
 
-export default function SoundEditor({ soundId }: SoundEditorProps) {
+export default function SoundEditor({
+  soundId,
+  onClose,
+  initialValues,
+  onValuesChange,
+}: SoundEditorProps) {
   const soundType = SOUND_EDITOR_MODELS[soundId];
   if (!soundType) return null;
   const defaults = useMemo(
@@ -24,7 +32,7 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
   );
 
   const [playing, setPlaying] = useState(false);
-  const [values, setValues] = useState<Record<string, number>>(defaults);
+  const [values, setValues] = useState<Record<string, number>>(initialValues ?? defaults);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +40,7 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
   const nodeRef = useRef<AudioWorkletNode | null>(null);
   const valRef = useRef(values);
   useEffect(() => { valRef.current = values; }, [values]);
-  useEffect(() => { setValues(defaults); }, [defaults]);
+  useEffect(() => { setValues(initialValues ?? defaults); }, [defaults, initialValues, soundId]);
 
   const stopSound = useCallback(() => {
     nodeRef.current?.disconnect();
@@ -73,20 +81,25 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
   }, [soundId, soundType.mode, soundType.processor, soundType.worklet]);
 
   const handleChange = useCallback((key: string, value: number) => {
-    setValues(prev => ({ ...prev, [key]: value }));
+    setValues((prev) => {
+      const next = { ...prev, [key]: value };
+      onValuesChange?.(next);
+      return next;
+    });
     if (nodeRef.current && ctxRef.current) {
       nodeRef.current.parameters.get(key)?.setValueAtTime(value, ctxRef.current.currentTime);
     }
-  }, []);
+  }, [onValuesChange]);
 
   const handleReset = useCallback(() => {
     setValues(defaults);
+    onValuesChange?.(defaults);
     if (nodeRef.current && ctxRef.current) {
       for (const [key, val] of Object.entries(defaults)) {
         nodeRef.current.parameters.get(key)?.setValueAtTime(val, ctxRef.current.currentTime);
       }
     }
-  }, [defaults]);
+  }, [defaults, onValuesChange]);
 
   useEffect(() => () => { nodeRef.current?.disconnect(); }, []);
 
@@ -115,6 +128,12 @@ export default function SoundEditor({ soundId }: SoundEditorProps) {
           <span className="material-symbols-rounded">restart_alt</span>
           reset
         </button>
+        {onClose && (
+          <button type="button" className="sb-close-btn" onClick={onClose}>
+            <span className="material-symbols-rounded">close</span>
+            close
+          </button>
+        )}
       </div>
 
       {error && <div className="sb-error">{error}</div>}
