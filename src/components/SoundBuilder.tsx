@@ -77,7 +77,7 @@ export default function SoundBuilder() {
     if (!_sbCtx) _sbCtx = new AudioContext();
     const ctx = _sbCtx;
     const resumeP = ctx.resume();
-    if (!_sbModule) _sbModule = ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+    if (!_sbModule) _sbModule = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/fire.worklet.js`);
     // ────────────────────────────────────────────────────────────────────
     try {
       await Promise.all([resumeP, _sbModule]);
