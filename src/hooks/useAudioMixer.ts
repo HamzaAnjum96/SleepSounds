@@ -393,6 +393,13 @@ function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
       gainMultiplier = mapRange(airTone, 0.74, 1.28) + gusts * 0.18;
       break;
     }
+    case 'thunder': {
+      const storm = v('storm', 0.63);
+      const presence = v('presence', 0.39);
+      playbackRate = mapRange(storm, 0.58, 1.18) + presence * 0.12;
+      gainMultiplier = mapRange(storm, 0.76, 1.44) + presence * 0.22;
+      break;
+    }
     case 'forest': {
       const leaves = v('leaves', 0.64);
       const twigs = v('twigs', 0.33);

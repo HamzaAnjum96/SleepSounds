@@ -114,6 +114,7 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   wind: { label: 'Wind', mode: 'simple', groups: simplePair({ key: 'gusts', label: 'Gusts', def: 0.52 }, { key: 'airTone', label: 'Air Tone', def: 0.46 }) },
   forest: { label: 'Forest', mode: 'simple', groups: simplePair({ key: 'leaves', label: 'Leaves', def: 0.64 }, { key: 'twigs', label: 'Twigs', def: 0.33 }) },
   fan: { label: 'Fan', mode: 'simple', groups: simplePair({ key: 'speed', label: 'Speed', def: 0.49 }, { key: 'hum', label: 'Hum', def: 0.41 }) },
+  thunder: { label: 'Distant Thunder', mode: 'simple', groups: simplePair({ key: 'storm', label: 'Rumble', def: 0.63 }, { key: 'presence', label: 'Clarity', def: 0.39 }) },
   'white-noise': { label: 'White Noise', mode: 'simple', groups: simplePair({ key: 'brightness', label: 'Brightness', def: 0.54 }, { key: 'air', label: 'Air', def: 0.36 }) },
   'pink-noise': { label: 'Pink Noise', mode: 'simple', groups: simplePair({ key: 'warmth', label: 'Warmth', def: 0.61 }, { key: 'focus', label: 'Focus', def: 0.43 }) },
   'brown-noise': { label: 'Brown Noise', mode: 'simple', groups: simplePair({ key: 'depth', label: 'Depth', def: 0.72 }, { key: 'rumble', label: 'Rumble', def: 0.38 }) },

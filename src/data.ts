@@ -657,12 +657,50 @@ function genBirdsong(): string {
   return gen(mix, 0.62);
 }
 
+function genThunder(): string {
+  // Distant thunder roll with occasional low booms.
+  const roll = brownNoise();
+  hp1(roll, 24);
+  lp1(roll, 420);
+
+  const hiss = pinkNoise();
+  hp1(hiss, 1800);
+  lp1(hiss, 5200);
+
+  const booms = new Float32Array(N);
+  let pos = Math.floor(SR * rand(1.5, 4.5));
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.7, 2.2));
+    const amp = rand(0.12, 0.34);
+    const f0 = rand(36, 95);
+    let ph = 0;
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const p = i / Math.max(1, len - 1);
+      const env = Math.exp(-4.6 * p);
+      const f = f0 * (1 - p * 0.35);
+      ph += (2 * Math.PI * f) / SR;
+      booms[pos + i] += Math.sin(ph) * env * amp;
+    }
+    pos += Math.floor(SR * rand(4.0, 10.0));
+  }
+  hp1(booms, 24);
+  lp1(booms, 240);
+
+  const swell = smoothRandomLfo(0.64, 1.26, 1.4, 6.2);
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = roll[i] * 0.74 * swell[i] + hiss[i] * 0.10 + booms[i] * 0.16;
+  }
+  return gen(mix, 0.7);
+}
+
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
   { id: 'rain',        name: 'Rain',        category: 'Water', url: genRain() },
   { id: 'ocean',       name: 'Ocean',       category: 'Water', url: genOcean() },
   { id: 'wind',        name: 'Wind',        category: 'Air',   url: genWind() },
+  { id: 'thunder',     name: 'Distant Thunder', category: 'Air',   url: genThunder() },
   { id: 'forest',      name: 'Forest',      category: 'Earth', url: genForest() },
   { id: 'fire',        name: 'Fire',        category: 'Fire',  url: genFire() },
   { id: 'white-noise', name: 'White Noise', category: 'Noise',    url: genWhite() },
@@ -690,4 +728,5 @@ export const BUILTIN_PRESETS: Preset[] = [
   { id: 'builtin-fan-rain',      name: 'Fan & Rain',    createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
   { id: 'builtin-windy-forest',  name: 'Windy Forest',  createdAt: '', masterVolume: 0.8, state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
   { id: 'builtin-campfire-night', name: 'Campfire Night', createdAt: '', masterVolume: 0.8, state: builtinState([['fire', 0.68], ['forest', 0.28]]) },
+  { id: 'builtin-stormy-fan', name: 'Stormy Fan', createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.42], ['thunder', 0.35], ['rain', 0.54]]) },
 ];
