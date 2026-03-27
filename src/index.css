@@ -344,6 +344,8 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 12px;
   animation: fadeSlideUp 0.65s 0.28s cubic-bezier(0.22,1,0.36,1) both;
   flex-shrink: 0;
@@ -361,6 +363,8 @@ header {
 
 .cat-pills {
   display: flex;
+  flex-wrap: wrap;
+  width: 100%;
   gap: 4px;
 }
 
