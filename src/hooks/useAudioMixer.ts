@@ -164,6 +164,17 @@ class FireWorkletSource implements MixerSource {
     return this.ctx;
   }
 
+  /** Returns the shared fire AudioContext with the worklet module loaded — for external use (e.g. SoundBuilder). */
+  static async openContext(): Promise<AudioContext> {
+    const ctx = FireWorkletSource.getContext();
+    if (!FireWorkletSource.modulePromise) {
+      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule('/worklets/fire.worklet.js');
+    }
+    await FireWorkletSource.modulePromise;
+    await ctx.resume();
+    return ctx;
+  }
+
   private async ensureNode() {
     const ctx = FireWorkletSource.getContext();
     if (!FireWorkletSource.modulePromise) {
@@ -530,3 +541,5 @@ export const useAudioMixer = (sounds: Sound[]) => {
     restoreMixerState,
   };
 };
+
+export const openFireContext = () => FireWorkletSource.openContext();
