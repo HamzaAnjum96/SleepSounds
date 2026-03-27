@@ -390,6 +390,14 @@ header {
   color: var(--accent);
   background: var(--accent-glow);
 }
+.cat-icon {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.7;
+}
+.cat-pill.active .cat-icon {
+  opacity: 1;
+}
 .cat-count {
   display: inline-flex;
   align-items: center;
@@ -841,8 +849,8 @@ header {
   font-size: 8px;
   font-weight: 400;
   letter-spacing: 0.06em;
-  color: var(--text-dim);
-  opacity: 0.45;
+  color: var(--text-secondary);
+  opacity: 0.7;
   pointer-events: none;
   z-index: 10;
 }

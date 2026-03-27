@@ -7,6 +7,16 @@ import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
 
+const CATEGORY_ICONS: Record<string, string> = {
+  All:      'apps',
+  Water:    'water_drop',
+  Fire:     'local_fire_department',
+  Air:      'air',
+  Earth:    'landscape',
+  Noise:    'music_note',
+  Wildlife: 'raven',
+};
+
 function sliderBg(value: number, max = 1) {
   const pct = (value / max) * 100;
   return {
@@ -377,6 +387,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                   className={`cat-pill${category === cat ? ' active' : ''}`}
                   onClick={() => setCategory(cat)}
                 >
+                  {CATEGORY_ICONS[cat] && <span className="material-symbols-rounded cat-icon">{CATEGORY_ICONS[cat]}</span>}
                   {cat}
                   {n > 0 && <span className="cat-count">{n}</span>}
                 </button>
