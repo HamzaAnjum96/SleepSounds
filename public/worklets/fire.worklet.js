@@ -2,36 +2,36 @@ class FireSynthProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
       // ── Core behaviour ────────────────────────────────────────────────
-      { name: 'intensity',    defaultValue: 0.62,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
-      { name: 'dryness',     defaultValue: 0.55,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
-      { name: 'wind',        defaultValue: 0.22,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
-      { name: 'size',        defaultValue: 0.45,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
-      { name: 'distance',    defaultValue: 0.2,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
-      { name: 'crackleBias', defaultValue: 0.5,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'intensity',    defaultValue: 0.39,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'dryness',     defaultValue: 0.47,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'wind',        defaultValue: 0.5,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'size',        defaultValue: 1.0,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'distance',    defaultValue: 0.54,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'crackleBias', defaultValue: 1.0,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       { name: 'running',     defaultValue: 1,       minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       // ── Roar / thunder background ─────────────────────────────────────
-      { name: 'bodyVol',     defaultValue: 0.40,    minValue: 0,       maxValue: 2,      automationRate: 'k-rate' },
-      { name: 'bodyLp',      defaultValue: 0.005,   minValue: 0.001,   maxValue: 0.05,   automationRate: 'k-rate' },
-      { name: 'roarMean',    defaultValue: 0.4,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
-      { name: 'roarSpeed',   defaultValue: 0.00003, minValue: 0.000005,maxValue: 0.0002, automationRate: 'k-rate' },
-      { name: 'roarSigma',   defaultValue: 0.0008,  minValue: 0,       maxValue: 0.005,  automationRate: 'k-rate' },
+      { name: 'bodyVol',     defaultValue: 1.4,     minValue: 0,       maxValue: 2,      automationRate: 'k-rate' },
+      { name: 'bodyLp',      defaultValue: 0.007,   minValue: 0.001,   maxValue: 0.05,   automationRate: 'k-rate' },
+      { name: 'roarMean',    defaultValue: 0.81,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      { name: 'roarSpeed',   defaultValue: 0.00005, minValue: 0.000005,maxValue: 0.0002, automationRate: 'k-rate' },
+      { name: 'roarSigma',   defaultValue: 0.0015,  minValue: 0,       maxValue: 0.005,  automationRate: 'k-rate' },
       // ── Mix levels ───────────────────────────────────────────────────
-      { name: 'crackleBase', defaultValue: 3.0,     minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
-      { name: 'crackleVol',  defaultValue: 2.8,     minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
-      { name: 'popVol',      defaultValue: 1.2,     minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
+      { name: 'crackleBase', defaultValue: 13.5,    minValue: 0,       maxValue: 15,     automationRate: 'k-rate' },
+      { name: 'crackleVol',  defaultValue: 5.4,     minValue: 0,       maxValue: 6,      automationRate: 'k-rate' },
+      { name: 'popVol',      defaultValue: 1.35,    minValue: 0,       maxValue: 3,      automationRate: 'k-rate' },
     ];
   }
 
   constructor() {
     super();
-    this.energy = 0.62;
-    this.turbulence = 0.35;
-    this.stress = 0.4;
-    this.embers = 0.2;
+    this.energy = 0.54;      // ≈ OU mean for intensity 0.39
+    this.turbulence = 0.6;   // ≈ OU mean for wind 0.5
+    this.stress = 0.58;      // ≈ OU mean for dryness 0.47
+    this.embers = 0.34;      // ≈ OU mean for intensity 0.39
 
     this.lpBody = 0;
     this.hpBody = 0;
-    this.roarEnv = 0.3;
+    this.roarEnv = 0.81;     // start at roarMean
 
     this.crackleEvents = [];
     this.popEvents = [];
@@ -114,12 +114,12 @@ class FireSynthProcessor extends AudioWorkletProcessor {
         this.popEvents.splice(i, 1);
         continue;
       }
-      const env = Math.exp(-5 * p);
-      const f1 = ev.f1 * (1 - 0.35 * p);
-      const f2 = ev.f2 * (1 - 0.2 * p);
-      ev.phase1 += (2 * Math.PI * f1) / sampleRate;
-      ev.phase2 += (2 * Math.PI * f2) / sampleRate;
-      const burst = 0.65 * Math.sin(ev.phase1) + 0.35 * Math.sin(ev.phase2) + 0.22 * (this.rnd() * 2 - 1);
+      const env = Math.exp(-9 * p); // faster snap — less bubble tail
+      // No pitch sweep: descending chirp was the main source of bubble character
+      ev.phase1 += (2 * Math.PI * ev.f1) / sampleRate;
+      ev.phase2 += (2 * Math.PI * ev.f2) / sampleRate;
+      // More noise, less tone — sounds like a wood crack rather than a bubble pop
+      const burst = 0.2 * Math.sin(ev.phase1) + 0.1 * Math.sin(ev.phase2) + 0.7 * (this.rnd() * 2 - 1);
       out += burst * ev.amp * env;
       ev.age++;
     }
@@ -132,22 +132,22 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const right = output[1] || left;
 
     const running     = parameters.running[0]     ?? 1;
-    const intensity   = parameters.intensity[0]   ?? 0.62;
-    const dryness     = parameters.dryness[0]     ?? 0.55;
-    const wind        = parameters.wind[0]         ?? 0.22;
-    const size        = parameters.size[0]         ?? 0.45;
-    const distance    = parameters.distance[0]     ?? 0.2;
-    const crackleBias = parameters.crackleBias[0]  ?? 0.5;
+    const intensity   = parameters.intensity[0]   ?? 0.39;
+    const dryness     = parameters.dryness[0]     ?? 0.47;
+    const wind        = parameters.wind[0]         ?? 0.5;
+    const size        = parameters.size[0]         ?? 1.0;
+    const distance    = parameters.distance[0]     ?? 0.54;
+    const crackleBias = parameters.crackleBias[0]  ?? 1.0;
 
-    const bodyVol     = parameters.bodyVol[0]      ?? 0.40;
-    const bodyLp      = parameters.bodyLp[0]       ?? 0.005;
-    const roarMean    = parameters.roarMean[0]     ?? 0.4;
-    const roarSpeed   = parameters.roarSpeed[0]    ?? 0.00003;
-    const roarSigma   = parameters.roarSigma[0]    ?? 0.0008;
+    const bodyVol     = parameters.bodyVol[0]      ?? 1.4;
+    const bodyLp      = parameters.bodyLp[0]       ?? 0.007;
+    const roarMean    = parameters.roarMean[0]     ?? 0.81;
+    const roarSpeed   = parameters.roarSpeed[0]    ?? 0.00005;
+    const roarSigma   = parameters.roarSigma[0]    ?? 0.0015;
 
-    const crackleBase = parameters.crackleBase[0]  ?? 3.0;
-    const crackleVol  = parameters.crackleVol[0]   ?? 2.8;
-    const popVol      = parameters.popVol[0]        ?? 1.2;
+    const crackleBase = parameters.crackleBase[0]  ?? 13.5;
+    const crackleVol  = parameters.crackleVol[0]   ?? 5.4;
+    const popVol      = parameters.popVol[0]        ?? 1.35;
 
     for (let i = 0; i < left.length; i++) {
       this.energy     = this.ou(this.energy,     0.25 + 0.75 * intensity, 0.00055, 0.0028);
