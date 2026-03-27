@@ -67,7 +67,7 @@ export default function SoundCard({
   return (
     <div
       style={cardIndex !== undefined ? { animationDelay: `${0.34 + cardIndex * 0.025}s` } : undefined}
-      className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}`}
+      className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}${canEdit ? ' has-editor' : ''}`}
     >
       <button type="button" className="sound-card-toggle" onClick={onToggle} aria-pressed={enabled}>
         <div className="card-top">
