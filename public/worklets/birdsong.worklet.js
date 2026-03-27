@@ -2,10 +2,6 @@ class BirdsongProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
       { name: 'running',      defaultValue: 1,     minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
-      // ── Ambience ──────────────────────────────────────────────────────
-      { name: 'bedVol',       defaultValue: 0.35,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
-      { name: 'bedTone',      defaultValue: 0.50,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
-      { name: 'bedBreath',    defaultValue: 0.50,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
       // ── Calls ─────────────────────────────────────────────────────────
       { name: 'callRate',     defaultValue: 2.0,   minValue: 0.1,  maxValue: 8,    automationRate: 'k-rate' },
       { name: 'callPitch',    defaultValue: 0.50,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
@@ -26,27 +22,6 @@ class BirdsongProcessor extends AudioWorkletProcessor {
 
   constructor() {
     super();
-    // ── Pink noise state (Voss-McCartney approximation, 8 octaves) ──
-    this.pinkRows = new Float32Array(8);
-    this.pinkRunning = 0;
-    this.pinkIndex = 0;
-    for (let i = 0; i < 8; i++) {
-      const v = (this._rnd() * 2 - 1) / 8;
-      this.pinkRows[i] = v;
-      this.pinkRunning += v;
-    }
-
-    // ── Bed filter state ──
-    this.bedLpY = 0;
-    this.bedHpY = 0;
-    this.bedHpPrev = 0;
-
-    // ── Bed LFO (breathing) ──
-    this.lfoVal = 0.85;
-    this.lfoTarget = 0.85;
-    this.lfoHoldRemain = Math.floor(sampleRate * 3.0);
-    this.lfoSpeed = 0;
-
     // ── Active events ──
     this.calls = [];   // chirp-sequence events
     this.trills = [];  // trill events
@@ -76,25 +51,6 @@ class BirdsongProcessor extends AudioWorkletProcessor {
 
   _rand(lo, hi) {
     return lo + this._rnd() * (hi - lo);
-  }
-
-  // ── Pink noise generator (per-sample) ──
-  pinkSample() {
-    this.pinkIndex++;
-    let numChanged = 0;
-    let idx = this.pinkIndex;
-    while (idx & 1) {
-      const row = numChanged & 7;
-      if (row < 8) {
-        this.pinkRunning -= this.pinkRows[row];
-        const newVal = (this._rnd() * 2 - 1) / 8;
-        this.pinkRows[row] = newVal;
-        this.pinkRunning += newVal;
-      }
-      numChanged++;
-      idx >>= 1;
-    }
-    return this.pinkRunning + (this._rnd() * 2 - 1) / 8;
   }
 
   // ── Trigger a bird call (sequence of chirps) ──
@@ -204,9 +160,6 @@ class BirdsongProcessor extends AudioWorkletProcessor {
     const right = output[1] || left;
 
     const running     = parameters.running[0]     ?? 1;
-    const bedVol      = parameters.bedVol[0]       ?? 0.35;
-    const bedTone     = parameters.bedTone[0]      ?? 0.50;
-    const bedBreath   = parameters.bedBreath[0]    ?? 0.50;
     const callRate    = parameters.callRate[0]     ?? 2.0;
     const callPitch   = parameters.callPitch[0]    ?? 0.50;
     const callVol     = parameters.callVol[0]      ?? 0.55;
@@ -219,12 +172,6 @@ class BirdsongProcessor extends AudioWorkletProcessor {
     const peepVol     = parameters.peepVol[0]      ?? 0.15;
     const gain        = parameters.gain[0]         ?? 0.62;
 
-    // Derive filter coefficients from bedTone (0 = dark/muffled, 1 = bright/open)
-    const lpFreq = 800 + bedTone * 3200;   // LP cutoff: 800–4000 Hz
-    const hpFreq = 80 + (1 - bedTone) * 200; // HP cutoff: 80–280 Hz
-    const lpA = Math.exp((-2 * Math.PI * lpFreq) / sampleRate);
-    const hpA = Math.exp((-2 * Math.PI * hpFreq) / sampleRate);
-
     // Call trigger probability per sample: callRate calls per ~5 seconds
     const callProb = callRate / (sampleRate * 5);
     // Trill: trillRate maps 0–1 to roughly 0.5–4 trills per 10 sec
@@ -233,29 +180,6 @@ class BirdsongProcessor extends AudioWorkletProcessor {
     const peepProb = (1 + peepRate * 11) / sampleRate;
 
     for (let i = 0; i < left.length; i++) {
-      // ── Ambient bed: filtered pink noise with breathing LFO ──
-      const pink = this.pinkSample();
-
-      // LP filter
-      this.bedLpY = lpA * this.bedLpY + (1 - lpA) * pink;
-      // HP filter (DC removal + warmth control)
-      const hpIn = this.bedLpY;
-      this.bedHpY = hpA * (this.bedHpY + hpIn - this.bedHpPrev);
-      this.bedHpPrev = hpIn;
-
-      // Breathing LFO
-      this.lfoHoldRemain--;
-      if (this.lfoHoldRemain <= 0) {
-        const breathMin = 0.7 + (1 - bedBreath) * 0.2;
-        const breathMax = 0.85 + bedBreath * 0.15;
-        this.lfoTarget = this._rand(breathMin, breathMax);
-        this.lfoHoldRemain = Math.floor(sampleRate * this._rand(2.5, 6.0));
-        this.lfoSpeed = 1.0 / (sampleRate * this._rand(0.8, 2.0));
-      }
-      this.lfoVal += (this.lfoTarget - this.lfoVal) * this.lfoSpeed;
-
-      const bed = this.bedHpY * this.lfoVal * bedVol;
-
       // ── Trigger calls ──
       this.callCooldown--;
       if (this.callCooldown <= 0 && this._rnd() < callProb) {
@@ -283,7 +207,7 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       const peepSig  = this.renderPeeps()  * peepVol;
 
       // ── Mix ──
-      let mix = bed + callSig + trillSig + peepSig;
+      let mix = callSig + trillSig + peepSig;
 
       // Soft clip
       const sat = 1.12;

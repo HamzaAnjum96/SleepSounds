@@ -573,16 +573,9 @@ function genFire(): string {
 }
 
 function genBirdsong(): string {
-  // Birdsong: gentle forest ambience bed + varied bird calls with chirps and trills
+  // Birdsong: varied bird calls without ambience bed.
 
-  // ── 1. Ambient bed: soft filtered pink noise for distant forest air ──
-  const bed = pinkNoise();
-  hp1(bed, 150);
-  lp1(bed, 1800);
-  const bedBreath = smoothRandomLfo(0.7, 1.0, 2.5, 6.0);
-  for (let i = 0; i < N; i++) bed[i] *= bedBreath[i] * 0.35;
-
-  // ── 2. Bird calls: short melodic chirps at varied pitches ──
+  // ── 1. Bird calls: short melodic chirps at varied pitches ──
   const calls = new Float32Array(N);
   let callPos = Math.floor(SR * rand(0.3, 1.2));
   while (callPos < N) {
@@ -615,7 +608,7 @@ function genBirdsong(): string {
   hp1(calls, 1200);
   lp1(calls, 8000);
 
-  // ── 3. Trills: rapid warbling sequences ──
+  // ── 2. Trills: rapid warbling sequences ──
   const trills = new Float32Array(N);
   let trillPos = Math.floor(SR * rand(1.5, 4.0));
   while (trillPos < N) {
@@ -638,7 +631,7 @@ function genBirdsong(): string {
   hp1(trills, 1800);
   lp1(trills, 9000);
 
-  // ── 4. Distant soft peeps: very quiet background birds ──
+  // ── 3. Distant soft peeps: very quiet background birds ──
   const peeps = new Float32Array(N);
   let peepPos = Math.floor(SR * rand(0.5, 2.0));
   while (peepPos < N) {
@@ -659,7 +652,7 @@ function genBirdsong(): string {
   // ── Mix ──
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = bed[i] + calls[i] * 0.55 + trills[i] * 0.30 + peeps[i] * 0.15;
+    mix[i] = calls[i] * 0.55 + trills[i] * 0.30 + peeps[i] * 0.15;
   }
   return gen(mix, 0.62);
 }

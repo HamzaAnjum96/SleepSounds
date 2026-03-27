@@ -451,6 +451,11 @@ header {
   animation: fadeSlideUp 0.55s cubic-bezier(0.22,1,0.36,1) both;
   overflow: hidden;
 }
+.sound-card-toggle {
+  all: unset;
+  cursor: pointer;
+  display: block;
+}
 .sound-card:hover {
   background: var(--surface-hover);
   border-color: rgba(255,255,255,0.11);
@@ -601,6 +606,15 @@ header {
   color: var(--text-secondary);
   font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 16;
   flex-shrink: 0;
+}
+
+.card-editor-wrap {
+  margin-top: 8px;
+}
+
+.card-editor-toggle {
+  font-size: 10px;
+  padding: 8px 12px;
 }
 
 /* ── Built-in Preset Chips ───────────────────────────────────────── */
