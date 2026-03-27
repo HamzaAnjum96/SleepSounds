@@ -364,6 +364,7 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const toNum = (value: unknown, fallback = 0.5) => (
   typeof value === 'number' ? clamp01(value) : fallback
 );
+const mapRange = (value: number, min: number, max: number) => min + (max - min) * value;
 
 function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
   const v = (key: string, fallback = 0.5) => toNum(raw[key], fallback);
@@ -374,57 +375,57 @@ function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
     case 'rain': {
       const density = v('density', 0.68);
       const softness = v('softness', 0.62);
-      playbackRate = 0.72 + density * 0.84 - softness * 0.16;
-      gainMultiplier = 0.88 + density * 0.22 + softness * 0.12;
+      playbackRate = mapRange(density, 0.62, 1.58) - softness * 0.20;
+      gainMultiplier = mapRange(density, 0.78, 1.42) - softness * 0.18;
       break;
     }
     case 'ocean': {
       const waveSize = v('waveSize', 0.58);
       const foam = v('foam', 0.47);
-      playbackRate = 0.78 + foam * 0.38 - waveSize * 0.18;
-      gainMultiplier = 0.86 + waveSize * 0.20 + foam * 0.18;
+      playbackRate = mapRange(foam, 0.72, 1.40) - waveSize * 0.32;
+      gainMultiplier = mapRange(waveSize, 0.74, 1.36) + foam * 0.12;
       break;
     }
     case 'wind': {
       const gusts = v('gusts', 0.52);
       const airTone = v('airTone', 0.46);
-      playbackRate = 0.8 + gusts * 0.68 + airTone * 0.12;
-      gainMultiplier = 0.85 + gusts * 0.12 + airTone * 0.24;
+      playbackRate = mapRange(gusts, 0.68, 1.66) + airTone * 0.08;
+      gainMultiplier = mapRange(airTone, 0.74, 1.28) + gusts * 0.18;
       break;
     }
     case 'forest': {
       const leaves = v('leaves', 0.64);
       const twigs = v('twigs', 0.33);
-      playbackRate = 0.84 + leaves * 0.34 + twigs * 0.18;
-      gainMultiplier = 0.86 + leaves * 0.20 + twigs * 0.22;
+      playbackRate = mapRange(leaves, 0.76, 1.34) + twigs * 0.22;
+      gainMultiplier = mapRange(leaves, 0.76, 1.22) + twigs * 0.22;
       break;
     }
     case 'fan': {
       const speed = v('speed', 0.49);
       const hum = v('hum', 0.41);
-      playbackRate = 0.62 + speed * 1.02 + hum * 0.08;
-      gainMultiplier = 0.82 + speed * 0.12 + hum * 0.32;
+      playbackRate = mapRange(speed, 0.60, 1.70) + hum * 0.06;
+      gainMultiplier = mapRange(hum, 0.72, 1.28) + speed * 0.16;
       break;
     }
     case 'white-noise': {
       const brightness = v('brightness', 0.54);
       const air = v('air', 0.36);
-      playbackRate = 0.9 + brightness * 0.34 + air * 0.16;
-      gainMultiplier = 0.82 + brightness * 0.08 + air * 0.22;
+      playbackRate = mapRange(brightness, 0.82, 1.42) + air * 0.16;
+      gainMultiplier = mapRange(air, 0.70, 1.26) + brightness * 0.10;
       break;
     }
     case 'pink-noise': {
       const warmth = v('warmth', 0.61);
       const focus = v('focus', 0.43);
-      playbackRate = 0.86 + focus * 0.26 - warmth * 0.12;
-      gainMultiplier = 0.86 + warmth * 0.20 + focus * 0.08;
+      playbackRate = mapRange(focus, 0.80, 1.36) - warmth * 0.16;
+      gainMultiplier = mapRange(warmth, 0.74, 1.32) + focus * 0.10;
       break;
     }
     case 'brown-noise': {
       const depth = v('depth', 0.72);
       const rumble = v('rumble', 0.38);
-      playbackRate = 0.76 + rumble * 0.26 - depth * 0.12;
-      gainMultiplier = 0.9 + depth * 0.24 + rumble * 0.14;
+      playbackRate = mapRange(rumble, 0.72, 1.26) - depth * 0.14;
+      gainMultiplier = mapRange(depth, 0.82, 1.42) + rumble * 0.08;
       break;
     }
     default:
