@@ -183,38 +183,48 @@ function pinkNoise(): Float32Array {
 
 // ── Sound generators ───────────────────────────────────────────────────────
 
-function genForest(): string {
+function genForest(params?: Record<string, number>): string {
+  const { leaves = 0.7, twigs: twigsParam = 0.35, breeze = 0.5 } = params ?? {};
+  const leavesMix = 0.5 + leaves * 0.5;
+  const twigAmpScale = twigsParam * 2.0;
+  const twigGapScale = 1.5 - twigsParam;
+  const breezeFreq = 0.024 + breeze * 0.04;
   // Forest canopy: leafy broadband bed + twig flicks + distant bird-like highs
   const buf = pinkNoise();
   hp1(buf, 120);
   lp1(buf, 2200);
   for (let i = 0; i < N; i++) {
-    const breeze = 0.70 + 0.30 * Math.abs(Math.sin((2 * Math.PI * 0.044 * i) / SR + 0.4));
-    buf[i] *= breeze;
+    const breezeEnv = 0.70 + 0.30 * Math.abs(Math.sin((2 * Math.PI * breezeFreq * i) / SR + 0.4));
+    buf[i] *= breezeEnv;
   }
-  const twigs = new Float32Array(N);
+  const twigsBuf = new Float32Array(N);
   let twigPos = Math.floor(SR * 0.2);
   while (twigPos < N) {
     const len = Math.floor(SR * rand(0.004, 0.018));
     for (let i = 0; i < len && twigPos + i < N; i++) {
       const env = Math.exp(-7.5 * (i / len));
-      twigs[twigPos + i] += (Math.random() * 2 - 1) * env * rand(0.04, 0.14);
+      twigsBuf[twigPos + i] += (Math.random() * 2 - 1) * env * rand(0.04, 0.14) * twigAmpScale;
     }
-    twigPos += Math.floor(SR * rand(0.11, 0.55));
+    twigPos += Math.floor(SR * rand(0.11 * twigGapScale, 0.55 * twigGapScale));
   }
-  hp1(twigs, 1400);
-  lp1(twigs, 5400);
+  hp1(twigsBuf, 1400);
+  lp1(twigsBuf, 5400);
 
   const canopy = new Float32Array(N);
-  for (let i = 0; i < N; i++) canopy[i] = buf[i] * 0.86 + twigs[i] * 0.14;
+  for (let i = 0; i < N; i++) canopy[i] = buf[i] * leavesMix + twigsBuf[i] * (1 - leavesMix);
   return gen(canopy, 0.58);
 }
 
-function genWhite(): string {
+function genWhite(params?: Record<string, number>): string {
+  const { brightness = 0.55, depth = 0.5, texture = 0.4 } = params ?? {};
+  const bodyLp = 4000 + brightness * 9200;
+  const bodyHp = 30 + (1 - depth) * 120;
+  const airMix = 0.08 + texture * 0.2;
+  const shimmerDepth = 0.06 + texture * 0.16;
   // Softer white noise: band-limited and gently animated to reduce hiss fatigue.
   const body = whiteNoise();
-  hp1(body, 90);
-  lp1(body, 8600);
+  hp1(body, bodyHp);
+  lp1(body, bodyLp);
 
   const air = whiteNoise();
   hp1(air, 2400);
@@ -223,73 +233,94 @@ function genWhite(): string {
   const drift = smoothRandomLfo(0.9, 1.1, 1.2, 3.8);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const shimmer = 0.86 + 0.14 * Math.sin((2 * Math.PI * 0.065 * i) / SR);
-    mix[i] = body[i] * 0.84 * drift[i] + air[i] * 0.16 * shimmer;
+    const shimmer = 1 - shimmerDepth + shimmerDepth * Math.sin((2 * Math.PI * 0.065 * i) / SR);
+    mix[i] = body[i] * (1 - airMix) * drift[i] + air[i] * airMix * shimmer;
   }
   return gen(mix, 0.62);
 }
 
-function genBrown(): string {
-  // Leaky-integrator brown noise with α = 0.998, giving a −3 dB cutoff of ≈ 10 Hz
-  // instead of the ≈ 100 Hz cutoff from the brownNoise() helper (α ≈ 0.98).
-  // With the higher α the spectrum rolls off at −6 dB/oct from 10 Hz upward —
-  // a near-true 1/f² (red-noise) density throughout the audible range — which
-  // produces a significantly deeper, more subsonic rumble than the helper alone.
-  // The brownNoise() helper keeps its original coefficient so other generators
-  // (thunder base, fireplace roar, heartbeat chest) that use it in a mix are
-  // not affected.
+function genBrown(params?: Record<string, number>): string {
+  const { depth = 0.7, rumble = 0.4, smoothness = 0.5 } = params ?? {};
+  const alpha = 0.994 + depth * 0.005;
+  const rumbleLpCut = 80 + rumble * 400;
+  const rumbleMix = rumble * 0.3;
+  const smoothLp = 200 + (1 - smoothness) * 2000;
   const buf = new Float32Array(N);
   let last = 0;
   for (let i = 0; i < N; i++) {
-    last = 0.998 * last + 0.002 * (Math.random() * 2 - 1);
+    last = alpha * last + (1 - alpha) * (Math.random() * 2 - 1);
     buf[i] = last;
   }
+  // Second LP pass for rumble emphasis
+  const rumbleBuf = new Float32Array(buf);
+  lp1(rumbleBuf, rumbleLpCut);
+  for (let i = 0; i < N; i++) buf[i] = buf[i] * (1 - rumbleMix) + rumbleBuf[i] * rumbleMix;
+  // Smoothness LP
+  lp1(buf, smoothLp);
   return gen(buf, 0.65);
 }
 
-function genFan(): string {
-  const airflow = pinkNoise();
-  hp1(airflow, 200);
-  lp1(airflow, 2200);
+function genFan(params?: Record<string, number>): string {
+  const { speed = 0.5, hum: humParam = 0.4, airflow: airflowParam = 0.6 } = params ?? {};
+  const flutterFreq = 12 + speed * 12;
+  const airflowHp = 150 + speed * 100;
+  const humLpCut = 80 + humParam * 80;
+  const humMix = 0.15 + humParam * 0.2;
+  const airflowMix = 0.5 + airflowParam * 0.5;
 
-  const hum = brownNoise();
-  lp1(hum, 120); lp1(hum, 120);
+  const airflowBuf = pinkNoise();
+  hp1(airflowBuf, airflowHp);
+  lp1(airflowBuf, 2200);
+
+  const humBuf = brownNoise();
+  lp1(humBuf, humLpCut); lp1(humBuf, humLpCut);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const flutter = 0.88 + 0.12 * Math.sin((2 * Math.PI * 18 * i) / SR);
-    mix[i] = airflow[i] * 0.75 * flutter + hum[i] * 0.25;
+    const flutter = 0.88 + 0.12 * Math.sin((2 * Math.PI * flutterFreq * i) / SR);
+    mix[i] = airflowBuf[i] * airflowMix * flutter + humBuf[i] * humMix;
   }
   return gen(mix, 0.65);
 }
 
-function genPink(): string {
+function genPink(params?: Record<string, number>): string {
+  const { warmth: warmthParam = 0.6, focus = 0.45, air = 0.4 } = params ?? {};
+  const warmthMix = 0.05 + warmthParam * 0.16;
+  const pinkHp = 20 + (1 - warmthParam) * 36;
+  const textureBpCenter = 1600 + focus * 1200;
+  const textureMix = 0.02 + focus * 0.06;
+  const pinkLp = 4000 + air * 4400;
   // Smoother pink profile: trim subsonic rumble + tame top edge + add warm bed.
   const pink = pinkNoise();
-  hp1(pink, 38);
-  lp1(pink, 6200);
+  hp1(pink, pinkHp);
+  lp1(pink, pinkLp);
 
-  const warmth = brownNoise();
-  hp1(warmth, 24);
-  lp1(warmth, 420);
+  const warmthBuf = brownNoise();
+  hp1(warmthBuf, 24);
+  lp1(warmthBuf, 420);
 
   const texture = whiteNoise();
-  bp2(texture, 2200, 0.9);
+  bp2(texture, textureBpCenter, 0.9);
   lp1(texture, 4200);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = pink[i] * 0.82 + warmth[i] * 0.13 + texture[i] * 0.05;
+    mix[i] = pink[i] * (1 - warmthMix - textureMix) + warmthBuf[i] * warmthMix + texture[i] * textureMix;
   }
   return gen(mix, 0.64);
 }
 
-function genRain(): string {
+function genRain(params?: Record<string, number>): string {
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5 } = params ?? {};
+  const gapScale = 0.3 + (1 - intensity) * 1.4;
+  const bedHp = 120 + (1 - heaviness) * 120;
+  const bedLp = 2800 + (1 - heaviness) * 5600;
+  const bubbleChance = 0.22 + surface * 0.4;
+  const pingChance = 0.35 + surface * 0.4;
   // Rain: diffuse bed + clustered impacts + tonal bubble-like micro-events
   const bed = pinkNoise();
-  // HP at 180 Hz (not 260) to preserve the 200–250 Hz "moderate" energy band per report
-  hp1(bed, 180);
-  lp1(bed, 5600);
+  hp1(bed, bedHp);
+  lp1(bed, bedLp);
   const density = smoothRandomLfo(0.65, 1.35, 0.8, 3.2);
   for (let i = 0; i < N; i++) bed[i] *= (0.76 + 0.24 * density[i]);
 
@@ -301,18 +332,14 @@ function genRain(): string {
     const clusterEnd = Math.min(N, pos + clusterDur);
     while (pos < clusterEnd) {
       const len = Math.floor(SR * rand(0.002, 0.009));
-      // Log-normal amplitude: many quiet drops, occasional loud ones.
-      // exp(uniform(−4.8, −1.6)) spans ~0.008–0.20 with geometric mean ~0.045.
       const amp = Math.exp(rand(-4.8, -1.6));
-      // 1ms rise ramp — eliminates instant-on click
       const riseN = Math.max(2, Math.floor(SR * 0.001));
       for (let i = 0; i < len && pos + i < N; i++) {
         const riseGain = Math.min(1, i / riseN);
         const env = Math.exp(-8 * (i / Math.max(1, len))) * riseGain;
         impacts[pos + i] += (Math.random() * 2 - 1) * amp * env;
       }
-      // Surface resonance ping: brief tuned ring excited by each drop
-      if (chance(0.55)) {
+      if (chance(pingChance)) {
         const pingF  = rand(700, 1800);
         const pingLen = Math.floor(SR * rand(0.003, 0.008));
         const pingAmp = amp * rand(0.25, 0.45);
@@ -322,13 +349,11 @@ function genRain(): string {
             * Math.exp(-14 * (i / pingLen)) * pingAmp * riseGain;
         }
       }
-      if (chance(0.42)) {
+      if (chance(bubbleChance)) {
         const bLen = Math.floor(SR * rand(0.01, 0.022));
         const f0 = rand(650, 1700);
         const f1 = f0 * rand(0.75, 0.92);
         const bAmp = rand(0.015, 0.055);
-        // Phase accumulator: ph += 2π·f/SR avoids the sin(2π·f(t)·t) "chirp" artefact
-        // where f and t both vary and their product creates an audible laser-sweep tone.
         let bPh = 0;
         for (let i = 0; i < bLen && pos + i < N; i++) {
           const p = i / Math.max(1, bLen - 1);
@@ -340,7 +365,7 @@ function genRain(): string {
       }
       pos += Math.floor(SR * rand(0.004, 0.03));
     }
-    pos += Math.floor(SR * rand(0.03, 0.25));
+    pos += Math.floor(SR * rand(0.03 * gapScale, 0.25 * gapScale));
   }
   hp1(impacts, 1400); lp1(impacts, 9000);
   hp1(bubbles, 420); lp1(bubbles, 4200);
@@ -349,25 +374,29 @@ function genRain(): string {
   return gen(mix, 0.7);
 }
 
-function genOcean(): string {
+function genOcean(params?: Record<string, number>): string {
+  const { waveSize = 0.55, foam = 0.5, depth = 0.5 } = params ?? {};
+  const waveMin = 5 + waveSize * 5;
+  const waveMax = 10 + waveSize * 10;
+  const surfLp = 1200 + foam * 1600;
+  const surfMix = 0.2 + foam * 0.36;
+  const baseLp = 240 + depth * 240;
+  const baseMix = 0.4 + depth * 0.44;
   // Ocean shoreline: undertow body + cresting surf that blooms on each wave
   const base = brownNoise();
-  lp1(base, 480); lp1(base, 360);
+  lp1(base, baseLp); lp1(base, baseLp * 0.75);
 
   const surf = pinkNoise();
   hp1(surf, 220);
-  lp1(surf, 2000);
+  lp1(surf, surfLp);
 
-  // Random-interval wave envelope: 7–15s periods, variable amplitude sets.
-  // Replaces the fixed 0.085 Hz sine which sounded metronomic.
   const waveEnvBuf = new Float32Array(N);
   let wPos = 0;
   while (wPos < N) {
-    const period = Math.floor(SR * rand(7.0, 15.0));
+    const period = Math.floor(SR * rand(waveMin, waveMax));
     const wAmp   = rand(0.45, 1.0);
     for (let i = 0; i < period && wPos + i < N; i++) {
       const p = i / period;
-      // Gradual swell → sharp crest → long washback
       let env: number;
       if (p < 0.38) env = Math.pow(p / 0.38, 1.6) * wAmp;
       else if (p < 0.52) env = wAmp;
@@ -382,41 +411,42 @@ function genOcean(): string {
     const wEnv  = Math.min(1, waveEnvBuf[i]);
     const wBase = 0.24 + 0.76 * wEnv;
     const wSurf = 0.08 + 0.92 * Math.pow(wEnv, 1.8);
-    mix[i] = base[i] * wBase * 0.62 + surf[i] * wSurf * 0.38;
+    mix[i] = base[i] * wBase * baseMix + surf[i] * wSurf * surfMix;
   }
   return gen(mix, 0.72);
 }
 
-function genWind(): string {
+function genWind(params?: Record<string, number>): string {
+  const { gusts = 0.5, whistle = 0.3, tone = 0.5 } = params ?? {};
+  const gustDepth = 0.2 + gusts * 0.6;
+  const whistleMixLevel = whistle * 0.28;
+  const bodyLp = 600 + tone * 800;
   // Wind: gust-driven turbulence with drifting resonant edge tones
   const buf = pinkNoise();
   hp1(buf, 90);
-  lp1(buf, 1400); lp1(buf, 900);
+  lp1(buf, bodyLp + 400); lp1(buf, bodyLp);
   const drift = smoothRandomLfo(0.84, 1.14, 1.8, 5.2);
   for (let i = 0; i < N; i++) {
-    const g1 = 0.48 + 0.52 * Math.abs(Math.sin((2 * Math.PI * 0.038 * i) / SR));
+    const g1 = (1 - gustDepth) + gustDepth * Math.abs(Math.sin((2 * Math.PI * 0.038 * i) / SR));
     const g2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.11 * i) / SR + 1.3);
     const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
-  // Multi-strip whistle: 4 narrow bandpass strips that fade in/out independently,
-  // simulating wind tone drifting as air speed and angle change.
   const whistleStrips = [
     { fc: 360,  q: 4.0 },
     { fc: 620,  q: 4.5 },
     { fc: 960,  q: 4.2 },
     { fc: 1380, q: 5.0 },
   ];
-  const whistleMix = new Float32Array(N);
+  const whistleBuf = new Float32Array(N);
   for (const s of whistleStrips) {
     const stripNoise = whiteNoise();
     bp2(stripNoise, s.fc, s.q);
-    // Each strip has its own slow random fade — creates drifting tone character
     const stripLfo = smoothRandomLfo(0.0, 1.0, 1.4, 5.5);
-    for (let i = 0; i < N; i++) whistleMix[i] += stripNoise[i] * stripLfo[i] * 0.25;
+    for (let i = 0; i < N; i++) whistleBuf[i] += stripNoise[i] * stripLfo[i] * 0.25;
   }
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = buf[i] * 0.86 + whistleMix[i] * 0.14;
+  for (let i = 0; i < N; i++) mix[i] = buf[i] * (1 - whistleMixLevel) + whistleBuf[i] * whistleMixLevel;
   return gen(mix, 0.68);
 }
 
@@ -657,26 +687,38 @@ function genBirdsong(): string {
   return gen(mix, 0.62);
 }
 
-function genStream(): string {
+function genStream(params?: Record<string, number>): string {
+  const { flow: flowParam = 0.6, sparkle = 0.45, depth = 0.5 } = params ?? {};
+  const lfoMin = 0.5 + flowParam * 0.4;
+  const lfoMax = 1.0 + flowParam * 0.5;
+  const rippleHp = 800 + sparkle * 800;
+  const rippleMix = 0.12 + sparkle * 0.2;
+  const bedHp = 100 + (1 - depth) * 160;
   // Gentle stream: broad watery bed with bright ripples.
   const bed = pinkNoise();
-  hp1(bed, 180);
+  hp1(bed, bedHp);
   lp1(bed, 2600);
 
   const ripples = whiteNoise();
-  hp1(ripples, 1200);
+  hp1(ripples, rippleHp);
   lp1(ripples, 7600);
 
-  const flow = smoothRandomLfo(0.72, 1.24, 0.5, 2.4);
+  const flowLfo = smoothRandomLfo(lfoMin, lfoMax, 0.5, 2.4);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const rippleEnv = Math.pow(Math.max(0, flow[i]), 1.8);
-    mix[i] = bed[i] * 0.78 * flow[i] + ripples[i] * 0.22 * rippleEnv;
+    const rippleEnv = Math.pow(Math.max(0, flowLfo[i]), 1.8);
+    mix[i] = bed[i] * (1 - rippleMix) * flowLfo[i] + ripples[i] * rippleMix * rippleEnv;
   }
   return gen(mix, 0.66);
 }
 
-function genThunder(): string {
+function genThunder(params?: Record<string, number>): string {
+  const { stormIntensity = 0.5, rumble = 0.6, distance = 0.4 } = params ?? {};
+  const boomGapMin = 2 + (1 - stormIntensity) * 4;
+  const boomGapMax = 6 + (1 - stormIntensity) * 8;
+  const rollMix = 0.5 + rumble * 0.48;
+  const masterLp = 1200 + (1 - distance) * 6000;
+  const hissMix = 0.06 + (1 - distance) * 0.08;
   // Distant thunder roll with occasional low booms.
   const roll = brownNoise();
   hp1(roll, 24);
@@ -700,7 +742,7 @@ function genThunder(): string {
       ph += (2 * Math.PI * f) / SR;
       booms[pos + i] += Math.sin(ph) * env * amp;
     }
-    pos += Math.floor(SR * rand(4.0, 10.0));
+    pos += Math.floor(SR * rand(boomGapMin, boomGapMax));
   }
   hp1(booms, 24);
   lp1(booms, 240);
@@ -708,23 +750,32 @@ function genThunder(): string {
   const swell = smoothRandomLfo(0.64, 1.26, 1.4, 6.2);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = roll[i] * 0.74 * swell[i] + hiss[i] * 0.10 + booms[i] * 0.16;
+    mix[i] = roll[i] * rollMix * swell[i] + hiss[i] * hissMix + booms[i] * 0.16;
   }
+  lp1(mix, masterLp);
   return gen(mix, 0.7);
 }
 
-function genNight(): string {
+function genNight(params?: Record<string, number>): string {
+  const { crickets = 0.5, depth = 0.5, rustling = 0.4 } = params ?? {};
+  const chirpGapScale = 1.5 - crickets;
+  const chirpAmpScale = 0.7 + crickets * 0.6;
+  const bedHp = 80 + (1 - depth) * 60;
+  const bedMix = 0.75 + depth * 0.3;
+  const rustlingDepth = 0.1 + rustling * 0.3;
   // Calm night ambience: low rustle + sparse insect chirps.
   const bed = pinkNoise();
-  hp1(bed, 110);
+  hp1(bed, bedHp);
   lp1(bed, 2600);
+
+  const rustleLfo = smoothRandomLfo(1 - rustlingDepth, 1 + rustlingDepth, 1.0, 4.0);
 
   const chirps = new Float32Array(N);
   let pos = Math.floor(SR * rand(0.2, 0.9));
   while (pos < N) {
     const len = Math.floor(SR * rand(0.035, 0.11));
     const f0 = rand(2600, 4200);
-    const amp = rand(0.012, 0.045);
+    const amp = rand(0.012, 0.045) * chirpAmpScale;
     let ph = 0;
     for (let i = 0; i < len && pos + i < N; i++) {
       const p = i / Math.max(1, len - 1);
@@ -732,16 +783,21 @@ function genNight(): string {
       ph += (2 * Math.PI * (f0 + 120 * Math.sin(2 * Math.PI * p * 3))) / SR;
       chirps[pos + i] += Math.sin(ph) * env * amp;
     }
-    pos += Math.floor(SR * rand(0.4, 1.9));
+    pos += Math.floor(SR * rand(0.4 * chirpGapScale, 1.9 * chirpGapScale));
   }
   lp1(chirps, 6200);
 
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = bed[i] * 0.9 + chirps[i] * 0.1;
+  for (let i = 0; i < N; i++) mix[i] = bed[i] * bedMix * rustleLfo[i] + chirps[i] * (1 - bedMix);
   return gen(mix, 0.6);
 }
 
-function genTrain(): string {
+function genTrain(params?: Record<string, number>): string {
+  const { speed = 0.5, rumble: rumbleParam = 0.5, clatter = 0.35 } = params ?? {};
+  const clickGapScale = 1.5 - speed;
+  const rumbleMix = 0.35 + rumbleParam * 0.44;
+  const clickLp = 3000 + clatter * 4000;
+  const clickAmpScale = 0.7 + clatter * 0.6;
   // Distant train cabin: wheel rhythm + broad mechanical rumble.
   const rumble = brownNoise();
   hp1(rumble, 40);
@@ -755,43 +811,503 @@ function genTrain(): string {
   let pos = Math.floor(SR * 0.25);
   while (pos < N) {
     const len = Math.floor(SR * rand(0.003, 0.012));
-    const amp = rand(0.025, 0.085);
+    const amp = rand(0.025, 0.085) * clickAmpScale;
     for (let i = 0; i < len && pos + i < N; i++) {
       clicks[pos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-10 * (i / len));
     }
-    pos += Math.floor(SR * rand(0.18, 0.62));
+    pos += Math.floor(SR * rand(0.18 * clickGapScale, 0.62 * clickGapScale));
   }
   hp1(clicks, 1200);
-  lp1(clicks, 5200);
+  lp1(clicks, clickLp);
 
   const sway = smoothRandomLfo(0.78, 1.18, 0.8, 3.8);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = rumble[i] * 0.57 * sway[i] + carriage[i] * 0.33 + clicks[i] * 0.1;
+    mix[i] = rumble[i] * rumbleMix * sway[i] + carriage[i] * 0.33 + clicks[i] * 0.1;
   }
   return gen(mix, 0.68);
+}
+
+// ── Sound regeneration ────────────────────────────────────────────────────
+
+const generatorMap: Record<string, (params?: Record<string, number>) => string> = {
+  rain: genRain,
+  stream: genStream,
+  ocean: genOcean,
+  wind: genWind,
+  thunder: genThunder,
+  forest: genForest,
+  'white-noise': genWhite,
+  'pink-noise': genPink,
+  'brown-noise': genBrown,
+  train: genTrain,
+  fan: genFan,
+  night: genNight,
+  waterfall: genWaterfall,
+  'tent-rain': genTentRain,
+  'tin-roof-rain': genTinRoofRain,
+  underwater: genUnderwater,
+  shower: genShower,
+  frogs: genFrogs,
+  cafe: genCafe,
+  airplane: genAirplane,
+  dryer: genDryer,
+  space: genSpace,
+  heartbeat: genHeartbeat,
+};
+
+/** Regenerate a sound's WAV blob URL with the given tuning parameters. */
+export function regenerateSound(soundId: string, params: Record<string, number>): string | null {
+  const generator = generatorMap[soundId];
+  if (!generator) return null;
+  return generator(params);
+}
+
+function genWaterfall(params?: Record<string, number>): string {
+  const { power = 0.6, mist = 0.4, distance = 0.3 } = params ?? {};
+  const baseBuf = brownNoise();
+  hp1(baseBuf, 30);
+  lp1(baseBuf, 300 + power * 400);
+  const bodyBuf = pinkNoise();
+  hp1(bodyBuf, 80 + power * 80);
+  lp1(bodyBuf, 1800 + power * 1200);
+  const spray = whiteNoise();
+  hp1(spray, 2000 + mist * 2000);
+  lp1(spray, 8000 + mist * 4000);
+  const bodyLfo = smoothRandomLfo(0.8, 1.1, 1.5, 4.0);
+  const distLp = 2000 + (1 - distance) * 8000;
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = baseBuf[i] * 0.3 * power + bodyBuf[i] * 0.5 * bodyLfo[i] + spray[i] * (0.1 + mist * 0.15);
+  }
+  lp1(mix, distLp);
+  return gen(mix, 0.68);
+}
+
+function genTentRain(params?: Record<string, number>): string {
+  const { intensity = 0.6, fabric = 0.5, wind = 0.3 } = params ?? {};
+  const bed = pinkNoise();
+  hp1(bed, 300);
+  lp1(bed, 3000 + fabric * 2000);
+  const bedLfo = smoothRandomLfo(0.7, 1.2, 1.0, 3.0);
+
+  const impactsBuf = new Float32Array(N);
+  let pos = Math.floor(SR * 0.01);
+  while (pos < N) {
+    const len = Math.floor(SR * rand(0.003, 0.012));
+    const amp = Math.exp(rand(-4.5, -1.8));
+    for (let i = 0; i < len && pos + i < N; i++) {
+      const env = Math.exp(-10 * (i / Math.max(1, len)));
+      impactsBuf[pos + i] += (Math.random() * 2 - 1) * amp * env;
+    }
+    pos += Math.floor(SR * rand(0.02, 0.15) / (intensity + 0.3));
+  }
+  hp1(impactsBuf, 800);
+  lp1(impactsBuf, 4000 + fabric * 3000);
+  bp2(impactsBuf, 1200 + fabric * 800, 2 + fabric * 3);
+
+  const windBed = brownNoise();
+  lp1(windBed, 400);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = bed[i] * 0.55 * bedLfo[i] + impactsBuf[i] * 0.3 + windBed[i] * wind * 0.15;
+  }
+  return gen(mix, 0.62);
+}
+
+function genTinRoofRain(params?: Record<string, number>): string {
+  const { intensity = 0.6, metallic = 0.5, gutters = 0.4 } = params ?? {};
+  const bed = pinkNoise();
+  hp1(bed, 200);
+  lp1(bed, 4000);
+
+  const pings = new Float32Array(N);
+  let pos = Math.floor(SR * 0.01);
+  while (pos < N) {
+    const pingF = rand(2000 + metallic * 2000, 4000 + metallic * 3000);
+    const pingLen = Math.floor(SR * rand(0.005, 0.020));
+    const pingAmp = rand(0.03, 0.12) * metallic;
+    for (let i = 0; i < pingLen && pos + i < N; i++) {
+      const env = Math.exp(-20 * (i / Math.max(1, pingLen)));
+      pings[pos + i] += Math.sin(2 * Math.PI * pingF * (i / SR)) * env * pingAmp;
+    }
+    pos += Math.floor(SR * rand(0.01, 0.1) / (intensity + 0.3));
+  }
+
+  const gutterBuf = new Float32Array(N);
+  const gBrown = brownNoise();
+  const gPink = pinkNoise();
+  for (let i = 0; i < N; i++) gutterBuf[i] = gBrown[i] * 0.5 + gPink[i] * 0.5;
+  hp1(gutterBuf, 100);
+  lp1(gutterBuf, 600 + gutters * 600);
+  const gutterLfo = smoothRandomLfo(0.7, 1.1, 2.0, 6.0);
+  for (let i = 0; i < N; i++) gutterBuf[i] *= gutterLfo[i];
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = bed[i] * 0.45 + pings[i] * 0.3 + gutterBuf[i] * gutters * 0.25;
+  }
+  return gen(mix, 0.64);
+}
+
+function genUnderwater(params?: Record<string, number>): string {
+  const { depth = 0.6, bubbles = 0.4, current = 0.5 } = params ?? {};
+  const baseBuf = brownNoise();
+  lp1(baseBuf, 200 + (1 - depth) * 400);
+  lp1(baseBuf, 200 + (1 - depth) * 400);
+
+  const currentBuf = pinkNoise();
+  hp1(currentBuf, 60);
+  lp1(currentBuf, 400 + (1 - depth) * 800);
+  const currentLfo = smoothRandomLfo(0.6, 1.2, 2.0, 6.0);
+  const currentMix = 0.2 + current * 0.4;
+  for (let i = 0; i < N; i++) currentBuf[i] *= currentLfo[i];
+
+  const bubblesBuf = new Float32Array(N);
+  let pos = Math.floor(SR * 0.05);
+  while (pos < N) {
+    const bFreq = rand(200, 800);
+    const bLen = Math.floor(SR * rand(0.008, 0.030));
+    const bAmp = rand(0.02, 0.08);
+    let ph = 0;
+    for (let i = 0; i < bLen && pos + i < N; i++) {
+      const p = i / Math.max(1, bLen);
+      const env = Math.sin(Math.PI * p);
+      const f = bFreq + bFreq * 0.3 * p; // pitch rise
+      ph += (2 * Math.PI * f) / SR;
+      bubblesBuf[pos + i] += Math.sin(ph) * env * bAmp;
+    }
+    pos += Math.floor(SR * rand(0.05, 0.4) / (bubbles + 0.2));
+  }
+  hp1(bubblesBuf, 150);
+  lp1(bubblesBuf, 2000);
+
+  const finalLp = 800 + (1 - depth) * 3000;
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = baseBuf[i] * 0.4 + currentBuf[i] * currentMix + bubblesBuf[i] * 0.2;
+  }
+  lp1(mix, finalLp);
+  return gen(mix, 0.6);
+}
+
+function genShower(params?: Record<string, number>): string {
+  const { pressure = 0.6, steam = 0.3, room = 0.5 } = params ?? {};
+  const spray = whiteNoise();
+  hp1(spray, 200 + pressure * 200);
+  lp1(spray, 6000 + pressure * 4000);
+  const sprayLfo = smoothRandomLfo(0.85, 1.1, 0.8, 2.5);
+  for (let i = 0; i < N; i++) spray[i] *= sprayLfo[i];
+
+  const bodyBuf = pinkNoise();
+  hp1(bodyBuf, 100);
+  lp1(bodyBuf, 2000 + pressure * 1000);
+
+  const steamBuf = whiteNoise();
+  hp1(steamBuf, 4000 + steam * 2000);
+  lp1(steamBuf, 12000);
+
+  const preMix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    preMix[i] = spray[i] * 0.5 + bodyBuf[i] * 0.35 + steamBuf[i] * (0.05 + steam * 0.1);
+  }
+  // Room resonance
+  const roomRes = new Float32Array(preMix);
+  bp2(roomRes, 400 + room * 400, 1 + room * 2);
+  for (let i = 0; i < N; i++) preMix[i] += roomRes[i] * room * 0.15;
+  return gen(preMix, 0.65);
+}
+
+function genFrogs(params?: Record<string, number>): string {
+  const { chorus = 0.5, pitch = 0.5, swamp = 0.4 } = params ?? {};
+  const swampBed = pinkNoise();
+  hp1(swampBed, 80);
+  lp1(swampBed, 1800);
+  const swampMix = 0.2 + swamp * 0.3;
+
+  // Deep croaks
+  const deepBuf = new Float32Array(N);
+  let pos = Math.floor(SR * rand(0.1, 0.5));
+  while (pos < N) {
+    const f0 = rand(180 + pitch * 80, 350 + pitch * 100);
+    const dur = Math.floor(SR * rand(0.08, 0.200));
+    const amp = rand(0.06, 0.14);
+    const amRate = rand(8, 15);
+    let ph = 0;
+    for (let i = 0; i < dur && pos + i < N; i++) {
+      const p = i / dur;
+      const env = Math.sin(Math.PI * p) * amp;
+      const am = 0.5 + 0.5 * Math.sin(2 * Math.PI * amRate * (i / SR));
+      ph += (2 * Math.PI * f0) / SR;
+      deepBuf[pos + i] += Math.sin(ph) * env * am;
+    }
+    pos += Math.floor(SR * rand(0.3, 2.0) / (chorus + 0.3));
+  }
+  hp1(deepBuf, 100);
+  lp1(deepBuf, 600);
+
+  // Mid ribbits
+  const midBuf = new Float32Array(N);
+  pos = Math.floor(SR * rand(0.2, 0.6));
+  while (pos < N) {
+    const f0 = rand(400 + pitch * 200, 800 + pitch * 300);
+    const dur = Math.floor(SR * rand(0.04, 0.100));
+    const amp = rand(0.04, 0.10);
+    let ph = 0;
+    for (let i = 0; i < dur && pos + i < N; i++) {
+      const p = i / dur;
+      const env = Math.sin(Math.PI * p) * amp;
+      const bend = 1 + 0.2 * Math.sin(Math.PI * p); // pitch bend up then down
+      ph += (2 * Math.PI * f0 * bend) / SR;
+      midBuf[pos + i] += Math.sin(ph) * env;
+    }
+    pos += Math.floor(SR * rand(0.2, 1.5) / (chorus + 0.3));
+  }
+  hp1(midBuf, 300);
+  lp1(midBuf, 1400);
+
+  // High peepers
+  const highBuf = new Float32Array(N);
+  pos = Math.floor(SR * rand(0.05, 0.3));
+  while (pos < N) {
+    const f0 = rand(1500 + pitch * 500, 2800 + pitch * 500);
+    const dur = Math.floor(SR * rand(0.015, 0.040));
+    const amp = rand(0.03, 0.08);
+    let ph = 0;
+    for (let i = 0; i < dur && pos + i < N; i++) {
+      const p = i / dur;
+      const env = Math.sin(Math.PI * p) * amp;
+      ph += (2 * Math.PI * f0) / SR;
+      highBuf[pos + i] += Math.sin(ph) * env;
+    }
+    pos += Math.floor(SR * rand(0.1, 0.8) / (chorus + 0.3));
+  }
+  lp1(highBuf, 5000);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = swampBed[i] * swampMix + deepBuf[i] * 0.3 + midBuf[i] * 0.2 + highBuf[i] * 0.15;
+  }
+  return gen(mix, 0.6);
+}
+
+function genCafe(params?: Record<string, number>): string {
+  const { crowd = 0.6, clinks = 0.3, warmth = 0.5 } = params ?? {};
+  const murmurPink = pinkNoise();
+  const murmurBrown = brownNoise();
+  const murmur = new Float32Array(N);
+  for (let i = 0; i < N; i++) murmur[i] = murmurPink[i] * 0.6 + murmurBrown[i] * 0.4;
+  hp1(murmur, 100 + warmth * 100);
+  lp1(murmur, 800 + (1 - warmth) * 1200);
+  const murmurLfo = smoothRandomLfo(0.5, 1.2, 0.6, 2.5);
+  for (let i = 0; i < N; i++) murmur[i] *= murmurLfo[i];
+
+  const clinksBuf = new Float32Array(N);
+  let pos = Math.floor(SR * rand(0.3, 1.0));
+  while (pos < N) {
+    const cFreq = rand(3000, 6000);
+    const cLen = Math.floor(SR * rand(0.010, 0.030));
+    const cAmp = rand(0.02, 0.06);
+    for (let i = 0; i < cLen && pos + i < N; i++) {
+      const env = Math.exp(-15 * (i / Math.max(1, cLen)));
+      clinksBuf[pos + i] += Math.sin(2 * Math.PI * cFreq * (i / SR)) * env * cAmp;
+    }
+    pos += Math.floor(SR * rand(0.5, 3.0) / (clinks + 0.2));
+  }
+  hp1(clinksBuf, 2000);
+  lp1(clinksBuf, 8000);
+
+  const bgHum = brownNoise();
+  lp1(bgHum, 200);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = murmur[i] * (0.4 + crowd * 0.4) + clinksBuf[i] * (0.05 + clinks * 0.1) + bgHum[i] * 0.1;
+  }
+  return gen(mix, 0.58);
+}
+
+function genAirplane(params?: Record<string, number>): string {
+  const { altitude = 0.5, cabin = 0.6, turbulence = 0.3 } = params ?? {};
+  const drone = brownNoise();
+  hp1(drone, 40 + altitude * 40);
+  lp1(drone, 300 + altitude * 200);
+
+  const drone2 = pinkNoise();
+  hp1(drone2, 80);
+  lp1(drone2, 600 + altitude * 400);
+  bp2(drone2, 120 + altitude * 80, 2);
+
+  const cabinNoise = pinkNoise();
+  hp1(cabinNoise, 200);
+  lp1(cabinNoise, 3000 + cabin * 2000);
+
+  const turbBuf = brownNoise();
+  const turbLfo = smoothRandomLfo(0.0, 1.0, 2.0, 8.0);
+  hp1(turbBuf, 20);
+  lp1(turbBuf, 200);
+  for (let i = 0; i < N; i++) turbBuf[i] *= turbLfo[i];
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = drone[i] * 0.35 + drone2[i] * 0.2 + cabinNoise[i] * (0.2 + cabin * 0.2) + turbBuf[i] * turbulence * 0.15;
+  }
+  return gen(mix, 0.66);
+}
+
+function genDryer(params?: Record<string, number>): string {
+  const { speed = 0.5, hum = 0.5, tumble = 0.4 } = params ?? {};
+  const humLp = 80 + hum * 60;
+  const humBuf = brownNoise();
+  lp1(humBuf, humLp);
+  lp1(humBuf, humLp);
+
+  const airflowBuf = pinkNoise();
+  hp1(airflowBuf, 150 + speed * 100);
+  lp1(airflowBuf, 2000 + speed * 1000);
+  const flutterFreq = 8 + speed * 8;
+  const flutterDepth = 0.1 + speed * 0.15;
+  for (let i = 0; i < N; i++) {
+    airflowBuf[i] *= 1 - flutterDepth + flutterDepth * Math.sin((2 * Math.PI * flutterFreq * i) / SR);
+  }
+
+  const tumbleBuf = new Float32Array(N);
+  let pos = Math.floor(SR * 0.1);
+  while (pos < N) {
+    const tLen = Math.floor(SR * rand(0.020, 0.060));
+    const tAmp = rand(0.04, 0.12) * tumble;
+    for (let i = 0; i < tLen && pos + i < N; i++) {
+      const env = Math.exp(-6 * (i / Math.max(1, tLen)));
+      tumbleBuf[pos + i] += (Math.random() * 2 - 1) * tAmp * env;
+    }
+    lp1(tumbleBuf, 200 + tumble * 200);
+    pos += Math.floor(SR * rand(0.3, 1.0) / (speed + 0.3));
+  }
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = humBuf[i] * (0.15 + hum * 0.2) + airflowBuf[i] * 0.5 + tumbleBuf[i] * (0.1 + tumble * 0.2);
+  }
+  return gen(mix, 0.62);
+}
+
+function genSpace(params?: Record<string, number>): string {
+  const { void: voidParam = 0.6, cosmic = 0.4, pulse = 0.3 } = params ?? {};
+  const voidBuf = brownNoise();
+  lp1(voidBuf, 60 + voidParam * 40);
+  lp1(voidBuf, 60 + voidParam * 40);
+
+  const shimmer1 = whiteNoise();
+  bp2(shimmer1, 2000 + cosmic * 3000, 8 + cosmic * 8);
+
+  const shimmer2 = whiteNoise();
+  bp2(shimmer2, 4000 + cosmic * 2000, 6 + cosmic * 6);
+
+  const pulseLfo = smoothRandomLfo(0.2, 1.0, 4 + pulse * 8, 8 + pulse * 16);
+  const driftLfo = smoothRandomLfo(0.7, 1.1, 3.0, 10.0);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    mix[i] = (voidBuf[i] * (0.3 + voidParam * 0.3) +
+              shimmer1[i] * 0.1 * (0.5 + cosmic) * driftLfo[i] +
+              shimmer2[i] * 0.06 * (0.5 + cosmic) * driftLfo[i]) * pulseLfo[i];
+  }
+  return gen(mix, 0.55);
+}
+
+function genHeartbeat(params?: Record<string, number>): string {
+  const { rate = 0.5, chest = 0.6, muffle = 0.5 } = params ?? {};
+  const bpm = 52 + rate * 28;
+  const beatInterval = Math.floor(SR * 60 / bpm);
+  const lubFreq = 40 + chest * 20;
+  const dubFreq = 50 + chest * 25;
+  const noiseLp = 100 + chest * 80;
+  const finalLp = 200 + (1 - muffle) * 600;
+
+  const beats = new Float32Array(N);
+  let beatPos = Math.floor(SR * 0.5);
+  while (beatPos < N) {
+    // Lub
+    const lubLen = Math.floor(SR * rand(0.08, 0.12));
+    for (let i = 0; i < lubLen && beatPos + i < N; i++) {
+      const p = i / lubLen;
+      const env = Math.sin(Math.PI * p);
+      const noise = (Math.random() * 2 - 1) * 0.3;
+      beats[beatPos + i] += (Math.sin(2 * Math.PI * lubFreq * (i / SR)) * 0.7 + noise) * env * 0.25;
+    }
+    // Dub (offset ~200ms)
+    const dubOffset = Math.floor(SR * 0.2);
+    const dubLen = Math.floor(SR * rand(0.06, 0.09));
+    const dubPos = beatPos + dubOffset;
+    for (let i = 0; i < dubLen && dubPos + i < N; i++) {
+      const p = i / dubLen;
+      const env = Math.sin(Math.PI * p);
+      const noise = (Math.random() * 2 - 1) * 0.3;
+      beats[dubPos + i] += (Math.sin(2 * Math.PI * dubFreq * (i / SR)) * 0.7 + noise) * env * 0.25 * 0.6;
+    }
+    // Add brown noise burst for realism at beat position
+    const burstLen = Math.floor(SR * 0.15);
+    for (let i = 0; i < burstLen && beatPos + i < N; i++) {
+      const p = i / burstLen;
+      const env = Math.exp(-5 * p);
+      beats[beatPos + i] += (Math.random() * 2 - 1) * 0.04 * env;
+    }
+    // Slight timing jitter
+    const jitter = Math.floor(rand(-0.01, 0.01) * beatInterval);
+    beatPos += beatInterval + jitter;
+  }
+  lp1(beats, noiseLp);
+
+  // Gentle bed
+  const bed = brownNoise();
+  lp1(bed, 80);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) mix[i] = beats[i] + bed[i] * 0.05;
+  lp1(mix, finalLp);
+  return gen(mix, 0.6);
 }
 
 // ── Sound library ──────────────────────────────────────────────────────────
 
 export const SOUND_LIBRARY: Sound[] = [
-  { id: 'rain',        name: 'Rain',        category: 'Water', url: genRain() },
-  { id: 'stream',      name: 'Stream',      category: 'Water', url: genStream() },
-  { id: 'ocean',       name: 'Ocean',       category: 'Water', url: genOcean() },
-  { id: 'wind',        name: 'Wind',        category: 'Air',   url: genWind() },
-  { id: 'thunder',     name: 'Thunder',     category: 'Air',   url: genThunder() },
-  { id: 'forest',      name: 'Forest',      category: 'Earth', url: genForest() },
-  { id: 'fire',        name: 'Fire',        category: 'Fire',  url: genFire() },
-  { id: 'white-noise', name: 'White Noise', category: 'Noise',    url: genWhite() },
-  { id: 'pink-noise',  name: 'Pink Noise',  category: 'Noise',    url: genPink() },
-  { id: 'brown-noise', name: 'Brown Noise', category: 'Noise',    url: genBrown() },
-  { id: 'train',       name: 'Train',       category: 'Urban',    url: genTrain() },
-  { id: 'fan',         name: 'Fan',         category: 'Air',      url: genFan() },
-  { id: 'night',       name: 'Night',       category: 'Wildlife', url: genNight() },
-  { id: 'birdsong',    name: 'Birdsong',    category: 'Wildlife', url: genBirdsong() },
+  // Water
+  { id: 'rain',          name: 'Rain',          category: 'Water',    url: genRain() },
+  { id: 'stream',        name: 'Stream',        category: 'Water',    url: genStream() },
+  { id: 'ocean',         name: 'Ocean',         category: 'Water',    url: genOcean() },
+  { id: 'waterfall',     name: 'Waterfall',     category: 'Water',    url: genWaterfall() },
+  { id: 'tent-rain',     name: 'Tent Rain',     category: 'Water',    url: genTentRain() },
+  { id: 'tin-roof-rain', name: 'Tin Roof Rain', category: 'Water',    url: genTinRoofRain() },
+  { id: 'underwater',    name: 'Underwater',    category: 'Water',    url: genUnderwater() },
+  { id: 'shower',        name: 'Shower',        category: 'Water',    url: genShower() },
+  // Fire
+  { id: 'fire',          name: 'Fire',          category: 'Fire',     url: genFire() },
+  // Air
+  { id: 'wind',          name: 'Wind',          category: 'Air',      url: genWind() },
+  { id: 'thunder',       name: 'Thunder',       category: 'Air',      url: genThunder() },
+  { id: 'fan',           name: 'Fan',           category: 'Air',      url: genFan() },
+  // Earth
+  { id: 'forest',        name: 'Forest',        category: 'Earth',    url: genForest() },
+  // Noise
+  { id: 'white-noise',   name: 'White Noise',   category: 'Noise',    url: genWhite() },
+  { id: 'pink-noise',    name: 'Pink Noise',    category: 'Noise',    url: genPink() },
+  { id: 'brown-noise',   name: 'Brown Noise',   category: 'Noise',    url: genBrown() },
+  { id: 'space',         name: 'Deep Space',    category: 'Noise',    url: genSpace() },
+  // Urban
+  { id: 'train',         name: 'Train',         category: 'Urban',    url: genTrain() },
+  { id: 'airplane',      name: 'Airplane',      category: 'Urban',    url: genAirplane() },
+  { id: 'cafe',          name: 'Café',          category: 'Urban',    url: genCafe() },
+  { id: 'dryer',         name: 'Dryer',         category: 'Urban',    url: genDryer() },
+  // Wildlife
+  { id: 'night',         name: 'Night',         category: 'Wildlife', url: genNight() },
+  { id: 'birdsong',      name: 'Birdsong',      category: 'Wildlife', url: genBirdsong() },
+  { id: 'frogs',         name: 'Frogs',         category: 'Wildlife', url: genFrogs() },
+  // Cozy
+  { id: 'heartbeat',     name: 'Heartbeat',     category: 'Cozy',    url: genHeartbeat() },
 ];
 
-export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife'] as const;
+export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
 export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';
@@ -806,8 +1322,12 @@ function builtinState(active: Array<[string, number]>): Record<string, SoundStat
 }
 
 export const BUILTIN_PRESETS: Preset[] = [
-  { id: 'builtin-fan-rain',      name: 'Fan & Rain',    createdAt: '', masterVolume: 0.8, state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
-  { id: 'builtin-windy-forest',  name: 'Windy Forest',  createdAt: '', masterVolume: 0.8, state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
-  { id: 'builtin-campfire-night', name: 'Campfire Night', createdAt: '', masterVolume: 0.8, state: builtinState([['fire', 0.68], ['forest', 0.28]]) },
-  { id: 'builtin-rainy-train', name: 'Rainy Train', createdAt: '', masterVolume: 0.78, state: builtinState([['rain', 0.62], ['train', 0.44], ['thunder', 0.34]]) },
+  { id: 'builtin-fan-rain',       name: 'Fan & Rain',     createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
+  { id: 'builtin-windy-forest',   name: 'Windy Forest',   createdAt: '', masterVolume: 0.8,  state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
+  { id: 'builtin-campfire-night',  name: 'Campfire Night', createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.68], ['forest', 0.28]]) },
+  { id: 'builtin-rainy-train',    name: 'Rainy Train',    createdAt: '', masterVolume: 0.78, state: builtinState([['rain', 0.62], ['train', 0.44], ['thunder', 0.34]]) },
+  { id: 'builtin-deep-sleep',     name: 'Deep Sleep',     createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.55], ['heartbeat', 0.40]]) },
+  { id: 'builtin-rainforest',     name: 'Rainforest',     createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.45], ['forest', 0.50], ['frogs', 0.35], ['birdsong', 0.25]]) },
+  { id: 'builtin-underwater-cave', name: 'Underwater Cave', createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60], ['space', 0.30]]) },
+  { id: 'builtin-cozy-cafe',      name: 'Cozy Café',      createdAt: '', masterVolume: 0.8,  state: builtinState([['cafe', 0.55], ['rain', 0.35]]) },
 ];

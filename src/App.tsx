@@ -18,6 +18,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   Noise:    'music_note',
   Urban:    'location_city',
   Wildlife: 'raven',
+  Cozy:     'self_care',
 };
 
 function sliderBg(value: number, max = 1) {
