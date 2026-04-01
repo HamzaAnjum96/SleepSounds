@@ -16,7 +16,7 @@ const SOUND_ICONS: Record<string, string> = {
   waterfall:       'water',
   'tent-rain':     'camping',
   'tin-roof-rain': 'roofing',
-  space:           'public',
+  space:           'rocket_launch',
   fan:             'mode_fan',
   cafe:            'local_cafe',
   airplane:        'flight',

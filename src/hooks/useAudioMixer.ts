@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
+import { regenerateSound } from '../data';
 
 const defaultSoundState = (): SoundState => ({ enabled: false, volume: 0.5 });
 
@@ -20,6 +21,7 @@ interface MixerSource {
   volume: number;
   readonly paused: boolean;
   applyTuning?: (tuning: { playbackRate: number; gainMultiplier: number }) => void;
+  swapUrl?: (newUrl: string) => void;
   play(): Promise<void>;
   pause(): void;
   stop(): void;
@@ -158,6 +160,82 @@ class CrossfadeAudio implements MixerSource {
     if (!this._xfading) {
       this._primary.volume = Math.min(1, this._targetVol * this._gainMultiplier);
     }
+  }
+
+  swapUrl(newUrl: string) {
+    const oldUrl = this._url;
+    this._url = newUrl;
+
+    if (!this._active || this._primary.paused) {
+      // Not playing: just rebuild elements with new URL
+      this._clearXfade();
+      this._stopMonitor();
+      this._els[0].removeEventListener('timeupdate', this._timeupdateA);
+      this._els[1].removeEventListener('timeupdate', this._timeupdateB);
+      this._els.forEach(el => { el.pause(); el.currentTime = 0; });
+      this._els = [this._make(), this._make()];
+      this._els[0].addEventListener('timeupdate', this._timeupdateA);
+      this._els[1].addEventListener('timeupdate', this._timeupdateB);
+      this._cur = 0;
+      this._els.forEach(el => {
+        el.playbackRate = this._playbackRate;
+        el.defaultPlaybackRate = this._playbackRate;
+      });
+      URL.revokeObjectURL(oldUrl);
+      return;
+    }
+
+    // Currently playing: quick crossfade to new URL
+    this._clearXfade();
+    const outEl = this._primary;
+    const secIdx = 1 - this._cur as 0 | 1;
+
+    // Replace secondary element with new URL
+    this._els[secIdx].removeEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
+    this._els[secIdx].pause();
+    this._els[secIdx] = this._make();
+    this._els[secIdx].playbackRate = this._playbackRate;
+    this._els[secIdx].defaultPlaybackRate = this._playbackRate;
+    this._els[secIdx].addEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
+
+    const inEl = this._els[secIdx];
+    inEl.currentTime = 0;
+    inEl.volume = 0;
+    void inEl.play();
+
+    const startOutVol = outEl.volume;
+    const targetInVol = Math.min(1, this._targetVol * this._gainMultiplier);
+    let step = 0;
+    const SWAP_STEPS = 20;
+    const SWAP_MS = 400;
+
+    this._xfading = true;
+    this._xfadeTimer = setInterval(() => {
+      step++;
+      const t = Math.min(1, step / SWAP_STEPS);
+      outEl.volume = Math.max(0, startOutVol * Math.sqrt(Math.max(0, 1 - t)));
+      inEl.volume = Math.min(1, targetInVol * Math.sqrt(t));
+
+      if (step >= SWAP_STEPS) {
+        clearInterval(this._xfadeTimer!);
+        this._xfadeTimer = null;
+        outEl.pause();
+        outEl.currentTime = 0;
+        this._cur = 1 - this._cur;
+        this._xfading = false;
+
+        // Update the now-inactive element with new URL too
+        const nowSecIdx = 1 - this._cur as 0 | 1;
+        this._els[nowSecIdx].removeEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
+        this._els[nowSecIdx].pause();
+        this._els[nowSecIdx] = this._make();
+        this._els[nowSecIdx].playbackRate = this._playbackRate;
+        this._els[nowSecIdx].defaultPlaybackRate = this._playbackRate;
+        this._els[nowSecIdx].addEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
+      }
+    }, SWAP_MS / SWAP_STEPS);
+
+    URL.revokeObjectURL(oldUrl);
   }
 
   pause() {
@@ -341,6 +419,13 @@ class FireSourceWithFallback implements MixerSource {
     }
   }
 
+  swapUrl(newUrl: string) {
+    if (this.failedOver) {
+      this.fallback.swapUrl(newUrl);
+    }
+    // If using worklet primary, ignore URL swap
+  }
+
   pause() {
     this.active.pause();
   }
@@ -360,112 +445,6 @@ const makeSource = (sound: Sound): MixerSource => {
   return new CrossfadeAudio(sound.url);
 };
 
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-const toNum = (value: unknown, fallback = 0.5) => (
-  typeof value === 'number' ? clamp01(value) : fallback
-);
-const mapRange = (value: number, min: number, max: number) => min + (max - min) * value;
-
-function mapSimpleTuning(soundId: string, raw: Record<string, number>) {
-  const v = (key: string, fallback = 0.5) => toNum(raw[key], fallback);
-  let playbackRate = 1;
-  let gainMultiplier = 1;
-
-  switch (soundId) {
-    case 'rain': {
-      const density = v('density', 0.68);
-      const softness = v('softness', 0.62);
-      playbackRate = mapRange(density, 0.62, 1.58) - softness * 0.20;
-      gainMultiplier = mapRange(density, 0.78, 1.42) - softness * 0.18;
-      break;
-    }
-    case 'ocean': {
-      const waveSize = v('waveSize', 0.58);
-      const foam = v('foam', 0.47);
-      playbackRate = mapRange(foam, 0.72, 1.40) - waveSize * 0.32;
-      gainMultiplier = mapRange(waveSize, 0.74, 1.36) + foam * 0.12;
-      break;
-    }
-    case 'stream': {
-      const flow = v('flow', 0.58);
-      const sparkle = v('sparkle', 0.44);
-      playbackRate = mapRange(flow, 0.76, 1.46) + sparkle * 0.18;
-      gainMultiplier = mapRange(flow, 0.78, 1.34) + sparkle * 0.10;
-      break;
-    }
-    case 'wind': {
-      const gusts = v('gusts', 0.52);
-      const airTone = v('airTone', 0.46);
-      playbackRate = mapRange(gusts, 0.68, 1.66) + airTone * 0.08;
-      gainMultiplier = mapRange(airTone, 0.74, 1.28) + gusts * 0.18;
-      break;
-    }
-    case 'thunder': {
-      const storm = v('storm', 0.63);
-      const presence = v('presence', 0.39);
-      playbackRate = mapRange(storm, 0.64, 1.24) + presence * 0.08;
-      gainMultiplier = mapRange(storm, 0.80, 1.42) + presence * 0.18;
-      break;
-    }
-    case 'forest': {
-      const leaves = v('leaves', 0.64);
-      const twigs = v('twigs', 0.33);
-      playbackRate = mapRange(leaves, 0.76, 1.34) + twigs * 0.22;
-      gainMultiplier = mapRange(leaves, 0.76, 1.22) + twigs * 0.22;
-      break;
-    }
-    case 'fan': {
-      const speed = v('speed', 0.49);
-      const hum = v('hum', 0.41);
-      playbackRate = mapRange(speed, 0.60, 1.70) + hum * 0.06;
-      gainMultiplier = mapRange(hum, 0.72, 1.28) + speed * 0.16;
-      break;
-    }
-    case 'train': {
-      const pace = v('pace', 0.52);
-      const metal = v('metal', 0.36);
-      playbackRate = mapRange(pace, 0.66, 1.48) + metal * 0.10;
-      gainMultiplier = mapRange(metal, 0.76, 1.28) + pace * 0.16;
-      break;
-    }
-    case 'night': {
-      const crickets = v('crickets', 0.46);
-      const hush = v('hush', 0.58);
-      playbackRate = mapRange(crickets, 0.80, 1.36) - hush * 0.18;
-      gainMultiplier = mapRange(hush, 0.82, 1.34) + crickets * 0.08;
-      break;
-    }
-    case 'white-noise': {
-      const brightness = v('brightness', 0.54);
-      const air = v('air', 0.36);
-      playbackRate = mapRange(brightness, 0.82, 1.42) + air * 0.16;
-      gainMultiplier = mapRange(air, 0.70, 1.26) + brightness * 0.10;
-      break;
-    }
-    case 'pink-noise': {
-      const warmth = v('warmth', 0.61);
-      const focus = v('focus', 0.43);
-      playbackRate = mapRange(focus, 0.80, 1.36) - warmth * 0.16;
-      gainMultiplier = mapRange(warmth, 0.74, 1.32) + focus * 0.10;
-      break;
-    }
-    case 'brown-noise': {
-      const depth = v('depth', 0.72);
-      const rumble = v('rumble', 0.38);
-      playbackRate = mapRange(rumble, 0.72, 1.26) - depth * 0.14;
-      gainMultiplier = mapRange(depth, 0.82, 1.42) + rumble * 0.08;
-      break;
-    }
-    default:
-      break;
-  }
-
-  return {
-    playbackRate: Math.min(1.7, Math.max(0.6, playbackRate)),
-    gainMultiplier: Math.min(1.45, Math.max(0.6, gainMultiplier)),
-  };
-}
-
 export const useAudioMixer = (sounds: Sound[]) => {
   const [soundState, setSoundState] = useState<Record<string, SoundState>>(() => createInitialState(sounds));
   const [loadingState, setLoadingState] = useState<Record<string, boolean>>(() =>
@@ -477,6 +456,8 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const [masterVolume, setMasterVolume] = useState(0.8);
   const audioMapRef = useRef<Record<string, MixerSource>>({});
   const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+  const tuningTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const lastTuningRef = useRef<Record<string, Record<string, number>>>({});
 
   useEffect(() => {
     const map: Record<string, MixerSource> = {};
@@ -487,6 +468,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
     });
     return () => {
       Object.values(map).forEach((source) => source.destroy());
+      // Clean up tuning timers
+      Object.values(tuningTimerRef.current).forEach(timer => clearTimeout(timer));
+      tuningTimerRef.current = {};
     };
   }, [sounds]);
 
@@ -593,10 +577,30 @@ export const useAudioMixer = (sounds: Sound[]) => {
   );
 
   const setSoundTuning = useCallback((soundId: string, values: Record<string, number>) => {
+    // Fire and birdsong use worklets - don't regenerate
     if (soundId === 'fire' || soundId === 'birdsong') return;
-    const source = audioMapRef.current[soundId];
-    if (!source?.applyTuning) return;
-    source.applyTuning(mapSimpleTuning(soundId, values));
+
+    lastTuningRef.current[soundId] = values;
+
+    // Debounce regeneration at 300ms
+    if (tuningTimerRef.current[soundId]) {
+      clearTimeout(tuningTimerRef.current[soundId]);
+    }
+
+    tuningTimerRef.current[soundId] = setTimeout(() => {
+      const params = lastTuningRef.current[soundId];
+      if (!params) return;
+
+      const newUrl = regenerateSound(soundId, params);
+      if (!newUrl) return;
+
+      const source = audioMapRef.current[soundId];
+      if (source?.swapUrl) {
+        source.swapUrl(newUrl);
+      }
+
+      delete tuningTimerRef.current[soundId];
+    }, 300);
   }, []);
 
   const pauseAll = useCallback(() => {
