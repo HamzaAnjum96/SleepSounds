@@ -1026,7 +1026,7 @@ function genUnderwater(params?: Record<string, number>): string {
   hp1(currentBuf, 60);
   lp1(currentBuf, 400 + (1 - depth) * 800);
   const currentLfo = smoothRandomLfo(0.6, 1.2, 2.0, 6.0);
-  const currentMix = 0.15;
+  const currentMix = 0.05 + current * 0.20;
   for (let i = 0; i < N; i++) currentBuf[i] *= currentLfo[i];
 
   const bubblesBuf = new Float32Array(N);
@@ -1065,12 +1065,21 @@ function genUnderwater(params?: Record<string, number>): string {
 
 function genShower(params?: Record<string, number>): string {
   const { pressure = 0.6, steam = 0.3, room = 0.5 } = params ?? {};
+  // Primary spray: bandpassed white noise for realistic water spray character
   const spray = whiteNoise();
-  hp1(spray, 200 + pressure * 200);
-  lp1(spray, 6000 + pressure * 4000);
+  hp1(spray, 1200);
+  lp1(spray, 8000);
   const sprayLfo = smoothRandomLfo(0.85, 1.1, 0.8, 2.5);
   for (let i = 0; i < N; i++) spray[i] *= sprayLfo[i];
 
+  // Second spray layer: body of water sound at lower band
+  const spray2 = whiteNoise();
+  hp1(spray2, 400);
+  lp1(spray2, 3000);
+  const spray2Lfo = smoothRandomLfo(0.8, 1.15, 1.0, 3.0);
+  for (let i = 0; i < N; i++) spray2[i] *= spray2Lfo[i];
+
+  // Minimal body: just a touch of pink for low-end foundation
   const bodyBuf = pinkNoise();
   hp1(bodyBuf, 100);
   lp1(bodyBuf, 2000 + pressure * 1000);
@@ -1081,12 +1090,12 @@ function genShower(params?: Record<string, number>): string {
 
   const preMix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    preMix[i] = spray[i] * 0.5 + bodyBuf[i] * 0.35 + steamBuf[i] * (0.05 + steam * 0.1);
+    preMix[i] = spray[i] * 0.50 + spray2[i] * 0.25 + bodyBuf[i] * 0.10 + steamBuf[i] * (0.05 + steam * 0.1);
   }
-  // Room resonance
+  // Room resonance (increased factor)
   const roomRes = new Float32Array(preMix);
   bp2(roomRes, 400 + room * 400, 1 + room * 2);
-  for (let i = 0; i < N; i++) preMix[i] += roomRes[i] * room * 0.15;
+  for (let i = 0; i < N; i++) preMix[i] += roomRes[i] * room * 0.30;
   return gen(preMix, 0.65);
 }
 
@@ -1095,7 +1104,7 @@ function genFrogs(params?: Record<string, number>): string {
   const swampBed = pinkNoise();
   hp1(swampBed, 80);
   lp1(swampBed, 1800);
-  const swampMix = 0.2 + swamp * 0.3;
+  const swampMix = 0.08 + swamp * 0.15;
 
   // Deep croaks
   const deepBuf = new Float32Array(N);
@@ -1158,7 +1167,7 @@ function genFrogs(params?: Record<string, number>): string {
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = swampBed[i] * swampMix + deepBuf[i] * 0.3 + midBuf[i] * 0.2 + highBuf[i] * 0.15;
+    mix[i] = swampBed[i] * swampMix + deepBuf[i] * 0.40 + midBuf[i] * 0.28 + highBuf[i] * 0.24;
   }
   return gen(mix, 0.6);
 }
