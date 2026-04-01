@@ -1178,70 +1178,108 @@ function genCafe(params?: Record<string, number>): string {
   const murmurBrown = brownNoise();
   const murmur = new Float32Array(N);
   for (let i = 0; i < N; i++) murmur[i] = murmurPink[i] * 0.6 + murmurBrown[i] * 0.4;
-  hp1(murmur, 100 + warmth * 100);
-  lp1(murmur, 800 + (1 - warmth) * 1200);
+  // Tighter bandpass to sound like distant voices, not just filtered noise
+  hp1(murmur, 150 + warmth * 100);
+  lp1(murmur, 500 + (1 - warmth) * 300);
   const murmurLfo = smoothRandomLfo(0.5, 1.2, 0.6, 2.5);
   for (let i = 0; i < N; i++) murmur[i] *= murmurLfo[i];
 
   const clinksBuf = new Float32Array(N);
   let pos = Math.floor(SR * rand(0.3, 1.0));
   while (pos < N) {
-    const cFreq = rand(3000, 6000);
-    const cLen = Math.floor(SR * rand(0.010, 0.030));
-    const cAmp = rand(0.02, 0.06);
-    for (let i = 0; i < cLen && pos + i < N; i++) {
-      const env = Math.exp(-15 * (i / Math.max(1, cLen)));
-      clinksBuf[pos + i] += Math.sin(2 * Math.PI * cFreq * (i / SR)) * env * cAmp;
+    // Sometimes emit a cluster of 2-3 quick clinks
+    const clusterSize = Math.random() < 0.35 ? Math.floor(rand(2, 3)) : 1;
+    let clusterPos = pos;
+    for (let c = 0; c < clusterSize; c++) {
+      const cFreq = rand(3000, 6000);
+      const cLen = Math.floor(SR * rand(0.010, 0.030));
+      const cAmp = rand(0.05, 0.15);
+      for (let i = 0; i < cLen && clusterPos + i < N; i++) {
+        const env = Math.exp(-15 * (i / Math.max(1, cLen)));
+        clinksBuf[clusterPos + i] += Math.sin(2 * Math.PI * cFreq * (i / SR)) * env * cAmp;
+      }
+      clusterPos += Math.floor(SR * rand(0.04, 0.12));
     }
     pos += Math.floor(SR * rand(0.5, 3.0) / (clinks + 0.2));
   }
   hp1(clinksBuf, 2000);
   lp1(clinksBuf, 8000);
 
+  // Occasional distant laughter/voice bursts (300-800Hz bandpassed noise, 0.1-0.3s)
+  const laughBuf = new Float32Array(N);
+  let laughPos = Math.floor(SR * rand(1.0, 3.0));
+  while (laughPos < N) {
+    const lDur = Math.floor(SR * rand(0.1, 0.3));
+    const lAmp = rand(0.03, 0.08) * crowd;
+    for (let i = 0; i < lDur && laughPos + i < N; i++) {
+      const p = i / lDur;
+      const env = Math.sin(Math.PI * p) * lAmp;
+      laughBuf[laughPos + i] += (Math.random() * 2 - 1) * env;
+    }
+    laughPos += Math.floor(SR * rand(3.0, 8.0));
+  }
+  hp1(laughBuf, 300);
+  lp1(laughBuf, 800);
+
   const bgHum = brownNoise();
   lp1(bgHum, 200);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = murmur[i] * (0.4 + crowd * 0.4) + clinksBuf[i] * (0.05 + clinks * 0.1) + bgHum[i] * 0.1;
+    mix[i] = murmur[i] * (0.4 + crowd * 0.4) + clinksBuf[i] * (0.05 + clinks * 0.1) + laughBuf[i] * 0.5 + bgHum[i] * 0.03;
   }
   return gen(mix, 0.58);
 }
 
 function genAirplane(params?: Record<string, number>): string {
   const { altitude = 0.5, cabin = 0.6, turbulence = 0.3 } = params ?? {};
-  const drone = brownNoise();
-  hp1(drone, 40 + altitude * 40);
-  lp1(drone, 300 + altitude * 200);
 
-  const drone2 = pinkNoise();
-  hp1(drone2, 80);
-  lp1(drone2, 600 + altitude * 400);
-  bp2(drone2, 120 + altitude * 80, 2);
+  // Tonal drone: primary engine sound at 85Hz + harmonics with slight detuning
+  const tonalDrone = new Float32Array(N);
+  const baseF = 65 + altitude * 40;
+  let ph1 = 0, ph2 = 0, ph3 = 0;
+  const detune1 = 1.0 + rand(-0.003, 0.003);
+  const detune2 = 1.0 + rand(-0.004, 0.004);
+  for (let i = 0; i < N; i++) {
+    ph1 += (2 * Math.PI * baseF) / SR;
+    ph2 += (2 * Math.PI * baseF * 2 * detune1) / SR;
+    ph3 += (2 * Math.PI * baseF * 3 * detune2) / SR;
+    tonalDrone[i] = Math.sin(ph1) * 0.6 + Math.sin(ph2) * 0.3 + Math.sin(ph3) * 0.1;
+  }
+  // Slow amplitude modulation for engine "breathing"
+  const droneLfo = smoothRandomLfo(0.85, 1.0, 0.5, 2.0);
+  for (let i = 0; i < N; i++) tonalDrone[i] *= droneLfo[i];
 
   const cabinNoise = pinkNoise();
   hp1(cabinNoise, 200);
   lp1(cabinNoise, 3000 + cabin * 2000);
 
   const turbBuf = brownNoise();
-  const turbLfo = smoothRandomLfo(0.0, 1.0, 2.0, 8.0);
+  // Wider LFO range for more dramatic turbulence
+  const turbLfo = smoothRandomLfo(0.0, 1.2, 1.5, 6.0);
   hp1(turbBuf, 20);
   lp1(turbBuf, 200);
   for (let i = 0; i < N; i++) turbBuf[i] *= turbLfo[i];
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = drone[i] * 0.35 + drone2[i] * 0.2 + cabinNoise[i] * (0.2 + cabin * 0.2) + turbBuf[i] * turbulence * 0.15;
+    mix[i] = tonalDrone[i] * 0.50 + cabinNoise[i] * (0.08 + cabin * 0.10) + turbBuf[i] * turbulence * 0.15;
   }
   return gen(mix, 0.66);
 }
 
 function genDryer(params?: Record<string, number>): string {
   const { speed = 0.5, hum = 0.5, tumble = 0.4 } = params ?? {};
-  const humLp = 80 + hum * 60;
-  const humBuf = brownNoise();
-  lp1(humBuf, humLp);
-  lp1(humBuf, humLp);
+
+  // Tonal motor hum: 60Hz fundamental + 120Hz harmonic, slightly modulated
+  const motorHum = new Float32Array(N);
+  let mPh1 = 0, mPh2 = 0;
+  const motorMod = smoothRandomLfo(0.97, 1.03, 0.3, 1.0);
+  for (let i = 0; i < N; i++) {
+    mPh1 += (2 * Math.PI * 60 * motorMod[i]) / SR;
+    mPh2 += (2 * Math.PI * 120 * motorMod[i]) / SR;
+    motorHum[i] = Math.sin(mPh1) * 0.7 + Math.sin(mPh2) * 0.3;
+  }
 
   const airflowBuf = pinkNoise();
   hp1(airflowBuf, 150 + speed * 100);
@@ -1252,46 +1290,85 @@ function genDryer(params?: Record<string, number>): string {
     airflowBuf[i] *= 1 - flutterDepth + flutterDepth * Math.sin((2 * Math.PI * flutterFreq * i) / SR);
   }
 
+  // Rhythmic tumble cycle: periodic thumps at dryer rotation rate (0.8-1.2Hz)
   const tumbleBuf = new Float32Array(N);
-  let pos = Math.floor(SR * 0.1);
-  while (pos < N) {
-    const tLen = Math.floor(SR * rand(0.020, 0.060));
-    const tAmp = rand(0.04, 0.12) * tumble;
-    for (let i = 0; i < tLen && pos + i < N; i++) {
-      const env = Math.exp(-6 * (i / Math.max(1, tLen)));
-      tumbleBuf[pos + i] += (Math.random() * 2 - 1) * tAmp * env;
+  const rotRate = 0.8 + speed * 0.4; // rotation frequency in Hz
+  const rotPeriod = Math.floor(SR / rotRate);
+  let tPos = Math.floor(rotPeriod * 0.2);
+  while (tPos < N) {
+    const tLen = Math.floor(SR * rand(0.020, 0.050));
+    const tAmp = (0.08 + rand(0, 0.06)) * tumble;
+    for (let i = 0; i < tLen && tPos + i < N; i++) {
+      const env = Math.exp(-8 * (i / Math.max(1, tLen)));
+      tumbleBuf[tPos + i] += (Math.random() * 2 - 1) * tAmp * env;
     }
-    lp1(tumbleBuf, 200 + tumble * 200);
-    pos += Math.floor(SR * rand(0.3, 1.0) / (speed + 0.3));
+    // Small timing variation around the rotation period
+    tPos += rotPeriod + Math.floor(rand(-rotPeriod * 0.05, rotPeriod * 0.05));
   }
+  lp1(tumbleBuf, 300);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = humBuf[i] * (0.15 + hum * 0.2) + airflowBuf[i] * 0.5 + tumbleBuf[i] * (0.1 + tumble * 0.2);
+    mix[i] = motorHum[i] * (0.15 + hum * 0.2) + airflowBuf[i] * 0.20 + tumbleBuf[i] * (0.15 + tumble * 0.25);
   }
   return gen(mix, 0.62);
 }
 
 function genSpace(params?: Record<string, number>): string {
   const { void: voidParam = 0.6, cosmic = 0.4, pulse = 0.3 } = params ?? {};
+
+  // Very quiet brownNoise void layer
   const voidBuf = brownNoise();
   lp1(voidBuf, 60 + voidParam * 40);
   lp1(voidBuf, 60 + voidParam * 40);
 
+  // Slow sweeping sine wave drones at very low frequencies (30-50Hz)
+  const droneBuf = new Float32Array(N);
+  const sweepLfo1 = smoothRandomLfo(30, 50, 8.0, 20.0); // slowly sweeping frequency
+  let dPh1 = 0, dPh2 = 0;
+  for (let i = 0; i < N; i++) {
+    dPh1 += (2 * Math.PI * sweepLfo1[i]) / SR;
+    dPh2 += (2 * Math.PI * (sweepLfo1[i] * 1.5)) / SR; // a fifth above
+    droneBuf[i] = Math.sin(dPh1) * 0.6 + Math.sin(dPh2) * 0.4;
+  }
+  const droneFadeLfo = smoothRandomLfo(0.3, 1.0, 5.0, 15.0);
+  for (let i = 0; i < N; i++) droneBuf[i] *= droneFadeLfo[i];
+
+  // Narrow-bandpass shimmer layers (higher Q for more tonal, ethereal character)
   const shimmer1 = whiteNoise();
-  bp2(shimmer1, 2000 + cosmic * 3000, 8 + cosmic * 8);
+  bp2(shimmer1, 2000 + cosmic * 3000, 18 + cosmic * 7);
 
   const shimmer2 = whiteNoise();
-  bp2(shimmer2, 4000 + cosmic * 2000, 6 + cosmic * 6);
+  bp2(shimmer2, 4000 + cosmic * 2000, 20 + cosmic * 5);
+
+  // Occasional "ping" events: high-frequency tones (4000-8000Hz) fading in/out over 1-3s
+  const pingBuf = new Float32Array(N);
+  let pingPos = Math.floor(SR * rand(1.0, 4.0));
+  while (pingPos < N) {
+    const pingF = rand(4000, 8000);
+    const pingDur = Math.floor(SR * rand(1.0, 3.0));
+    const pingAmp = rand(0.04, 0.10) * (0.5 + cosmic);
+    let pPh = 0;
+    for (let i = 0; i < pingDur && pingPos + i < N; i++) {
+      const p = i / pingDur;
+      // Fade in and fade out envelope
+      const env = Math.sin(Math.PI * p) * pingAmp;
+      pPh += (2 * Math.PI * pingF) / SR;
+      pingBuf[pingPos + i] += Math.sin(pPh) * env;
+    }
+    pingPos += Math.floor(SR * rand(3.0, 10.0));
+  }
 
   const pulseLfo = smoothRandomLfo(0.2, 1.0, 4 + pulse * 8, 8 + pulse * 16);
   const driftLfo = smoothRandomLfo(0.7, 1.1, 3.0, 10.0);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = (voidBuf[i] * (0.3 + voidParam * 0.3) +
+    mix[i] = (voidBuf[i] * (0.15 + voidParam * 0.15) +
+              droneBuf[i] * 0.20 +
               shimmer1[i] * 0.1 * (0.5 + cosmic) * driftLfo[i] +
-              shimmer2[i] * 0.06 * (0.5 + cosmic) * driftLfo[i]) * pulseLfo[i];
+              shimmer2[i] * 0.06 * (0.5 + cosmic) * driftLfo[i] +
+              pingBuf[i] * 0.15) * pulseLfo[i];
   }
   return gen(mix, 0.55);
 }
@@ -1314,7 +1391,7 @@ function genHeartbeat(params?: Record<string, number>): string {
       const p = i / lubLen;
       const env = Math.sin(Math.PI * p);
       const noise = (Math.random() * 2 - 1) * 0.3;
-      beats[beatPos + i] += (Math.sin(2 * Math.PI * lubFreq * (i / SR)) * 0.7 + noise) * env * 0.25;
+      beats[beatPos + i] += (Math.sin(2 * Math.PI * lubFreq * (i / SR)) * 0.7 + noise) * env * 0.45;
     }
     // Dub (offset ~200ms)
     const dubOffset = Math.floor(SR * 0.2);
@@ -1324,14 +1401,14 @@ function genHeartbeat(params?: Record<string, number>): string {
       const p = i / dubLen;
       const env = Math.sin(Math.PI * p);
       const noise = (Math.random() * 2 - 1) * 0.3;
-      beats[dubPos + i] += (Math.sin(2 * Math.PI * dubFreq * (i / SR)) * 0.7 + noise) * env * 0.25 * 0.6;
+      beats[dubPos + i] += (Math.sin(2 * Math.PI * dubFreq * (i / SR)) * 0.7 + noise) * env * 0.45 * 0.55;
     }
     // Add brown noise burst for realism at beat position
     const burstLen = Math.floor(SR * 0.15);
     for (let i = 0; i < burstLen && beatPos + i < N; i++) {
       const p = i / burstLen;
       const env = Math.exp(-5 * p);
-      beats[beatPos + i] += (Math.random() * 2 - 1) * 0.04 * env;
+      beats[beatPos + i] += (Math.random() * 2 - 1) * 0.08 * env;
     }
     // Slight timing jitter
     const jitter = Math.floor(rand(-0.01, 0.01) * beatInterval);
@@ -1344,7 +1421,7 @@ function genHeartbeat(params?: Record<string, number>): string {
   lp1(bed, 80);
 
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = beats[i] + bed[i] * 0.05;
+  for (let i = 0; i < N; i++) mix[i] = beats[i] + bed[i] * 0.02;
   lp1(mix, finalLp);
   return gen(mix, 0.6);
 }
