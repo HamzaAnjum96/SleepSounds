@@ -96,6 +96,23 @@ npm run preview
 
 ## Changelog
 
+### 0.2.1
+- **Sound quality overhaul**: Replaced all 13 new sound generators (plus Night Insects and Train) with superior physically-modelled versions — eliminates white-noise-dominated character
+- **Night Insects**: Stridulation cricket model with 5 individual crickets through narrow bandpass resonators, tooth-strike texture, katydid layer — no white noise bed
+- **Deep Space**: Pure deep brown-noise drone with triple LP filtering and slow sine modulation — no white noise at all
+- **Frogs**: 4-species model (bullfrog/tree frog/chorus frog/spring peeper) with vocal-sac resonance and shared chorus LFO
+- **Heartbeat**: Realistic lub-dub with HRV, S1/S2 valve sounds, inharmonic ratios, chest resonance
+- **Underwater**: Deep pressure rumble (triple LP brown noise) with sparse rising-pitch bubbles and dual-sine modulation
+- **Train**: Rail-joint pulses with soft pulse shape, low resonator, subtle rattles — no clicking
+- **Dryer**: Mechanical pink-noise hum with jittered fabric thumps at drum rotation rate
+- **Airplane**: Cabin pink-noise drone + deep brown-noise engine — no tonal sine harmonics
+- **Café**: Tight bandpass conversational murmur with triple-sine activity flow
+- **Waterfall**: Broad-spectrum brown low + spray + impact detail
+- **Tent Rain**: Modal resonance tap model with 3 modes per impact
+- **Tin Roof Rain**: 8-mode panel bank model with metallic ring
+- **Shower**: Dense hiss + body + sparkling droplets model
+- All slider params wired to influence generation meaningfully (filter cutoffs, event rates, amplitudes, species mix)
+
 ### 0.2.0
 - **Major sound expansion**: Added 11 new procedurally generated sounds: Waterfall, Tent Rain, Tin Roof Rain, Underwater, Shower, Frogs, Cafe, Airplane, Dryer, Deep Space, and Heartbeat — bringing total to 25 sounds
 - **Meaningful sliders**: Every sound now has 3 tuning sliders that actually regenerate the audio with different parameters (e.g. Rain intensity changes drop density, heaviness changes filter character, surface changes resonance). Replaced the old playback-rate/gain-multiplier approach with real WAV regeneration on slider change
