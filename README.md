@@ -96,6 +96,13 @@ npm run preview
 
 ## Changelog
 
+### 0.2.1
+- **Accessibility polish pass** (no behavioural changes):
+  - Raised muted-text contrast to meet WCAG AA: `--text-secondary` 3.5:1 → 4.7:1 and `--text-dim` 1.9:1 → 3.4:1 against the background, keeping the cool blue-grey hue. Section labels and the preset-name placeholder now use the secondary tier so their small text clears 4.5:1.
+  - Added a `prefers-reduced-motion: reduce` block: the moon drift, scroll parallax, star pulse, play-button pulse, equaliser bounce, and entrance reveals all settle to a static state; the equaliser stays visible as a static mark so "playing" still reads.
+  - Added `:focus-visible` keyboard focus rings (accent outline) to every control; previously each set `outline: none` with no replacement. Card toggles ring the whole card to avoid clipping inside the card's `overflow: hidden`.
+- Removed unused `src/components/VolumeSlider.tsx` (dead code; the app renders sliders inline).
+
 ### 0.2.0
 - **Major sound expansion**: Added 11 new procedurally generated sounds: Waterfall, Tent Rain, Tin Roof Rain, Underwater, Shower, Frogs, Cafe, Airplane, Dryer, Deep Space, and Heartbeat — bringing total to 25 sounds
 - **Meaningful sliders**: Every sound now has 3 tuning sliders that actually regenerate the audio with different parameters (e.g. Rain intensity changes drop density, heaviness changes filter character, surface changes resonance). Replaced the old playback-rate/gain-multiplier approach with real WAV regeneration on slider change

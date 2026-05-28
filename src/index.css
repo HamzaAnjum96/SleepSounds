@@ -14,8 +14,8 @@
   --border:          rgba(255,255,255,0.07);
   --border-active:   rgba(160,185,255,0.22);
   --text-primary:    #dfe3ed;
-  --text-secondary:  #606880;
-  --text-dim:        #3a3f50;
+  --text-secondary:  #727b9a;
+  --text-dim:        #5e657c;
   --accent:          #7ba7e8;
   --accent-glow:     rgba(123,167,232,0.18);
   --warm:            #b89a6a;
@@ -356,7 +356,7 @@ header {
   font-weight: 400;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-secondary);
 }
 
 /* ── Category Pills ──────────────────────────────────────────────── */
@@ -771,7 +771,7 @@ header {
   border-color: rgba(123,167,232,0.3);
 }
 .preset-input::placeholder {
-  color: var(--text-dim);
+  color: var(--text-secondary);
 }
 
 .preset-save-btn {
@@ -1137,4 +1137,55 @@ header {
   color: var(--text-secondary);
   overflow-x: auto;
   white-space: pre;
+}
+
+/* ── Keyboard focus ──────────────────────────────────────────────── */
+/* Controls above set `outline: none` for pointer use; restore a visible
+   ring for keyboard users only (`:focus-visible`), in the accent color. */
+
+.play-btn:focus-visible,
+.timer-btn:focus-visible,
+.cat-pill:focus-visible,
+.builtin-preset-btn:focus-visible,
+.preset-chip-del:focus-visible,
+.preset-save-btn:focus-visible,
+.preset-input:focus-visible,
+.preset-load-btn:focus-visible,
+.preset-del-btn:focus-visible,
+.card-editor-icon:focus-visible,
+.drift-slider:focus-visible,
+.sb-toggle:focus-visible,
+.sb-sound-btn:focus-visible,
+.sb-play-btn:focus-visible,
+.sb-reset-btn:focus-visible,
+.sb-close-btn:focus-visible,
+.sb-copy-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The sound-card toggle sits inside an overflow:hidden card that would clip
+   an inset ring, so highlight the whole card instead (preserving its glow). */
+.sound-card-toggle:focus-visible { outline: none; }
+.sound-card:has(.sound-card-toggle:focus-visible) {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 24px var(--accent-glow);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+/* A sleep app should never insist on movement. Hold the ambient scene
+   still and make every state change instant for users who ask for it. */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* No moon drift and no scroll parallax. */
+  .moon { top: 7% !important; }
+  /* Keep the starfield present but settled. */
+  .stars { opacity: 0.7 !important; }
+  /* Hold the equaliser as a static mark so "playing" still reads. */
+  .eq-bars span { height: 7px !important; }
 }
