@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SOUND_EDITOR_MODELS } from './soundEditorDefs';
-
-function sbSliderBg(value: number, min: number, max: number) {
-  const pct = ((value - min) / (max - min)) * 100;
-  return {
-    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`,
-  };
-}
+import { sliderFill } from '../lib/sliderFill';
 
 interface SoundEditorProps {
   soundId: string;
@@ -84,7 +78,7 @@ export default function SoundEditor({
                 max={p.max}
                 step={p.step}
                 value={values[p.key] ?? p.def}
-                style={sbSliderBg(values[p.key] ?? p.def, p.min, p.max)}
+                style={sliderFill(values[p.key] ?? p.def, p.min, p.max)}
                 onChange={e => handleChange(p.key, Number(e.target.value))}
               />
             </div>

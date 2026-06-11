@@ -1,5 +1,6 @@
 import type { Sound } from '../types';
 import { EDITABLE_SOUND_IDS } from './soundEditorDefs';
+import { sliderFill } from '../lib/sliderFill';
 
 const SOUND_ICONS: Record<string, string> = {
   rain:            'rainy',
@@ -40,13 +41,6 @@ interface SoundCardProps {
   onToggleEditor?: () => void;
   onToggle: () => void;
   onVolumeChange: (value: number) => void;
-}
-
-function sliderBg(value: number) {
-  const pct = value * 100;
-  return {
-    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`,
-  };
 }
 
 export default function SoundCard({
@@ -101,7 +95,7 @@ export default function SoundCard({
           max={1}
           step={0.01}
           value={volume}
-          style={sliderBg(volume)}
+          style={sliderFill(volume)}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
         />
       </div>

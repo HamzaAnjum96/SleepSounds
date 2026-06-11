@@ -6,6 +6,7 @@ import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
+import { sliderFill } from './lib/sliderFill';
 
 const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 
@@ -20,13 +21,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   Wildlife: 'raven',
   Cozy:     'self_care',
 };
-
-function sliderBg(value: number, max = 1) {
-  const pct = (value / max) * 100;
-  return {
-    background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%)`,
-  };
-}
 
 function formatCountdown(seconds: number) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -358,7 +352,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                 max={1}
                 step={0.01}
                 value={masterVolume}
-                style={sliderBg(masterVolume)}
+                style={sliderFill(masterVolume)}
                 onChange={(e) => setMasterVolume(Number(e.target.value))}
               />
               <span className="material-symbols-rounded">volume_up</span>

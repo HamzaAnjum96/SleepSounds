@@ -96,6 +96,14 @@ npm run preview
 
 ## Changelog
 
+### 0.3.0
+- **Design-system foundation + typographic refinement** (UI/look-and-feel; no audio or behaviour changes):
+  - Added `DESIGN.md` documenting the full visual system (color roles, type scale, spacing, radius, motion, z-index, elevation, components, layout).
+  - Reworked `src/index.css` into a token-driven system: every component now consumes design tokens (`--fs-*`, `--sp-*`, `--r-*`, `--dur-*`/`--ease`, `--z-*`, color roles) instead of scattered literal values.
+  - Consolidated the typographic scale: the old 8/9/9.5/10px label sprawl collapses to one 10px eyebrow tier, small controls move to a legible 11px, and the wordmark/footer keep Cormorant. Unified eyebrow letter-spacing and tightened the header/wordmark lockup rhythm.
+  - **Removed a dead parallel design system**: deleted six unused components (`ActiveMixer`, `Header`, `MasterControls`, `PresetManager`, `SleepTimer`, `SoundLibrary`) that were the only consumers of the Tailwind theme, then stripped the now-unused Tailwind theme tokens (`midnight`, `deepBlue`, `cardBlue`, `accentSoft`, `hero-gradient`, `shadow-card`, `pulseSoft`).
+  - De-duplicated the slider-fill helper (previously copied in three files) into `src/lib/sliderFill.ts`.
+
 ### 0.2.1
 - **Accessibility polish pass** (no behavioural changes):
   - Raised muted-text contrast to meet WCAG AA: `--text-secondary` 3.5:1 → 4.7:1 and `--text-dim` 1.9:1 → 3.4:1 against the background, keeping the cool blue-grey hue. Section labels and the preset-name placeholder now use the secondary tier so their small text clears 4.5:1.
