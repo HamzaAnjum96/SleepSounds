@@ -23,7 +23,6 @@ export default function SoundEditor({
   );
 
   const [values, setValues] = useState<Record<string, number>>(initialValues ?? defaults);
-  const [copied, setCopied] = useState(false);
   useEffect(() => { setValues(initialValues ?? defaults); }, [defaults, initialValues, soundId]);
 
   const handleChange = useCallback((key: string, value: number) => {
@@ -38,14 +37,6 @@ export default function SoundEditor({
     setValues(defaults);
     onValuesChange?.(defaults);
   }, [defaults, onValuesChange]);
-
-  const configText = useMemo(() => JSON.stringify(values, null, 2), [values]);
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(configText).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
-  }, [configText]);
 
   return (
     <div className="sb-panel">
@@ -86,17 +77,6 @@ export default function SoundEditor({
           ))}
         </div>
       ))}
-
-      <div className="sb-output compact">
-        <div className="sb-output-header">
-          <span className="sb-output-label">config values</span>
-          <button type="button" className="sb-copy-btn" onClick={handleCopy}>
-            <span className="material-symbols-rounded">{copied ? 'check' : 'content_copy'}</span>
-            {copied ? 'copied' : 'copy'}
-          </button>
-        </div>
-        <pre className="sb-pre">{configText}</pre>
-      </div>
     </div>
   );
 }

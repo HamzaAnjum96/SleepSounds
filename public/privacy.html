@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#080c14" />
+    <title>drift — privacy & terms</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <style>
+      :root { --bg:#080c14; --ink:#dfe3ed; --dim:#8c93a8; --muted:#5e657c; --accent:#7ba7e8; --line:rgba(255,255,255,.08); }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: 'Inter', system-ui, sans-serif; font-weight: 300;
+        line-height: 1.65; -webkit-font-smoothing: antialiased;
+        padding: max(env(safe-area-inset-top), 40px) 24px calc(env(safe-area-inset-bottom) + 64px);
+      }
+      main { max-width: 640px; margin: 0 auto; }
+      .brand { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 40px; letter-spacing: .04em; margin: 0 0 4px; }
+      .sub { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin: 0 0 40px; }
+      h2 { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 500; margin: 36px 0 10px; }
+      p, li { color: #c3c9d8; font-size: 15px; }
+      a { color: var(--accent); }
+      ul { padding-left: 20px; }
+      .note { color: var(--muted); font-size: 13px; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
+      .back { display: inline-block; margin-top: 28px; font-size: 13px; letter-spacing: .1em; color: var(--dim); text-decoration: none; }
+      .back:hover { color: var(--ink); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 class="brand">drift</h1>
+      <p class="sub">privacy &amp; terms</p>
+
+      <h2>The short version</h2>
+      <p>
+        drift is a sound mixer that runs entirely in your browser. It has no
+        accounts, no servers of its own, and no analytics or tracking. It does
+        not collect, store, or transmit any personal information. We never see
+        how you use it.
+      </p>
+
+      <h2>What stays on your device</h2>
+      <ul>
+        <li>The mixes you save (presets) and the current state of the app are
+          stored in your browser's local storage, on your device only. They
+          are never uploaded. Clearing your browser data removes them.</li>
+        <li>All sounds are generated inside the app. Nothing is streamed or
+          downloaded from an audio service.</li>
+      </ul>
+
+      <h2>Third parties</h2>
+      <p>
+        drift loads its fonts and icon set from Google Fonts. When the page
+        loads, your browser requests those files from Google's servers, which
+        means Google may receive your IP address and basic request information,
+        as described in
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's privacy policy</a>.
+        This is the only third-party request drift makes, and it carries no
+        information about your activity in the app.
+      </p>
+      <p>
+        If you install drift from an app store, that store applies its own
+        privacy terms to the download and to your device, separate from this
+        policy.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        drift is suitable for all ages and collects nothing from anyone,
+        including children.
+      </p>
+
+      <h2>Terms of use</h2>
+      <ul>
+        <li>drift is provided as-is, for relaxation, focus, and sleep, without
+          warranties of any kind.</li>
+        <li>drift is not a medical device and does not provide medical advice.
+          It is not a treatment for any sleep, hearing, or health condition. If
+          you have concerns about your sleep or health, speak with a qualified
+          professional.</li>
+        <li>Please keep the volume at a comfortable level. Prolonged listening
+          at high volume can harm your hearing.</li>
+      </ul>
+
+      <h2>Changes</h2>
+      <p>
+        If this policy changes, the updated version will appear here. Because
+        drift keeps no contact information, material changes will simply be
+        reflected on this page.
+      </p>
+
+      <p class="note">
+        Questions? Open an issue on the project's
+        <a href="https://github.com/HamzaAnjum96/SleepSounds" target="_blank" rel="noopener noreferrer">GitHub repository</a>.
+      </p>
+
+      <a class="back" href="./">← back to drift</a>
+    </main>
+  </body>
+</html>

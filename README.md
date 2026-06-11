@@ -96,6 +96,13 @@ npm run preview
 
 ## Changelog
 
+### 1.1.0
+- **New app icon**: redrew the icon as a gold crescent with a soft halo over a radial night sky (`public/icon.svg`), regenerated to all PNG sizes (192/512/1024 + 180 apple-touch) and a refined small-size `favicon.svg`. Manifest icons split into proper `any` + `maskable` entries.
+- **Better media-session player**: the notification/lock-screen player now leads with the mix names as the title (with "drift" as the artist line), ships multiple artwork sizes, and uses a redrawn crescent-night artwork that matches the app icon so Android tints the notification on-brand.
+- **Android system bars**: `theme_color` and `background_color` set to the true background `#080c14` so an installed PWA themes the status bar (and, on recent Android, the navigation bar) to match. (The bottom nav bar can only be fully controlled from a native/TWA wrapper, not from the web layer.)
+- **Sound editor**: removed the developer "config values" export section (JSON + copy button) entirely, along with its now-orphaned styles.
+- **Privacy & terms**: added a hosted policy page (`public/privacy.html`, linked from the footer) and a repo mirror (`PRIVACY.md`), covering the no-data-collection model, local-only storage, the single Google Fonts third-party request, and a not-a-medical-device disclaimer.
+
 ### 1.0.1
 - **Replaced the per-card icon watermark with a soft corner color wash.** The large faint category glyph (and its per-family motion) read as decoration and crowded each card alongside its real sound icon. Each card now carries only a gentle radial glow of its category hue in the top-right corner (`.sound-card::after`): invisible at rest, a hint on hover, gentle when active. The per-category color identity stays; the glyph is gone.
 

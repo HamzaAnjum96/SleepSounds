@@ -33,31 +33,50 @@ function formatCountdown(seconds: number) {
   return `${m}:${s}`;
 }
 
-/** Generate a blue-gradient crescent canvas for the media-session artwork.
- *  Android extracts a palette from this image to colour the notification. */
+/** Generate the media-session artwork: a crescent-moon night scene matching
+ *  the app icon. Android extracts a palette from this image to colour the
+ *  notification, so the deep navy keeps the player on-brand. */
 function buildMediaArtwork(size: number): string {
   try {
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const ctx = c.getContext('2d');
     if (!ctx) return `${import.meta.env.BASE_URL}icon-512.png`;
-    // Deep blue gradient background
-    const g = ctx.createLinearGradient(0, 0, 0, size);
-    g.addColorStop(0, '#0c1e50');
-    g.addColorStop(1, '#1a3880');
-    ctx.fillStyle = g;
+    // Deep radial night sky (matches icon.svg).
+    const sky = ctx.createRadialGradient(
+      0.4 * size, 0.32 * size, 0,
+      0.5 * size, 0.5 * size, 0.85 * size,
+    );
+    sky.addColorStop(0, '#15264f');
+    sky.addColorStop(0.55, '#0b1430');
+    sky.addColorStop(1, '#070b18');
+    ctx.fillStyle = sky;
     ctx.fillRect(0, 0, size, size);
     // Stars
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    for (const [x, y, r] of [[0.14, 0.14, 0.004], [0.30, 0.08, 0.003], [0.82, 0.19, 0.004],
-                              [0.88, 0.74, 0.003], [0.11, 0.68, 0.004], [0.76, 0.11, 0.003]] as const) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for (const [x, y, r] of [[0.16, 0.18, 0.006], [0.30, 0.10, 0.004], [0.80, 0.20, 0.005],
+                              [0.86, 0.74, 0.004], [0.14, 0.66, 0.005], [0.74, 0.12, 0.004],
+                              [0.58, 0.80, 0.004]] as const) {
       ctx.beginPath(); ctx.arc(x * size, y * size, r * size, 0, Math.PI * 2); ctx.fill();
     }
-    // Crescent moon
-    ctx.fillStyle = '#d4b878';
-    ctx.beginPath(); ctx.arc(0.53 * size, 0.43 * size, 0.23 * size, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#142660';
-    ctx.beginPath(); ctx.arc(0.65 * size, 0.37 * size, 0.20 * size, 0, Math.PI * 2); ctx.fill();
+    // Soft moon halo
+    const halo = ctx.createRadialGradient(
+      0.58 * size, 0.45 * size, 0,
+      0.58 * size, 0.45 * size, 0.34 * size,
+    );
+    halo.addColorStop(0, 'rgba(217,189,128,0.5)');
+    halo.addColorStop(1, 'rgba(217,189,128,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, size, size);
+    // Crescent moon, gold
+    const moon = ctx.createLinearGradient(0.4 * size, 0.25 * size, 0.75 * size, 0.7 * size);
+    moon.addColorStop(0, '#f4ead0');
+    moon.addColorStop(1, '#bd9a55');
+    ctx.fillStyle = moon;
+    ctx.beginPath(); ctx.arc(0.57 * size, 0.45 * size, 0.225 * size, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath(); ctx.arc(0.67 * size, 0.38 * size, 0.2 * size, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
     return c.toDataURL('image/png');
   } catch { return `${import.meta.env.BASE_URL}icon-512.png`; }
 }
@@ -189,14 +208,18 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   // Media Session API — powers lock-screen / notification player on Android & iOS
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
+    const base = import.meta.env.BASE_URL;
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: 'drift',
-      artist: activeSounds.length > 0
+      // The mix is the headline; "drift" is the artist line beneath it.
+      title: activeSounds.length > 0
         ? activeSounds.map((s) => s.name).join(' · ')
-        : 'sleep sounds',
+        : 'drift',
+      artist: 'drift',
       album: 'sleep sounds',
       artwork: [
-        { src: mediaArtwork, sizes: '512x512', type: 'image/png' },
+        { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png' },
+        { src: `${base}icon-512.png`, sizes: '512x512', type: 'image/png' },
+        { src: mediaArtwork,          sizes: '512x512', type: 'image/png' },
       ],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
@@ -569,6 +592,12 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           {(activeSounds.length > 0 || isPaused) && (
             <div className="footer-rest">rest well</div>
           )}
+          <a
+            className="footer-privacy"
+            href={`${import.meta.env.BASE_URL}privacy.html`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >privacy</a>
           <div className="footer-version" aria-hidden="true">v{version}</div>
         </div>
       </div>
