@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.8.1
+- Preset cards: the gradients were still too dense to see through (a regex had also nudged some colour radials up to 0.30). Rewrote each scene's art with a genuinely faint tint — colour radials ~0.16–0.24, near-clear base (~0.08/0.03) — so the frosted night sky shows through the cards. The bottom scrim still carries the name.
+
 ### 2.8.0
 - **Preset cards are now genuinely transparent.** v2.7's glass treatment kept the gradient base at ~0.55 alpha, which over the near-black background still read as solid. Dropped the base gradient stops to 0.30 / 0.18 alpha so the night sky shows through the cards (the colour tint + blur + sheen remain); strengthened the bottom text scrim so names stay legible.
 
