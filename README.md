@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.8.0
+- **Preset cards are now genuinely transparent.** v2.7's glass treatment kept the gradient base at ~0.55 alpha, which over the near-black background still read as solid. Dropped the base gradient stops to 0.30 / 0.18 alpha so the night sky shows through the cards (the colour tint + blur + sheen remain); strengthened the bottom text scrim so names stay legible.
+
 ### 2.7.0
 - **UI review & fix-up — tinted-glass preset cards.** The scene and mix cards keep their colour gradients but now read as proper tinted glass: a backdrop blur + saturate frosts the night sky behind, a light-catching top hairline (`inset 0 1px 0`) and a top-left sheen sell the glass, and a soft drop shadow lifts them off the page (instead of flat gradient tiles).
 - **Unified glass material** across all five glass surfaces — scene cards, mix cards, mini player, now-playing sheet, and the storage notice now share the same blur + saturate + highlight recipe, so they feel like one material.
