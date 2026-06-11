@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.3.2
+- Trimmed scene layers per feedback: Rainfall is just rain (no fan), Windy Forest is just wind + forest (no birdsong), Fireside is just fire + a 5% night drone (no wind).
+
 ### 2.3.0
 - **Reworked the eight curated scenes with proper level balance** (not everything at 0.5). Each is mixed so the focal layer leads and broad beds sit underneath: Rainfall (rain 0.60 · fan 0.18), Distant Storm (thunder 0.62 · rain 0.40 · wind 0.16), Windy Forest (forest 0.60 · wind 0.30 · birdsong 0.12), Fireside (fire 0.62 · wind 0.20 · night 0.05), Ocean Night (ocean 0.55 · wind 0.18 · night 0.08), Deep Rest (brown noise 0.50 · heartbeat 0.24 · night 0.12), Underwater (underwater 0.60 · night 0.20), and Café in the Rain (café 0.55 · rain 0.30). Scene art and mood lines re-synced to the new set.
 

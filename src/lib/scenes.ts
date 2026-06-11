@@ -17,7 +17,7 @@ export interface Scene {
 
 const ART: Record<string, { mood: string; art: string }> = {
   'builtin-rainfall': {
-    mood: 'steady rain, a warm fan beneath',
+    mood: 'just rain, falling steady',
     art: `radial-gradient(120% 90% at 85% 0%, rgba(123,167,232,0.30) 0%, transparent 58%),
           radial-gradient(100% 100% at 15% 100%, rgba(90,120,180,0.18) 0%, transparent 60%),
           linear-gradient(150deg, rgba(26,41,64,0.55) 0%, rgba(13,22,38,0.42) 72%)`,
@@ -35,7 +35,7 @@ const ART: Record<string, { mood: string; art: string }> = {
           linear-gradient(150deg, rgba(22,41,31,0.55) 0%, rgba(10,20,16,0.42) 72%)`,
   },
   'builtin-fireside': {
-    mood: 'crackle and embers, wind outside',
+    mood: 'crackle and embers in the dark',
     art: `radial-gradient(110% 95% at 22% 100%, rgba(224,158,96,0.32) 0%, transparent 58%),
           radial-gradient(90% 80% at 85% 10%, rgba(150,80,45,0.20) 0%, transparent 60%),
           linear-gradient(160deg, rgba(38,24,15,0.56) 0%, rgba(16,9,6,0.44) 72%)`,
