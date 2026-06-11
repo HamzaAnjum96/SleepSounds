@@ -232,8 +232,8 @@ export default function App() {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: activeSounds.length > 0
         ? activeSounds.map((s) => s.name).join(' · ')
-        : 'drift',
-      artist: 'drift',
+        : 'drift away',
+      artist: 'drift away',
       album: 'sleep sounds',
       artwork: [
         { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png' },
@@ -406,7 +406,7 @@ export default function App() {
         onScroll={handleAppScroll}
       >
         <header>
-          <div className="wordmark">drift</div>
+          <div className="wordmark">drift away</div>
           <div className="greeting">{greeting()}</div>
         </header>
 
@@ -506,6 +506,7 @@ export default function App() {
                   key={cat}
                   type="button"
                   className={`cat-pill${category === cat ? ' active' : ''}`}
+                  data-cat={cat}
                   aria-pressed={category === cat}
                   onClick={() => setCategory(cat)}
                 >

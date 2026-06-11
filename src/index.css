@@ -218,6 +218,7 @@ header {
   letter-spacing: var(--tracking-wordmark);
   color: var(--text-primary);
   line-height: 1;
+  white-space: nowrap;
 }
 
 .greeting {
@@ -358,12 +359,15 @@ header {
   appearance: none;
   --fill: var(--card-accent, var(--accent));
   width: 100%;
-  height: 4px;
-  border-radius: var(--sp-2);
+  height: 6px;
+  border-radius: var(--r-full);
   outline: none;
   cursor: pointer;
   flex: 1;
 }
+/* The track is the element background (the inline fill gradient); the thumb is
+   auto-centered on the 6px element so it always sits ON the bar. A tight drop
+   shadow grounds it — the old soft glow made the ball look detached. */
 .drift-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -371,15 +375,20 @@ header {
   height: 14px;
   border-radius: var(--r-full);
   background: var(--fill);
-  box-shadow: 0 0 8px rgba(123,167,232,0.25);
+  box-shadow: 0 1px 3px rgba(2, 6, 18, 0.5);
   cursor: pointer;
   transition: transform var(--dur-1);
 }
 .drift-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 .drift-slider:active::-webkit-slider-thumb {
-  transform: scale(1.25);
+  transform: scale(1.2);
+}
+.drift-slider::-moz-range-track {
+  height: 6px;
+  border-radius: var(--r-full);
+  background: transparent;
 }
 .drift-slider::-moz-range-thumb {
   width: 14px;
@@ -387,10 +396,8 @@ header {
   border: none;
   border-radius: var(--r-full);
   background: var(--fill);
+  box-shadow: 0 1px 3px rgba(2, 6, 18, 0.5);
   cursor: pointer;
-}
-.drift-slider:active::-moz-range-thumb {
-  transform: scale(1.25);
 }
 
 /* ── Sections ────────────────────────────────────────────────────── */
@@ -442,10 +449,11 @@ header {
 }
 
 .cat-pill {
+  --cat: 123,167,232;            /* "All" falls back to the accent blue */
   display: flex;
   align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-5) var(--sp-10);
+  gap: var(--sp-5);
+  padding: var(--sp-6) var(--sp-12);
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: transparent;
@@ -462,13 +470,14 @@ header {
   border-color: var(--border-strong);
   color: var(--text-primary);
 }
+/* The active filter glows in its own category hue, tying the row to the cards. */
 .cat-pill.active {
-  border-color: var(--border-active);
-  color: var(--accent);
-  background: var(--accent-glow);
+  border-color: rgba(var(--cat), 0.45);
+  color: rgb(var(--cat));
+  background: rgba(var(--cat), 0.12);
 }
 .cat-icon {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   opacity: 0.7;
 }
@@ -479,20 +488,20 @@ header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: var(--r-full);
   border: 1px solid rgba(255,255,255,0.18);
   background: var(--surface-faint);
   color: transparent;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
 }
 .cat-count.active {
   border-color: transparent;
-  background: var(--accent);
+  background: rgb(var(--cat));
   color: #0a0f1a;
 }
 
@@ -583,8 +592,8 @@ header {
   transform: scale(0.985);
 }
 .sound-card.active {
-  background: var(--surface-active);
-  border-color: rgba(var(--cat), 0.28);
+  background: rgba(var(--cat), 0.07);
+  border-color: rgba(var(--cat), 0.32);
   box-shadow: 0 0 24px rgba(var(--cat), 0.16);
 }
 
@@ -704,9 +713,9 @@ header {
 .sound-card.active::after { opacity: 1; }
 
 .card-name {
-  font-size: var(--fs-body);
+  font-size: var(--fs-lead);
   font-weight: 400;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--text-primary);
   margin-bottom: var(--sp-12);
   line-height: 1.2;
@@ -730,7 +739,7 @@ header {
 }
 .sound-card.active .card-vol {
   opacity: 1;
-  max-height: 24px;
+  max-height: 28px;
 }
 .card-vol .material-symbols-rounded {
   font-size: 13px;
@@ -1307,13 +1316,16 @@ header {
   display: flex;
   align-items: center;
   gap: var(--sp-10);
-  padding: var(--sp-8) var(--sp-10) var(--sp-8) var(--sp-8);
-  background: rgba(13,18,30,0.86);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.10);
+  padding: var(--sp-8) var(--sp-12) var(--sp-8) var(--sp-8);
+  background: rgba(22,29,46,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(123,167,232,0.22);
   border-radius: var(--r-pill);
-  box-shadow: 0 12px 36px rgba(2,6,18,0.55);
+  box-shadow:
+    0 18px 48px rgba(2,6,18,0.7),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.06);
   animation: playerRise 0.45s var(--ease) backwards;
 }
 @keyframes playerRise {
@@ -1323,36 +1335,38 @@ header {
 
 .mp-play-wrap {
   position: relative;
-  width: 38px; height: 38px;
+  width: 40px; height: 40px;
   flex-shrink: 0;
 }
+/* Solid bright disc: the one high-contrast focal point that catches the eye. */
 .mp-play {
-  width: 38px; height: 38px;
+  width: 40px; height: 40px;
   border-radius: var(--r-full);
-  border: 1px solid var(--accent-line);
-  background: var(--accent-tint);
-  color: var(--accent);
+  border: none;
+  background: var(--accent);
+  color: #0a1020;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: background var(--dur-2), border-color var(--dur-2);
+  box-shadow: 0 2px 12px rgba(123,167,232,0.45);
+  transition: filter var(--dur-2), box-shadow var(--dur-2);
   outline: none;
 }
 .mp-play .material-symbols-rounded {
-  font-size: 19px;
-  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  font-size: 21px;
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-.mp-play:hover { background: var(--accent-tint-2); }
+.mp-play:hover { filter: brightness(1.08); box-shadow: 0 2px 18px rgba(123,167,232,0.6); }
 .mp-play.playing {
   animation: mpPulse 2.8s ease-in-out infinite;
 }
 @keyframes mpPulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(123,167,232,0.12); }
-  50%       { box-shadow: 0 0 20px rgba(123,167,232,0.26); }
+  0%, 100% { box-shadow: 0 2px 12px rgba(123,167,232,0.35); }
+  50%       { box-shadow: 0 2px 22px rgba(123,167,232,0.6); }
 }
 .mp-ring {
   position: absolute;
   inset: -4px;
-  width: 46px; height: 46px;
+  width: 48px; height: 48px;
   transform: rotate(-90deg);
   pointer-events: none;
   opacity: 0.9;

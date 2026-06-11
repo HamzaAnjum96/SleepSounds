@@ -5,7 +5,7 @@
 > - Add an entry to the `## Changelog` section at the bottom of this file describing what changed and why.
 > - If sound generation changes significantly, bump `PRESET_STORAGE_KEY` in `src/data.ts` (e.g. `v2` → `v3`).
 
-**drift** (repo name Sleep Mixer) is a mobile-first ambient sound app for
+**drift away** (repo name Sleep Mixer) is a mobile-first ambient sound app for
 relaxation and sleep. All 18 sounds are generated in the browser; nothing is
 streamed or downloaded. Rain, Thunder, Windy Forest, Fire, and Birdsong are
 synthesised live via AudioWorklet (event-based); the rest are procedural WAV loops.
@@ -97,6 +97,12 @@ npm run preview
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 2.5.0
+- **Renamed the app to "drift away"** — wordmark, page title, PWA manifest (name + short name), apple-web-app title, media-session metadata, and the privacy page.
+- **Fixed the slider "detached ball" look.** The thumb's soft glow over a thin 4px track read as a floating ball beside a rectangle. The track is now 6px, the thumb is grounded with a tight drop shadow (no glow), and `::-moz-range-track` is defined for consistent cross-browser centering — the thumb now reads as a knob sitting on the bar.
+- **Made the playback bar stand out.** It was too translucent to register: now a more opaque, defined glass bar with a stronger lift shadow and a defining edge, and the play control is a **solid bright accent disc** (dark glyph) as the one high-contrast focal point.
+- **Deep pass on the library.** The category filter pill now glows in its own family hue when active (Fire ember, Air cyan, …), tying the row to the cards; active sound cards are tinted with their category color instead of a generic blue-white; sound names are a step larger/clearer; counts and icons refined.
 
 ### 2.4.0
 - Removed the Café sound and its "Café in the Rain" scene (library is now 18 sounds, 7 scenes). The Underwater scene is now just underwater (dropped the night drone).

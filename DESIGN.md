@@ -1,6 +1,6 @@
 # Design
 
-The visual system for **drift**, a calm, nocturnal, premium sleep-sound mixer.
+The visual system for **drift away**, a calm, nocturnal, premium sleep-sound mixer.
 Tokens defined in `src/index.css` (`:root`) are the single source of truth;
 every component consumes tokens, never raw values. Tailwind is present only for
 its base reset (`@tailwind base`); the app uses no Tailwind utility classes.
