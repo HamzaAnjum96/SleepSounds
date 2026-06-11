@@ -1077,12 +1077,14 @@ function builtinState(active: Array<[string, number]>): Record<string, SoundStat
 }
 
 export const BUILTIN_PRESETS: Preset[] = [
-  { id: 'builtin-fan-rain',       name: 'Fan & Rain',     createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.38], ['rain', 0.72]]) },
-  { id: 'builtin-windy-forest',   name: 'Windy Forest',   createdAt: '', masterVolume: 0.8,  state: builtinState([['wind', 0.55], ['forest', 0.70]]) },
-  { id: 'builtin-campfire-night',  name: 'Campfire Night', createdAt: '', masterVolume: 0.8,  state: builtinState([['night', 0.02], ['fire', 0.68]]) },
-  { id: 'builtin-rainy-train',    name: 'Rainy Train',    createdAt: '', masterVolume: 0.78, state: builtinState([['rain', 0.62], ['train', 0.44], ['thunder', 0.34]]) },
-  { id: 'builtin-deep-sleep',     name: 'Deep Sleep',     createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.55], ['heartbeat', 0.40]]) },
-  { id: 'builtin-rainforest',     name: 'Rainforest',     createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.45], ['forest', 0.50], ['birdsong', 0.25]]) },
-  { id: 'builtin-underwater-cave', name: 'Underwater Cave', createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60], ['night', 0.30]]) },
-  { id: 'builtin-cozy-cafe',      name: 'Cozy Café',      createdAt: '', masterVolume: 0.8,  state: builtinState([['cafe', 0.55], ['rain', 0.35]]) },
+  // Mixed, not toggled-on: the focal layer leads, broad beds (rain, wind,
+  // noise, ocean) sit underneath, and accents stay quiet and occasional.
+  { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.60], ['fan', 0.18]]) },
+  { id: 'builtin-distant-storm', name: 'Distant Storm',     createdAt: '', masterVolume: 0.78, state: builtinState([['thunder', 0.62], ['rain', 0.40], ['wind', 0.16]]) },
+  { id: 'builtin-windy-forest',  name: 'Windy Forest',      createdAt: '', masterVolume: 0.8,  state: builtinState([['forest', 0.60], ['wind', 0.30], ['birdsong', 0.12]]) },
+  { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.62], ['wind', 0.20], ['night', 0.05]]) },
+  { id: 'builtin-ocean-night',   name: 'Ocean Night',       createdAt: '', masterVolume: 0.78, state: builtinState([['ocean', 0.55], ['wind', 0.18], ['night', 0.08]]) },
+  { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
+  { id: 'builtin-underwater',    name: 'Underwater',        createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60], ['night', 0.20]]) },
+  { id: 'builtin-cafe-rain',     name: 'Café in the Rain',  createdAt: '', masterVolume: 0.8,  state: builtinState([['cafe', 0.55], ['rain', 0.30]]) },
 ];

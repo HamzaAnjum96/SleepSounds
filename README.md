@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.3.0
+- **Reworked the eight curated scenes with proper level balance** (not everything at 0.5). Each is mixed so the focal layer leads and broad beds sit underneath: Rainfall (rain 0.60 · fan 0.18), Distant Storm (thunder 0.62 · rain 0.40 · wind 0.16), Windy Forest (forest 0.60 · wind 0.30 · birdsong 0.12), Fireside (fire 0.62 · wind 0.20 · night 0.05), Ocean Night (ocean 0.55 · wind 0.18 · night 0.08), Deep Rest (brown noise 0.50 · heartbeat 0.24 · night 0.12), Underwater (underwater 0.60 · night 0.20), and Café in the Rain (café 0.55 · rain 0.30). Scene art and mood lines re-synced to the new set.
+
 ### 2.2.0
 - **Library curation.** Removed Waterfall, Tent Rain, Tin Roof Rain, Frogs, Dryer, and Deep Space. **Night** now plays the Deep Space synthesis (the deep, drifting void was the keeper), so its slider set is now Void / Shimmer / Drift. The library is now 19 sounds.
 - **Campfire Night** reworked: the Night drone at 2% under Fire (was Fire + Forest). The **Underwater Cave** scene and the **Rainforest** scene were updated to drop the removed layers (Underwater + Night; Rain + Windy Forest + Birdsong). Dead generators and editor entries removed.
