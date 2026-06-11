@@ -954,15 +954,13 @@ function genTinRoofRain(params?: Record<string, number>): string {
 function genUnderwater(params?: Record<string, number>): string {
   const { depth = 0.6, bubbles = 0.4, current = 0.5 } = params ?? {};
   const baseBuf = brownNoise();
-  lp1(baseBuf, 200 + (1 - depth) * 400);
-  lp1(baseBuf, 200 + (1 - depth) * 400);
+  lp1(baseBuf, 180 + (1 - depth) * 320);
+  lp1(baseBuf, 180 + (1 - depth) * 320);
 
-  const currentBuf = pinkNoise();
-  hp1(currentBuf, 60);
-  lp1(currentBuf, 400 + (1 - depth) * 800);
-  const currentLfo = smoothRandomLfo(0.6, 1.2, 2.0, 6.0);
-  const currentMix = 0.2 + current * 0.4;
-  for (let i = 0; i < N; i++) currentBuf[i] *= currentLfo[i];
+  // "Current" is a slow swell of the deep rumble itself — not a midrange pink
+  // wash, which read as static and doesn't belong underwater.
+  const swellLfo = smoothRandomLfo(0.55, 1.25, 2.5, 7.0);
+  const currentDepth = 0.25 + current * 0.5;
 
   const bubblesBuf = new Float32Array(N);
   let pos = Math.floor(SR * 0.05);
@@ -981,12 +979,14 @@ function genUnderwater(params?: Record<string, number>): string {
     pos += Math.floor(SR * rand(0.05, 0.4) / (bubbles + 0.2));
   }
   hp1(bubblesBuf, 150);
-  lp1(bubblesBuf, 2000);
+  lp1(bubblesBuf, 1600);
 
-  const finalLp = 800 + (1 - depth) * 3000;
+  // Dark final cutoff so no high-frequency hiss survives.
+  const finalLp = 500 + (1 - depth) * 1400;
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = baseBuf[i] * 0.4 + currentBuf[i] * currentMix + bubblesBuf[i] * 0.2;
+    const swell = 1 - currentDepth + currentDepth * swellLfo[i];
+    mix[i] = baseBuf[i] * 0.85 * swell + bubblesBuf[i] * 0.22;
   }
   lp1(mix, finalLp);
   return gen(mix, 0.6);

@@ -1129,18 +1129,22 @@ header {
   outline: none;
   overflow: hidden;
   text-align: left;
+  /* Translucent gradient art over a glass blur, so the night sky shows through
+     and the cards sit in the same material as the player and sheet. */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: border-color var(--dur-2), box-shadow var(--dur-2), transform var(--dur-1);
 }
 .scene-card::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(5,8,15,0.55) 0%, transparent 55%);
+  background: linear-gradient(to top, rgba(5,8,15,0.45) 0%, transparent 58%);
   pointer-events: none;
 }
 .scene-card:hover {
   border-color: rgba(255,255,255,0.16);
-  box-shadow: 0 8px 28px rgba(2,9,30,0.45);
+  box-shadow: 0 8px 28px rgba(2,9,30,0.35);
 }
 .scene-card:active { transform: scale(0.98); }
 .scene-card.current {
@@ -1237,6 +1241,8 @@ header {
   cursor: pointer;
   outline: none;
   text-align: left;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: background var(--dur-2), border-color var(--dur-2), transform var(--dur-1);
 }
 .mix-card-body:hover {

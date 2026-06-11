@@ -96,7 +96,6 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.pendingClaps = []; // { at, f, q, peak, decayS, pan, lpHz }
     this.elapsed = 0;       // running sample counter for clap scheduling
     this.level = 0;
-    this.airSeed = new Float32Array(3);
   }
 
   rnd() { this.seed = (1664525 * this.seed + 1013904223) >>> 0; return this.seed / 4294967296; }
@@ -162,12 +161,6 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.nextEvent = Math.floor(Math.max(8, meanGap) * SR);
   }
 
-  pinkAir() {
-    const s = this.airSeed; const white = this.rnd() * 2 - 1;
-    s[0] = 0.99 * s[0] + white * 0.09; s[1] = 0.96 * s[1] + white * 0.29; s[2] = 0.57 * s[2] + white * 1.05;
-    return (s[0] + s[1] + s[2]) * 0.05;
-  }
-
   process(_inputs, outputs, params) {
     const out = outputs[0]; const L = out[0], R = out[1] || out[0]; const n = L.length;
     const stormIntensity = params.stormIntensity[0];
@@ -220,12 +213,11 @@ class ThunderProcessor extends AudioWorkletProcessor {
       const dg = this.deepEnv.next();
       let dep = dg > 0.0001 ? this.deepHP.process(this.deepLP.process(noise)) * dg * 1.4 : 0;
 
-      const air = this.pinkAir() * 0.25;
-
       // mix: claps keep their own pan; bodies get a slight event-wide width.
+      // No constant noise floor — thunder lives over true silence.
       const body = rum + aft;
-      let sl = clL + body * (0.55 + this.eventPanL * 0.45) + dep + air;
-      let sr = clR + body * (0.55 + this.eventPanR * 0.45) + dep + air;
+      let sl = clL + body * (0.55 + this.eventPanL * 0.45) + dep;
+      let sr = clR + body * (0.55 + this.eventPanR * 0.45) + dep;
 
       this.level = levelTarget + (this.level - levelTarget) * levelCoef;
       sl *= this.level; sr *= this.level;

@@ -98,6 +98,10 @@ npm run preview
 
 ## Changelog
 
+### 2.1.2
+- **Removed static noise floors.** Thunder no longer carries a constant pink "air" bed — it now lives over true silence between events. Underwater's hissy midrange pink "current" wash is gone; its movement now comes from a slow swell of the deep rumble, with a darker final low-pass so no high-frequency static survives.
+- **Translucent scene & mix cards.** The curated-scene cards bottomed out in opaque colours; their gradient art is now translucent over a backdrop blur (and mix cards gained the same glass), so the night sky shows through and they sit in the same material as the mini player and now-playing sheet.
+
 ### 2.1.1
 - **Rain de-laser tuning.** Raindrop hits read as sci-fi "pew" sounds because the water family used a descending sine glide (a literal laser zap) and the other drops used high-Q bandpasses that ring tonally. Fixed by removing the glide entirely, dropping filter Q across all drop families so each is a broadband *tick* rather than a tuned beep, and making resonant rings faint, short, and rare. Water plips are now low, soft, and infrequent.
 
