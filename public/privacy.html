@@ -6,24 +6,40 @@
     <meta name="theme-color" content="#080c14" />
     <title>drift — privacy & terms</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-      :root { --bg:#080c14; --ink:#dfe3ed; --dim:#8c93a8; --muted:#5e657c; --accent:#7ba7e8; --line:rgba(255,255,255,.08); }
+      :root {
+        --bg:#080c14; --ink:#dfe3ed; --dim:#8c93a8; --muted:#5e657c; --accent:#7ba7e8;
+        --line:rgba(255,255,255,.08);
+        --display:'Cormorant', Georgia, serif;
+        --body:'Inter', system-ui, sans-serif;
+      }
       * { box-sizing: border-box; }
       body {
         margin: 0; background: var(--bg); color: var(--ink);
-        font-family: 'Inter', system-ui, sans-serif; font-weight: 300;
-        line-height: 1.65; -webkit-font-smoothing: antialiased;
-        padding: max(env(safe-area-inset-top), 40px) 24px calc(env(safe-area-inset-bottom) + 64px);
+        font-family: var(--body); font-weight: 300;
+        line-height: 1.7; -webkit-font-smoothing: antialiased;
+        padding: max(env(safe-area-inset-top), 48px) 24px calc(env(safe-area-inset-bottom) + 64px);
       }
-      main { max-width: 640px; margin: 0 auto; }
-      .brand { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 40px; letter-spacing: .04em; margin: 0 0 4px; }
-      .sub { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin: 0 0 40px; }
-      h2 { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 500; margin: 36px 0 10px; }
-      p, li { color: #c3c9d8; font-size: 15px; }
-      a { color: var(--accent); }
+      main { max-width: 620px; margin: 0 auto; }
+      .brand {
+        font-family: var(--display); font-style: italic; font-weight: 300;
+        font-size: clamp(3rem, 12vw, 3.6rem); letter-spacing: .06em; line-height: 1;
+        color: var(--ink); margin: 0 0 6px;
+      }
+      .sub { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin: 0 0 44px; }
+      h2 { font-family: var(--body); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); font-weight: 400; margin: 40px 0 10px; }
+      p, li { color: #c3c9d8; font-size: 15px; font-weight: 300; }
+      a { color: var(--accent); text-underline-offset: 3px; }
       ul { padding-left: 20px; }
-      .note { color: var(--muted); font-size: 13px; margin-top: 48px; border-top: 1px solid var(--line); padding-top: 20px; }
-      .back { display: inline-block; margin-top: 28px; font-size: 13px; letter-spacing: .1em; color: var(--dim); text-decoration: none; }
+      li { margin-bottom: 6px; }
+      .note { color: var(--muted); font-size: 13px; margin-top: 52px; border-top: 1px solid var(--line); padding-top: 22px; }
+      .back {
+        font-family: var(--display); font-style: italic; display: inline-block;
+        margin-top: 32px; font-size: 17px; letter-spacing: .04em; color: var(--dim); text-decoration: none;
+      }
       .back:hover { color: var(--ink); }
     </style>
   </head>

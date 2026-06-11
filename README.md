@@ -96,6 +96,10 @@ npm run preview
 
 ## Changelog
 
+### 1.1.1
+- Pinned the footer "privacy" link to the very bottom of the screen (fixed, centered) instead of trailing the "rest well" footer line.
+- Made the privacy page typography match the app: loads Cormorant + Inter, with the Cormorant italic wordmark replacing the Georgia serif fallback.
+
 ### 1.1.0
 - **New app icon**: redrew the icon as a gold crescent with a soft halo over a radial night sky (`public/icon.svg`), regenerated to all PNG sizes (192/512/1024 + 180 apple-touch) and a refined small-size `favicon.svg`. Manifest icons split into proper `any` + `maskable` entries.
 - **Better media-session player**: the notification/lock-screen player now leads with the mix names as the title (with "drift" as the artist line), ships multiple artwork sizes, and uses a redrawn crescent-night artwork that matches the app icon so Android tints the notification on-brand.

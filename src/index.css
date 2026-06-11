@@ -1008,18 +1008,24 @@ header {
   letter-spacing: 0.18em;
 }
 
+/* Pinned to the very bottom of the screen, separate from the footer line. */
 .footer-privacy {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--sp-6));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-overlay);
   font-family: var(--font-body);
   font-style: normal;
   font-size: var(--fs-eyebrow);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-dim);
   text-decoration: none;
-  transition: color var(--dur-2);
-  margin-top: var(--sp-2);
+  opacity: 0.7;
+  transition: color var(--dur-2), opacity var(--dur-2);
 }
-.footer-privacy:hover { color: var(--text-secondary); }
+.footer-privacy:hover { color: var(--text-secondary); opacity: 1; }
 .footer-privacy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .footer-version {
