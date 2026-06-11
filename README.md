@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.5.1
+- Reordered the scene shelf to lead with the strongest presets: Rainfall, Fireside, Deep Rest, then the rest.
+
 ### 2.5.0
 - **Renamed the app to "drift away"** — wordmark, page title, PWA manifest (name + short name), apple-web-app title, media-session metadata, and the privacy page.
 - **Fixed the slider "detached ball" look.** The thumb's soft glow over a thin 4px track read as a floating ball beside a rectangle. The track is now 6px, the thumb is grounded with a tight drop shadow (no glow), and `::-moz-range-track` is defined for consistent cross-browser centering — the thumb now reads as a knob sitting on the bar.
