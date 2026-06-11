@@ -30,7 +30,6 @@ for WCAG AA on `--bg` (contrast noted).
 | `--bg` | `#080c14` | Body canvas |
 | `--surface` | `rgba(255,255,255,.035)` | Cards, master bar, inputs |
 | `--surface-hover` | `rgba(255,255,255,.055)` | Card hover |
-| `--surface-active` | `rgba(180,200,255,.06)` | Active card |
 | `--surface-faint` | `rgba(255,255,255,.02)` | Inset groups, count badge |
 | `--surface-sunken` | `rgba(0,0,0,.25)` | Code/output well |
 | `--track` | `rgba(255,255,255,.10)` | Unfilled slider track |
@@ -122,8 +121,13 @@ Rhythm is varied deliberately (e.g. card padding `16 16 14`, header
 
 | Token | Value | Use |
 |---|---|---|
-| `--shadow-card` | `0 10px 30px rgba(2,9,30,.35)` | Raised panels |
 | `--glow-accent` | `0 0 24px var(--accent-glow)` | Active card / focused card halo |
+
+Glass surfaces (scene & mix cards, mini player, now-playing sheet, cookie
+notice) share one material: a translucent tint over `backdrop-filter: blur()
+saturate(1.2)`, a light-catching `inset 0 1px 0` top hairline, and a soft drop
+shadow. The preset cards add their colour gradient as the tint and a top-left
+sheen, so they read as tinted glass rather than flat tiles.
 
 ## Motion
 

@@ -98,6 +98,11 @@ npm run preview
 
 ## Changelog
 
+### 2.7.0
+- **UI review & fix-up — tinted-glass preset cards.** The scene and mix cards keep their colour gradients but now read as proper tinted glass: a backdrop blur + saturate frosts the night sky behind, a light-catching top hairline (`inset 0 1px 0`) and a top-left sheen sell the glass, and a soft drop shadow lifts them off the page (instead of flat gradient tiles).
+- **Unified glass material** across all five glass surfaces — scene cards, mix cards, mini player, now-playing sheet, and the storage notice now share the same blur + saturate + highlight recipe, so they feel like one material.
+- Removed two orphaned design tokens (`--surface-active`, `--shadow-card`); DESIGN.md updated. Revert point for this pass: branch `backup/pre-ui-review-v2.6.0`.
+
 ### 2.6.0
 - **Storage notice ("cookie" popup).** drift away sets no tracking/advertising cookies, so instead of a misleading banner it shows an honest one-time note: mixes and settings are kept on-device (localStorage) and fonts load from Google, no tracking/ads — with a privacy link and a "Got it" button, styled to match the playback bar's glass. Remembered after dismissal.
 - **Train rebalanced.** A broadband pink-noise "carriage" wash (mixed at 0.33) was overwhelming the wheel-clatter rhythm (only 0.10). The carriage bed is now darker and much quieter (0.11) and the clatter leads (0.24), so the train reads as a train.
