@@ -96,6 +96,13 @@ npm run preview
 
 ## Changelog
 
+### 0.5.0
+- **Drift mode + wind-down timer** (Stage 4 of the design roadmap):
+  - New fullscreen **drift mode** (`src/components/DriftMode.tsx`), entered via the moon button in the master bar once sounds are active: the mixer chrome fades away, the living sky shows through, and a large Cormorant clock, the mix names, the countdown, and a breathing play orb remain. Controls quiet down after 5 still seconds (the clock stays); any touch wakes them. Esc or the close button exits; exiting is automatic if the mix empties.
+  - Requests a **screen wake lock** while drift mode is open (best-effort, re-acquired on tab return) so the bedside display stays softly lit.
+  - **Timer redesign**: the −30/+15/+30/✕ increment chips are replaced with absolute durations (15m · 30m · 1h · 90m); tap the active chip to cancel. A warm progress ring around the play button empties as the timer runs.
+  - **Gentle wind-down fade**: over the timer's final 90 seconds the mix eases out (playback gain only, via a new `masterFade` multiplier in `useAudioMixer`) so the stop never jolts. Sound-generation algorithms untouched.
+
 ### 0.4.0
 - **Living night sky** (Stage 3 of the design roadmap): replaced the static CSS starfield with a procedural canvas scene (`src/components/NightSky.tsx`):
   - Seeded star placement, so drift's constellation is identical every visit

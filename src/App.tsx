@@ -1,5 +1,6 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { version } from '../package.json';
+import DriftMode from './components/DriftMode';
 import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
@@ -22,6 +23,19 @@ const CATEGORY_ICONS: Record<string, string> = {
   Wildlife: 'raven',
   Cozy:     'self_care',
 };
+
+const TIMER_PRESETS = [
+  { label: '15m', secs: 15 * 60 },
+  { label: '30m', secs: 30 * 60 },
+  { label: '1h',  secs: 60 * 60 },
+  { label: '90m', secs: 90 * 60 },
+];
+
+/** Seconds before timer end over which the mix gently fades out. */
+const FADE_WINDOW_S = 90;
+
+const RING_R = 26;
+const RING_C = 2 * Math.PI * RING_R;
 
 function formatCountdown(seconds: number) {
   const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -64,6 +78,7 @@ export default function App() {
     loadingState,
     masterVolume,
     setMasterVolume,
+    setMasterFade,
     toggleSound,
     setSoundVolume,
     setSoundTuning,
@@ -79,6 +94,7 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
+  const [driftOpen, setDriftOpen] = useState(false);
   const soundsGridRef = useRef<HTMLDivElement | null>(null);
   const [soundsGridColumns, setSoundsGridColumns] = useState(2);
   const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
@@ -168,7 +184,10 @@ export default function App() {
 const isPlaying = activeSounds.length > 0 && !isPaused;
 
   useEffect(() => {
-    if (activeSounds.length === 0) setIsPaused(false);
+    if (activeSounds.length === 0) {
+      setIsPaused(false);
+      setDriftOpen(false);
+    }
   }, [activeSounds.length]);
 
   // Media Session API — powers lock-screen / notification player on Android & iOS
@@ -216,6 +235,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
 
   // Sleep timer — counts down playing-time only (pauses when audio pauses)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [timerTotal, setTimerTotal] = useState<number | null>(null);
 
   // Tick only while playing
   useEffect(() => {
@@ -232,17 +252,29 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       stopAll();
       setIsPaused(false);
       setSecondsLeft(null);
+      setTimerTotal(null);
     }
   }, [secondsLeft, stopAll]);
 
-  const handleTimerAdjust = (minutes: number) => {
-    setSecondsLeft((prev) => {
-      const next = (prev ?? 0) + minutes * 60;
-      return next <= 0 ? null : next;
-    });
-  };
+  // Wind-down: ease the mix out over the timer's final stretch, so sleep is
+  // never interrupted by an abrupt stop. Playback-gain only.
+  useEffect(() => {
+    if (secondsLeft === null) {
+      setMasterFade(1);
+    } else if (secondsLeft <= FADE_WINDOW_S) {
+      setMasterFade(Math.pow(secondsLeft / FADE_WINDOW_S, 1.4));
+    }
+  }, [secondsLeft, setMasterFade]);
 
-  const handleTimerReset = () => setSecondsLeft(null);
+  const handleTimerSelect = (secs: number) => {
+    if (timerTotal === secs && secondsLeft !== null) {
+      setSecondsLeft(null);
+      setTimerTotal(null);
+    } else {
+      setSecondsLeft(secs);
+      setTimerTotal(secs);
+    }
+  };
 
   const visibleSounds = category === 'All'
     ? SOUND_LIBRARY
@@ -308,7 +340,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
       />
       <div className="moon" />
 
-      <div className="app" onScroll={handleAppScroll}>
+      <div className={`app${driftOpen ? ' app-quiet' : ''}`} onScroll={handleAppScroll}>
         <header>
           <div className="wordmark">drift</div>
           <div className="tagline">sleep sounds</div>
@@ -317,27 +349,57 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
         <div className="master">
           {/* Row 1: play + timer chips */}
           <div className="master-top">
+            <div className="play-wrap">
+              <button
+                type="button"
+                className={`play-btn${isPlaying ? ' playing' : ''}`}
+                onClick={handleMasterToggle}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+              >
+                <span className="material-symbols-rounded">
+                  {isPlaying ? 'pause' : 'play_arrow'}
+                </span>
+              </button>
+              {secondsLeft !== null && timerTotal !== null && (
+                <svg className="timer-ring" viewBox="0 0 56 56" aria-hidden="true">
+                  <circle
+                    cx="28" cy="28" r={RING_R}
+                    fill="none"
+                    stroke="var(--warm)"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeDasharray={RING_C}
+                    strokeDashoffset={RING_C * (1 - secondsLeft / timerTotal)}
+                  />
+                </svg>
+              )}
+            </div>
+
             <button
               type="button"
-              className={`play-btn${isPlaying ? ' playing' : ''}`}
-              onClick={handleMasterToggle}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
+              className="drift-btn"
+              onClick={() => setDriftOpen(true)}
+              disabled={activeSounds.length === 0}
+              aria-label="Enter drift mode"
+              title="Drift mode"
             >
-              <span className="material-symbols-rounded">
-                {isPlaying ? 'pause' : 'play_arrow'}
-              </span>
+              <span className="material-symbols-rounded">bedtime</span>
             </button>
 
             <div className="timers">
               <div className="timer-chips">
-                <button type="button" className="timer-btn" onClick={() => handleTimerAdjust(-30)}>−30m</button>
-                <button type="button" className="timer-btn" onClick={() => handleTimerAdjust(15)}>+15m</button>
-                <button type="button" className="timer-btn" onClick={() => handleTimerAdjust(30)}>+30m</button>
-                <button
-                  type="button"
-                  className={`timer-btn timer-reset${secondsLeft === null ? ' dim' : ''}`}
-                  onClick={handleTimerReset}
-                >✕</button>
+                {TIMER_PRESETS.map((t) => {
+                  const active = timerTotal === t.secs && secondsLeft !== null;
+                  return (
+                    <button
+                      key={t.label}
+                      type="button"
+                      className={`timer-btn${active ? ' active' : ''}`}
+                      aria-pressed={active}
+                      onClick={() => handleTimerSelect(t.secs)}
+                    >{t.label}</button>
+                  );
+                })}
               </div>
               <div className="timer-countdown">
                 {secondsLeft !== null ? formatCountdown(secondsLeft) : ''}
@@ -501,6 +563,15 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           <div className="footer-version">v{version}</div>
         </div>
       </div>
+
+      <DriftMode
+        open={driftOpen}
+        onClose={() => setDriftOpen(false)}
+        isPlaying={isPlaying}
+        onTogglePlay={handleMasterToggle}
+        mixNames={activeSounds.map((s) => s.name)}
+        secondsLeft={secondsLeft}
+      />
     </>
   );
 }

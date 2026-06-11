@@ -454,6 +454,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
     }, {}),
   );
   const [masterVolume, setMasterVolume] = useState(0.8);
+  // Playback-level wind-down multiplier (sleep-timer fade). 1 = no fade.
+  // Applied on top of master volume; owned by the UI's timer logic.
+  const [masterFade, setMasterFade] = useState(1);
   const audioMapRef = useRef<Record<string, MixerSource>>({});
   const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const tuningTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -478,9 +481,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
     (soundId: string, volume: number) => {
       const source = audioMapRef.current[soundId];
       if (!source) return;
-      source.volume = Math.min(1, Math.max(0, volume * masterVolume));
+      source.volume = Math.min(1, Math.max(0, volume * masterVolume * masterFade));
     },
-    [masterVolume],
+    [masterVolume, masterFade],
   );
 
   useEffect(() => {
@@ -542,7 +545,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
       if (nextEnabled) {
         clearFade(soundId);
-        const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume));
+        const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume * masterFade));
         try {
           setLoadingState((prev) => ({ ...prev, [soundId]: true }));
           source.volume = 0;
@@ -562,7 +565,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         doFadeOut(soundId, () => source.stop());
       }
     },
-    [clearFade, doFadeIn, doFadeOut, masterVolume, soundState],
+    [clearFade, doFadeIn, doFadeOut, masterVolume, masterFade, soundState],
   );
 
   const setSoundVolume = useCallback(
@@ -620,7 +623,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
       if (!source) continue;
       clearFade(soundId);
       setLoadingState((prev) => ({ ...prev, [soundId]: true }));
-      const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume));
+      const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume * masterFade));
       source.volume = 0;
       try {
         await source.play();
@@ -631,7 +634,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         setLoadingState((prev) => ({ ...prev, [soundId]: false }));
       }
     }
-  }, [clearFade, doFadeIn, masterVolume, soundState]);
+  }, [clearFade, doFadeIn, masterVolume, masterFade, soundState]);
 
   const stopAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
@@ -668,7 +671,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
               const source = audioMapRef.current[soundId];
               if (!source) return;
               setLoadingState((prev) => ({ ...prev, [soundId]: true }));
-              const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster));
+              const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster * masterFade));
               source.volume = 0;
               try {
                 await source.play();
@@ -683,7 +686,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         );
       }
     },
-    [doFadeIn, masterVolume, stopAll],
+    [doFadeIn, masterVolume, masterFade, stopAll],
   );
 
   const activeSounds = useMemo(() => sounds.filter((sound) => soundState[sound.id]?.enabled), [soundState, sounds]);
@@ -693,6 +696,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
     loadingState,
     masterVolume,
     setMasterVolume,
+    setMasterFade,
     toggleSound,
     setSoundVolume,
     setSoundTuning,
