@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.8.2
+- Fixed the scene cards looking "transparent on fade-in, then solid at rest." They were a dark colour gradient with no frosted base, so over the near-black sky they read as solid (the only translucency was the entrance fade). Gave them a faint frosted-white film under the colour tint — the same trick the mix cards use — by moving the gradient to `background-image` and adding `background-color: rgba(255,255,255,0.06)`. They now read as a lighter glass pane, tinted by the scene colour, at rest.
+
 ### 2.8.1
 - Preset cards: the gradients were still too dense to see through (a regex had also nudged some colour radials up to 0.30). Rewrote each scene's art with a genuinely faint tint — colour radials ~0.16–0.24, near-clear base (~0.08/0.03) — so the frosted night sky shows through the cards. The bottom scrim still carries the name.
 

@@ -1136,9 +1136,11 @@ header {
   outline: none;
   overflow: hidden;
   text-align: left;
-  /* Tinted glass: the translucent colour gradient is the tint, a backdrop blur
-     frosts the night sky behind, a top hairline catches the light, and a soft
-     drop shadow lifts it off the page — the same material as the player. */
+  /* Tinted glass: a faint frosted-white film (so the pane reads as glass over
+     the dark sky, not a solid dark tile) carries the colour gradient as a tint,
+     a backdrop blur frosts the night sky behind, a top hairline catches the
+     light, and a soft drop shadow lifts it off the page. */
+  background-color: rgba(255,255,255,0.06);
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
   box-shadow:
