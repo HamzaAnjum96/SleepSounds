@@ -1,5 +1,6 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { version } from '../package.json';
+import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
@@ -294,10 +295,17 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
     document.documentElement.style.setProperty('--moon-scroll', `${scrollY}px`);
   }, []);
 
+  // The sky settles with the mix over the last five minutes of the timer.
+  const skyDim = secondsLeft !== null ? Math.max(0, Math.min(1, 1 - secondsLeft / 300)) : 0;
+
   return (
     <>
       <div className="bg-layer" />
-      <div className="stars" />
+      <NightSky
+        playing={isPlaying}
+        intensity={Math.min(1, activeSounds.length / 4)}
+        dim={skyDim}
+      />
       <div className="moon" />
 
       <div className="app" onScroll={handleAppScroll}>

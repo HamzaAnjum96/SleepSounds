@@ -7,8 +7,11 @@ its base reset (`@tailwind base`); the app uses no Tailwind utility classes.
 
 ## Theme
 
-Dark, nighttime, single-surface. A near-black blue-ink canvas under a procedural
-starfield and a single drifting moon. The interface recedes so the sound, not
+Dark, nighttime, single-surface. A near-black blue-ink canvas under a living,
+seed-stable procedural starfield (canvas, `NightSky.tsx`) and a single drifting
+moon. The sky reacts to the product: it brightens slightly while the mix plays,
+settles when idle, dims through the last five minutes of the sleep timer, and
+lets a rare meteor cross while playing. The interface recedes so the sound, not
 the UI, is the experience. Light mode is intentionally not offered: the physical
 scene is "in bed, lights off, phone in hand," which forces a dark theme.
 

@@ -96,6 +96,14 @@ npm run preview
 
 ## Changelog
 
+### 0.4.0
+- **Living night sky** (Stage 3 of the design roadmap): replaced the static CSS starfield with a procedural canvas scene (`src/components/NightSky.tsx`):
+  - Seeded star placement, so drift's constellation is identical every visit
+  - Stars twinkle on individual phases; the sky brightens gently while the mix plays and settles when idle
+  - During the last five minutes of the sleep timer, the sky gradually dims with the wind-down
+  - A rare meteor crosses while playing (never when idle or during deep wind-down)
+  - 30fps render cap, DPR capped at 2, pauses on hidden tabs, and draws a single static frame under `prefers-reduced-motion`
+
 ### 0.3.0
 - **Design-system foundation + typographic refinement** (UI/look-and-feel; no audio or behaviour changes):
   - Added `DESIGN.md` documenting the full visual system (color roles, type scale, spacing, radius, motion, z-index, elevation, components, layout).
