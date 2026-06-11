@@ -62,7 +62,9 @@ for WCAG AA on `--bg` (contrast noted).
 ### Category accents
 Each sound family has a muted hue (`--cat` rgb triplet, set per `data-cat` on
 the card; `--card-accent` resolves it). Active cards use it for border, glow,
-icon, indicator, equaliser, and slider fill. All ≥7:1 on `--bg`.
+icon, indicator, equaliser, slider fill, and a soft top-right corner wash
+(`.sound-card::after`: invisible at rest, a hint on hover, gentle when active).
+All ≥7:1 on `--bg`.
 
 | Category | Triplet | Character |
 |---|---|---|

@@ -1,7 +1,6 @@
 import type { Sound } from '../types';
 import { EDITABLE_SOUND_IDS } from './soundEditorDefs';
 import { sliderFill } from '../lib/sliderFill';
-import { CATEGORY_ICONS } from '../lib/categoryIcons';
 
 const SOUND_ICONS: Record<string, string> = {
   rain:            'rainy',
@@ -65,11 +64,6 @@ export default function SoundCard({
       className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}${canEdit ? ' has-editor' : ''}`}
       data-cat={sound.category}
     >
-      {CATEGORY_ICONS[sound.category] && (
-        <span className="material-symbols-rounded element-mark" aria-hidden="true">
-          {CATEGORY_ICONS[sound.category]}
-        </span>
-      )}
       <button type="button" className="sound-card-toggle" onClick={onToggle} aria-pressed={enabled}>
         <div className="card-top">
           <span className="material-symbols-rounded card-icon">{icon}</span>

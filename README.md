@@ -96,6 +96,9 @@ npm run preview
 
 ## Changelog
 
+### 1.0.1
+- **Replaced the per-card icon watermark with a soft corner color wash.** The large faint category glyph (and its per-family motion) read as decoration and crowded each card alongside its real sound icon. Each card now carries only a gentle radial glow of its category hue in the top-right corner (`.sound-card::after`): invisible at rest, a hint on hover, gentle when active. The per-category color identity stays; the glyph is gone.
+
 ### 1.0.0
 - **Onboarding, accessibility, and ship-grade hardening** (Stage 6, completing the design roadmap):
   - **First-run whisper**: a single Cormorant line above the grid ("tap a sound to begin · layer as many as you like"), shown until the first sound is ever toggled, then remembered via `localStorage`.

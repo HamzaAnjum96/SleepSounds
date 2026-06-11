@@ -608,6 +608,7 @@ header {
 .sound-card {
   --card-accent: rgb(var(--cat));
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -737,53 +738,27 @@ header {
   50%       { height: 11px; }
 }
 
-/* ── Element watermark ───────────────────────────────────────────── */
+/* ── Category corner wash ────────────────────────────────────────── */
+/* In place of an icon watermark, each card carries a soft glow of its
+   category hue in the top-right corner: invisible at rest, a hint on
+   hover, gentle when active. Identity without decoration. */
 
-.element-mark {
+.sound-card::after {
+  content: '';
   position: absolute;
-  top: var(--sp-8);
-  right: var(--sp-8);
-  font-size: 32px;
-  color: rgba(255, 255, 255, 0.05);
+  top: 0;
+  right: 0;
+  width: 65%;
+  height: 65%;
+  background: radial-gradient(ellipse at top right,
+    rgba(var(--cat), 0.10) 0%, rgba(var(--cat), 0.04) 38%, transparent 72%);
+  opacity: 0;
+  transition: opacity var(--dur-4) var(--ease);
   pointer-events: none;
-  transition: color var(--dur-4);
-  user-select: none;
-  z-index: var(--z-bg);
+  z-index: -1;
 }
-.sound-card.active .element-mark {
-  color: rgba(255, 255, 255, 0.13);
-}
-
-/* While playing, each element moves the way its family does: water bobs,
-   fire flickers, air and wildlife sway, cozy breathes. Earth, noise, and
-   urban hold still; stillness is part of the range. */
-.sound-card.playing .element-mark                      { animation: markBob 7s ease-in-out infinite; }
-.sound-card.playing[data-cat="Fire"] .element-mark     { animation: markFlicker 4s ease-in-out infinite; }
-.sound-card.playing[data-cat="Air"] .element-mark      { animation: markSway 9s ease-in-out infinite; }
-.sound-card.playing[data-cat="Wildlife"] .element-mark { animation: markSway 8s ease-in-out infinite; }
-.sound-card.playing[data-cat="Cozy"] .element-mark     { animation: markBreathe 6s ease-in-out infinite; }
-.sound-card.playing[data-cat="Earth"] .element-mark,
-.sound-card.playing[data-cat="Noise"] .element-mark,
-.sound-card.playing[data-cat="Urban"] .element-mark    { animation: none; }
-
-@keyframes markBob {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-2px); }
-}
-@keyframes markSway {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  50%       { transform: translateX(2px) rotate(1.2deg); }
-}
-@keyframes markFlicker {
-  0%, 100% { opacity: 1; }
-  30%       { opacity: 0.6; }
-  55%       { opacity: 0.9; }
-  75%       { opacity: 0.7; }
-}
-@keyframes markBreathe {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.06); }
-}
+.sound-card:hover::after { opacity: 0.5; }
+.sound-card.active::after { opacity: 1; }
 
 .card-name {
   font-size: var(--fs-body);
