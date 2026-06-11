@@ -58,12 +58,6 @@ const ART: Record<string, { mood: string; art: string }> = {
           radial-gradient(90% 80% at 18% 8%, rgba(45,95,135,0.20) 0%, transparent 60%),
           linear-gradient(165deg, rgba(11,30,40,0.58) 0%, rgba(6,15,21,0.46) 72%)`,
   },
-  'builtin-cafe-rain': {
-    mood: 'murmurs, rain past the window',
-    art: `radial-gradient(120% 95% at 22% 0%, rgba(209,166,114,0.30) 0%, transparent 58%),
-          radial-gradient(90% 90% at 90% 95%, rgba(140,100,60,0.20) 0%, transparent 60%),
-          linear-gradient(150deg, rgba(38,29,17,0.55) 0%, rgba(18,12,7,0.43) 72%)`,
-  },
 };
 
 const FALLBACK = {

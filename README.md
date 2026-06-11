@@ -6,14 +6,14 @@
 > - If sound generation changes significantly, bump `PRESET_STORAGE_KEY` in `src/data.ts` (e.g. `v2` → `v3`).
 
 **drift** (repo name Sleep Mixer) is a mobile-first ambient sound app for
-relaxation and sleep. All 19 sounds are generated in the browser; nothing is
+relaxation and sleep. All 18 sounds are generated in the browser; nothing is
 streamed or downloaded. Rain, Thunder, Windy Forest, Fire, and Birdsong are
 synthesised live via AudioWorklet (event-based); the rest are procedural WAV loops.
 
 ## Features
 
-- **Scenes**: eight curated mixes as gradient-art cards; tap to play instantly.
-- **The library**: 19 procedurally generated sounds, layered
+- **Scenes**: seven curated mixes as gradient-art cards; tap to play instantly.
+- **The library**: 18 procedurally generated sounds, layered
   freely with per-sound volume and (for select sounds) deep parameter editors.
 - **Mini player + now-playing sheet**: persistent player bar; the sheet holds
   per-layer sliders, master volume, sleep timer, save-mix, and drift mode.
@@ -97,6 +97,9 @@ npm run preview
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 2.4.0
+- Removed the Café sound and its "Café in the Rain" scene (library is now 18 sounds, 7 scenes). The Underwater scene is now just underwater (dropped the night drone).
 
 ### 2.3.2
 - Trimmed scene layers per feedback: Rainfall is just rain (no fan), Windy Forest is just wind + forest (no birdsong), Fireside is just fire + a 5% night drone (no wind).

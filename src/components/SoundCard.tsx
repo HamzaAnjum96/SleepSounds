@@ -15,7 +15,6 @@ const SOUND_ICONS: Record<string, string> = {
   thunder:         'thunderstorm',
   stream:          'stream',
   fan:             'mode_fan',
-  cafe:            'local_cafe',
   airplane:        'flight',
   birdsong:        'raven',
   underwater:      'scuba_diving',

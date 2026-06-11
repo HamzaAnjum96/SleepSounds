@@ -187,11 +187,6 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'steam', label: 'Steam', def: 0.30 },
     { key: 'room', label: 'Room', def: 0.50 },
   )},
-  cafe: { label: 'Café', mode: 'simple', groups: simpleGroup(
-    { key: 'crowd', label: 'Crowd', def: 0.60 },
-    { key: 'clinks', label: 'Clinks', def: 0.30 },
-    { key: 'warmth', label: 'Warmth', def: 0.50 },
-  )},
   airplane: { label: 'Airplane', mode: 'simple', groups: simpleGroup(
     { key: 'altitude', label: 'Altitude', def: 0.50 },
     { key: 'cabin', label: 'Cabin', def: 0.60 },

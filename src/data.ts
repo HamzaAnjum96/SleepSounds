@@ -809,7 +809,6 @@ const generatorMap: Record<string, (params?: Record<string, number>) => string> 
   night: genSpace,
   underwater: genUnderwater,
   shower: genShower,
-  cafe: genCafe,
   airplane: genAirplane,
   heartbeat: genHeartbeat,
 };
@@ -887,42 +886,6 @@ function genShower(params?: Record<string, number>): string {
   bp2(roomRes, 400 + room * 400, 1 + room * 2);
   for (let i = 0; i < N; i++) preMix[i] += roomRes[i] * room * 0.15;
   return gen(preMix, 0.65);
-}
-
-function genCafe(params?: Record<string, number>): string {
-  const { crowd = 0.6, clinks = 0.3, warmth = 0.5 } = params ?? {};
-  const murmurPink = pinkNoise();
-  const murmurBrown = brownNoise();
-  const murmur = new Float32Array(N);
-  for (let i = 0; i < N; i++) murmur[i] = murmurPink[i] * 0.6 + murmurBrown[i] * 0.4;
-  hp1(murmur, 100 + warmth * 100);
-  lp1(murmur, 800 + (1 - warmth) * 1200);
-  const murmurLfo = smoothRandomLfo(0.5, 1.2, 0.6, 2.5);
-  for (let i = 0; i < N; i++) murmur[i] *= murmurLfo[i];
-
-  const clinksBuf = new Float32Array(N);
-  let pos = Math.floor(SR * rand(0.3, 1.0));
-  while (pos < N) {
-    const cFreq = rand(3000, 6000);
-    const cLen = Math.floor(SR * rand(0.010, 0.030));
-    const cAmp = rand(0.02, 0.06);
-    for (let i = 0; i < cLen && pos + i < N; i++) {
-      const env = Math.exp(-15 * (i / Math.max(1, cLen)));
-      clinksBuf[pos + i] += Math.sin(2 * Math.PI * cFreq * (i / SR)) * env * cAmp;
-    }
-    pos += Math.floor(SR * rand(0.5, 3.0) / (clinks + 0.2));
-  }
-  hp1(clinksBuf, 2000);
-  lp1(clinksBuf, 8000);
-
-  const bgHum = brownNoise();
-  lp1(bgHum, 200);
-
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    mix[i] = murmur[i] * (0.4 + crowd * 0.4) + clinksBuf[i] * (0.05 + clinks * 0.1) + bgHum[i] * 0.1;
-  }
-  return gen(mix, 0.58);
 }
 
 function genAirplane(params?: Record<string, number>): string {
@@ -1054,7 +1017,6 @@ export const SOUND_LIBRARY: Sound[] = [
   // Urban
   { id: 'train',         name: 'Train',         category: 'Urban',    url: genTrain() },
   { id: 'airplane',      name: 'Airplane',      category: 'Urban',    url: genAirplane() },
-  { id: 'cafe',          name: 'Café',          category: 'Urban',    url: genCafe() },
   // Wildlife
   { id: 'night',         name: 'Night',         category: 'Wildlife', url: genSpace() },
   { id: 'birdsong',      name: 'Birdsong',      category: 'Wildlife', url: genBirdsong() },
@@ -1085,6 +1047,5 @@ export const BUILTIN_PRESETS: Preset[] = [
   { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.62], ['night', 0.05]]) },
   { id: 'builtin-ocean-night',   name: 'Ocean Night',       createdAt: '', masterVolume: 0.78, state: builtinState([['ocean', 0.55], ['wind', 0.18], ['night', 0.08]]) },
   { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
-  { id: 'builtin-underwater',    name: 'Underwater',        createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60], ['night', 0.20]]) },
-  { id: 'builtin-cafe-rain',     name: 'Café in the Rain',  createdAt: '', masterVolume: 0.8,  state: builtinState([['cafe', 0.55], ['rain', 0.30]]) },
+  { id: 'builtin-underwater',    name: 'Underwater',        createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60]]) },
 ];
