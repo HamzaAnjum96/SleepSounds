@@ -73,7 +73,7 @@ export default function SoundCard({
       <button type="button" className="sound-card-toggle" onClick={onToggle} aria-pressed={enabled}>
         <div className="card-top">
           <span className="material-symbols-rounded card-icon">{icon}</span>
-          <div className="card-indicator">
+          <div className="card-indicator" aria-hidden="true">
             {loading ? (
               <div className="card-loader" aria-hidden="true" />
             ) : (
@@ -103,6 +103,7 @@ export default function SoundCard({
           step={0.01}
           value={volume}
           style={sliderFill(volume)}
+          aria-label={`${sound.name} volume`}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
         />
       </div>

@@ -79,6 +79,7 @@ export default function SoundEditor({
                 step={p.step}
                 value={values[p.key] ?? p.def}
                 style={sliderFill(values[p.key] ?? p.def, p.min, p.max)}
+                aria-label={p.label}
                 onChange={e => handleChange(p.key, Number(e.target.value))}
               />
             </div>

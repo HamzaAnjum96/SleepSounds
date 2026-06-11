@@ -167,6 +167,18 @@ Every interactive control has default / hover / focus-visible / active states
 (and disabled where relevant). Focus is keyboard-only (`:focus-visible`) with an
 accent ring; cards ring the whole tile to avoid clipping inside `overflow:hidden`.
 
+## Accessibility
+
+WCAG AA contrast on all text tiers (see Color). Keyboard focus is accent-ringed
+via `:focus-visible` on every control; cards ring the whole tile. Every slider
+carries an aria-label; toggle chips expose `aria-pressed`; decorative marks are
+aria-hidden. Drift mode is a proper dialog (focus moved in, restored on exit,
+Esc closes). Reduced motion stills the entire scene, including the canvas sky.
+Small chips keep a calm visual size but carry invisible touch halos toward the
+44px guideline; `touch-action: manipulation` removes tap delay; pinch zoom
+stays enabled. A first-run whisper above the grid teaches the mixer in one
+line, then never returns.
+
 ## Layout
 
 Mobile-first, single column, `max-width: 520px`, centered, full-height scroll

@@ -40,7 +40,7 @@ function buildMediaArtwork(size: number): string {
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const ctx = c.getContext('2d');
-    if (!ctx) return '/icon-512.png';
+    if (!ctx) return `${import.meta.env.BASE_URL}icon-512.png`;
     // Deep blue gradient background
     const g = ctx.createLinearGradient(0, 0, 0, size);
     g.addColorStop(0, '#0c1e50');
@@ -59,7 +59,7 @@ function buildMediaArtwork(size: number): string {
     ctx.fillStyle = '#142660';
     ctx.beginPath(); ctx.arc(0.65 * size, 0.37 * size, 0.20 * size, 0, Math.PI * 2); ctx.fill();
     return c.toDataURL('image/png');
-  } catch { return '/icon-512.png'; }
+  } catch { return `${import.meta.env.BASE_URL}icon-512.png`; }
 }
 
 export default function App() {
@@ -85,6 +85,11 @@ export default function App() {
   const [category, setCategory] = useState<Category>('All');
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
   const [driftOpen, setDriftOpen] = useState(false);
+  // First-run whisper: shown until the first sound is ever toggled.
+  const [showHint, setShowHint] = useState(() => {
+    try { return localStorage.getItem('drift-onboarded') === null; }
+    catch { return false; }
+  });
   const soundsGridRef = useRef<HTMLDivElement | null>(null);
   const [soundsGridColumns, setSoundsGridColumns] = useState(2);
   const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
@@ -221,10 +226,14 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
 
   const handleSoundToggle = useCallback(async (soundId: string) => {
     haptic(8);
+    if (showHint) {
+      setShowHint(false);
+      try { localStorage.setItem('drift-onboarded', '1'); } catch { /* private mode */ }
+    }
     const wasEnabled = soundState[soundId]?.enabled;
     if (!wasEnabled && isPaused) setIsPaused(false);
     await toggleSound(soundId);
-  }, [soundState, isPaused, toggleSound]);
+  }, [soundState, isPaused, toggleSound, showHint]);
 
   // Sleep timer — counts down playing-time only (pauses when audio pauses)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -417,6 +426,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                 step={0.01}
                 value={masterVolume}
                 style={sliderFill(masterVolume)}
+                aria-label="Master volume"
                 onChange={(e) => setMasterVolume(Number(e.target.value))}
               />
               <span className="material-symbols-rounded">volume_up</span>
@@ -497,6 +507,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
                   key={cat}
                   type="button"
                   className={`cat-pill${category === cat ? ' active' : ''}`}
+                  aria-pressed={category === cat}
                   onClick={() => setCategory(cat)}
                 >
                   {CATEGORY_ICONS[cat] && <span className="material-symbols-rounded cat-icon">{CATEGORY_ICONS[cat]}</span>}
@@ -507,6 +518,10 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
             })}
           </div>
         </div>
+
+        {showHint && (
+          <p className="first-hint">tap a sound to begin · layer as many as you like</p>
+        )}
 
         <div ref={soundsGridRef} className="sounds-grid">
           {visibleSounds.map((sound, i) => (
@@ -554,7 +569,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           {(activeSounds.length > 0 || isPaused) && (
             <div className="footer-rest">rest well</div>
           )}
-          <div className="footer-version">v{version}</div>
+          <div className="footer-version" aria-hidden="true">v{version}</div>
         </div>
       </div>
 

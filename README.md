@@ -96,6 +96,13 @@ npm run preview
 
 ## Changelog
 
+### 1.0.0
+- **Onboarding, accessibility, and ship-grade hardening** (Stage 6, completing the design roadmap):
+  - **First-run whisper**: a single Cormorant line above the grid ("tap a sound to begin · layer as many as you like"), shown until the first sound is ever toggled, then remembered via `localStorage`.
+  - **Accessibility pass**: aria-labels on every slider (master, per-sound, editor params), `aria-pressed` on category pills and timer chips, decorative elements (indicator, watermark, ring, version stamp) hidden from assistive tech; drift mode already carries dialog semantics with focus management.
+  - **Expanded hit targets**: small chips keep their calm visual size but gain invisible touch halos approaching the 44px guideline; `touch-action: manipulation` removes double-tap zoom delay; tap highlight removed. Pinch zoom re-enabled (dropped `maximum-scale=1` from the viewport).
+  - **PWA/meta fixes**: `manifest.json` icon paths and `start_url`/`scope` made relative (they 404'd under the `/SleepSounds/` GitHub Pages base), manifest and `theme-color` aligned to the true background `#080c14`, media-session artwork fallback made base-aware, and a meta description added.
+
 ### 0.6.0
 - **Per-sound character + tactile micro-interactions** (Stage 5 of the design roadmap):
   - **Category accents**: each sound family now carries its own muted hue when active (Fire ember, Air pale cyan, Earth sage, Noise dusty violet, Urban steel, Wildlife moss, Cozy warm gold; Water keeps the signature blue). Applied to the active card's border, glow, icon, indicator dot, equaliser, volume slider, and editor handle. All hues ≥7:1 contrast on the background.
