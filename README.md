@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.1.1
+- **Rain de-laser tuning.** Raindrop hits read as sci-fi "pew" sounds because the water family used a descending sine glide (a literal laser zap) and the other drops used high-Q bandpasses that ring tonally. Fixed by removing the glide entirely, dropping filter Q across all drop families so each is a broadband *tick* rather than a tuned beep, and making resonant rings faint, short, and rare. Water plips are now low, soft, and infrequent.
+
 ### 2.1.0
 - **Real-time synthesis for Rain, Thunder, and Windy Forest** (sound generation overhaul, fully in-browser via AudioWorklet). These three were the least recognisable because they were stationary noise loops; environmental sounds are identified from *temporal events*, not static spectra. Each is now generated live off the main thread (`public/worklets/`), with the previous WAV kept as an automatic fallback if the worklet can't load:
   - **Rain** (`rain.worklet.js`): an airy filtered-noise bed under three drop families — solid hits (with occasional modal rings), leaf hits, and water chirps — scheduled as independent Poisson processes across near/mid/far lanes with slow density drift. You hear impacts first, bed second.

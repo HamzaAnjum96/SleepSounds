@@ -170,12 +170,12 @@ class RainProcessor extends AudioWorkletProcessor {
     for (let i = 0; i < this.voices.length; i++) if (!this.voices[i].active) { v = this.voices[i]; break; }
     if (!v) return;
 
-    // surface picks the drop family probabilistically: low = hard (solid),
-    // high = soft (leaf/water).
+    // Family mix. Solid taps dominate; leaves are common; water "plips" stay
+    // rare — too many tonal events reads as artificial. Higher surface = softer.
     const r = this.rnd();
     let kind;
-    if (r < 0.55 - surface * 0.4) kind = 'solid';
-    else if (r < 0.85 - surface * 0.15) kind = 'leaf';
+    if (r < 0.5 - surface * 0.3) kind = 'solid';
+    else if (r < 0.9 - surface * 0.05) kind = 'leaf';
     else kind = 'water';
 
     // near drops are louder, lower (heavier), and wider; far drops quiet/narrow.
@@ -185,31 +185,35 @@ class RainProcessor extends AudioWorkletProcessor {
         : (this.rnd() * 2 - 1) * 0.28;
     const heavy = 0.6 + heaviness * 0.8;
 
+    // Low Q throughout: a raindrop is a broadband *tick*, not a tuned beep.
+    // High Q on a short noise burst rings tonally — the "laser" artefact.
     if (kind === 'solid') {
-      const f = (2600 + this.rnd() * 3200) / heavy;
+      const f = (1900 + this.rnd() * 2600) / heavy;
       this.takeAndTrigger(v, {
-        freq: f, q: 5 + this.rnd() * 4,
-        attackS: 0.0015, decayS: (0.008 + this.rnd() * 0.02) * heavy,
+        freq: f, q: 1.1 + this.rnd() * 1.3,
+        attackS: 0.0012, decayS: (0.006 + this.rnd() * 0.016) * heavy,
         peak: 0.06 * laneGain, pan: lanePan,
-        ringFreq: this.rnd() < 0.35 ? (700 + this.rnd() * 2200) / heavy : 0,
-        ringAmt: 0.01 * laneGain * (1 - surface * 0.5), ringDecayS: 0.04 + this.rnd() * 0.04,
+        // a faint, very short click only occasionally; never a sustained ping
+        ringFreq: this.rnd() < 0.1 ? (900 + this.rnd() * 1400) / heavy : 0,
+        ringAmt: 0.003 * laneGain, ringDecayS: 0.01 + this.rnd() * 0.015,
       });
     } else if (kind === 'leaf') {
-      const f = (1800 + this.rnd() * 2400) / heavy;
+      const f = (1200 + this.rnd() * 2200) / heavy;
       this.takeAndTrigger(v, {
-        freq: f, q: 2.5 + this.rnd() * 3,
+        freq: f, q: 0.8 + this.rnd() * 1.2,
         attackS: 0.002, decayS: (0.012 + this.rnd() * 0.03) * heavy,
         peak: 0.04 * laneGain, pan: lanePan,
       });
     } else {
-      const from = (1800 + this.rnd() * 1700) / heavy;
+      // water plip: a low, soft noisy burst with a faint short resonance —
+      // NO descending glide (that is what read as a sci-fi laser).
+      const f = (650 + this.rnd() * 850) / heavy;
       this.takeAndTrigger(v, {
-        freq: from, q: 3 + this.rnd() * 2,
-        attackS: 0.003, decayS: (0.03 + this.rnd() * 0.05) * heavy,
-        peak: 0.03 * laneGain, pan: lanePan,
-        chirpFrom: from, chirpTo: (350 + this.rnd() * 700) / heavy,
-        chirpGlideS: 0.03 + this.rnd() * 0.05, chirpAmt: 0.04 * laneGain,
-        chirpDecayS: 0.03 + this.rnd() * 0.05,
+        freq: f, q: 1.4 + this.rnd() * 1.2,
+        attackS: 0.002, decayS: (0.018 + this.rnd() * 0.035) * heavy,
+        peak: 0.038 * laneGain, pan: lanePan,
+        ringFreq: f * (1 + this.rnd() * 0.25),
+        ringAmt: 0.005 * laneGain, ringDecayS: 0.015 + this.rnd() * 0.018,
       });
     }
   }
