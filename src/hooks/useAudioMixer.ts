@@ -22,6 +22,8 @@ interface MixerSource {
   readonly paused: boolean;
   applyTuning?: (tuning: { playbackRate: number; gainMultiplier: number }) => void;
   swapUrl?: (newUrl: string) => void;
+  /** Live k-rate control for worklet-backed sounds (rain, thunder, forest, fire). */
+  setParams?: (values: Record<string, number>) => void;
   play(): Promise<void>;
   pause(): void;
   stop(): void;
@@ -270,144 +272,163 @@ class CrossfadeAudio implements MixerSource {
   }
 }
 
-class FireWorkletSource implements MixerSource {
-  private static ctx: AudioContext | null = null;
-  private static modulePromise: Promise<void> | null = null;
+/**
+ * Configuration for a real-time AudioWorklet generator. These sounds are
+ * synthesised live (event-based: drops, claps, leaf bursts) rather than looped
+ * from a pre-rendered WAV, which is what makes them read as the real thing.
+ */
+interface WorkletConfig {
+  module: string;                       // file under worklets/
+  processor: string;                    // registerProcessor name
+  params: Record<string, number>;       // initial AudioParam values (excl. running)
+  /** Maps the 3-slider editor keys to worklet param names (identity if omitted). */
+  paramMap?: Record<string, string>;
+}
 
+const WORKLET_CONFIGS: Record<string, WorkletConfig> = {
+  fire: {
+    module: 'fire.worklet.js',
+    processor: 'fire-synth',
+    params: { intensity: 0.62, dryness: 0.55, wind: 0.22, size: 0.45, distance: 0.2, crackleBias: 0.5 },
+  },
+  rain: {
+    module: 'rain.worklet.js',
+    processor: 'rain-gen',
+    params: { intensity: 0.65, heaviness: 0.5, surface: 0.5 },
+  },
+  thunder: {
+    module: 'thunder.worklet.js',
+    processor: 'thunder-gen',
+    params: { stormIntensity: 0.5, rumble: 0.6, distance: 0.4 },
+  },
+  forest: {
+    module: 'windyforest.worklet.js',
+    processor: 'windyforest-gen',
+    params: { leaves: 0.7, twigs: 0.35, breeze: 0.5 },
+  },
+};
+
+/** One AudioContext shared across every worklet source, plus a per-module
+ *  load promise so each worklet file is fetched and registered only once. */
+let sharedWorkletCtx: AudioContext | null = null;
+const workletModulePromises = new Map<string, Promise<void>>();
+
+function getWorkletCtx(): AudioContext {
+  if (!sharedWorkletCtx) sharedWorkletCtx = new AudioContext();
+  return sharedWorkletCtx;
+}
+
+function loadWorkletModule(ctx: AudioContext, module: string): Promise<void> {
+  let p = workletModulePromises.get(module);
+  if (!p) {
+    p = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/${module}`);
+    workletModulePromises.set(module, p);
+  }
+  return p;
+}
+
+/** Generic real-time worklet generator with a `running` on/off param and live
+ *  k-rate parameter control. */
+class WorkletSource implements MixerSource {
   private gainNode: GainNode | null = null;
-  private outNode: GainNode | null = null;
   private node: AudioWorkletNode | null = null;
   private _volume = 0;
   private started = false;
   private playing = false;
+  private pending: Record<string, number> | null = null;
 
-  private static getContext() {
-    if (!this.ctx) this.ctx = new AudioContext();
-    return this.ctx;
-  }
-
-  /** Returns the shared fire AudioContext with the worklet module loaded — for external use (e.g. SoundBuilder). */
-  static async openContext(): Promise<AudioContext> {
-    const ctx = FireWorkletSource.getContext();
-    if (!FireWorkletSource.modulePromise) {
-      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/fire.worklet.js`);
-    }
-    await FireWorkletSource.modulePromise;
-    await ctx.resume();
-    return ctx;
-  }
+  constructor(private cfg: WorkletConfig) {}
 
   private async ensureNode() {
-    const ctx = FireWorkletSource.getContext();
-    if (!FireWorkletSource.modulePromise) {
-      FireWorkletSource.modulePromise = ctx.audioWorklet.addModule(`${import.meta.env.BASE_URL}worklets/fire.worklet.js`);
-    }
-    await FireWorkletSource.modulePromise;
-
+    const ctx = getWorkletCtx();
+    await loadWorkletModule(ctx, this.cfg.module);
     if (this.node) return;
 
-    this.node = new AudioWorkletNode(ctx, 'fire-synth', {
+    this.node = new AudioWorkletNode(ctx, this.cfg.processor, {
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      parameterData: {
-        intensity: 0.62,
-        dryness: 0.55,
-        wind: 0.22,
-        size: 0.45,
-        distance: 0.2,
-        crackleBias: 0.5,
-        running: 0,
-      },
+      parameterData: { ...this.cfg.params, running: 0 },
     });
-
     this.gainNode = new GainNode(ctx, { gain: 0 });
-    this.outNode = new GainNode(ctx, { gain: 0.95 });
-
     this.node.connect(this.gainNode);
-    this.gainNode.connect(this.outNode);
-    this.outNode.connect(ctx.destination);
+    this.gainNode.connect(ctx.destination);
+    if (this.pending) { this.applyParams(this.pending); this.pending = null; }
   }
 
-  get volume() {
-    return this._volume;
+  private applyParams(values: Record<string, number>) {
+    if (!this.node) { this.pending = { ...this.pending, ...values }; return; }
+    const ctx = getWorkletCtx();
+    const map = this.cfg.paramMap;
+    for (const [k, v] of Object.entries(values)) {
+      const name = map?.[k] ?? k;
+      this.node.parameters.get(name)?.setTargetAtTime(v, ctx.currentTime, 0.05);
+    }
   }
 
+  setParams(values: Record<string, number>) { this.applyParams(values); }
+
+  get volume() { return this._volume; }
   set volume(v: number) {
     this._volume = v;
     if (!this.gainNode) return;
-    const ctx = FireWorkletSource.getContext();
-    this.gainNode.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
+    this.gainNode.gain.setTargetAtTime(v, getWorkletCtx().currentTime, 0.05);
   }
 
-  get paused() {
-    return !this.playing;
-  }
+  get paused() { return !this.playing; }
 
   async play() {
     await this.ensureNode();
-    const ctx = FireWorkletSource.getContext();
+    const ctx = getWorkletCtx();
     await ctx.resume();
     this.started = true;
     this.playing = true;
-    this.node?.parameters.get('running')?.setTargetAtTime(1, ctx.currentTime, 0.01);
+    this.node?.parameters.get('running')?.setValueAtTime(1, ctx.currentTime);
     this.gainNode?.gain.setTargetAtTime(this._volume, ctx.currentTime, 0.05);
   }
 
   pause() {
     if (!this.started) return;
-    const ctx = FireWorkletSource.getContext();
     this.playing = false;
-    this.node?.parameters.get('running')?.setTargetAtTime(0, ctx.currentTime, 0.02);
-    this.gainNode?.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+    // The worklet fades itself to silence on running=0; no hard gain cut.
+    this.node?.parameters.get('running')?.setValueAtTime(0, getWorkletCtx().currentTime);
   }
 
-  stop() {
-    this.pause();
-  }
+  stop() { this.pause(); }
 
   destroy() {
-    this.pause();
+    this.playing = false;
+    this.node?.parameters.get('running')?.setValueAtTime(0, getWorkletCtx().currentTime);
     this.node?.disconnect();
     this.gainNode?.disconnect();
-    this.outNode?.disconnect();
     this.node = null;
     this.gainNode = null;
-    this.outNode = null;
     this.started = false;
   }
 }
 
-class FireSourceWithFallback implements MixerSource {
-  private primary = new FireWorkletSource();
+/** A worklet primary with the pre-rendered WAV as a safety net: if the worklet
+ *  fails to load (old browser, blocked module), playback falls back seamlessly. */
+class WorkletWithFallback implements MixerSource {
+  private primary: WorkletSource;
   private fallback: CrossfadeAudio;
-  private active: MixerSource = this.primary;
+  private active: MixerSource;
   private _volume = 0;
   private failedOver = false;
 
-  constructor(fallbackUrl: string) {
+  constructor(cfg: WorkletConfig, fallbackUrl: string) {
+    this.primary = new WorkletSource(cfg);
     this.fallback = new CrossfadeAudio(fallbackUrl);
+    this.active = this.primary;
   }
 
-  get volume() {
-    return this._volume;
-  }
-
-  set volume(v: number) {
-    this._volume = v;
-    this.active.volume = v;
-  }
-
-  get paused() {
-    return this.active.paused;
-  }
+  get volume() { return this._volume; }
+  set volume(v: number) { this._volume = v; this.active.volume = v; }
+  get paused() { return this.active.paused; }
 
   async play() {
     this.active.volume = this._volume;
-    if (this.failedOver) {
-      await this.active.play();
-      return;
-    }
+    if (this.failedOver) { await this.active.play(); return; }
     try {
       await this.primary.play();
     } catch {
@@ -419,29 +440,23 @@ class FireSourceWithFallback implements MixerSource {
     }
   }
 
+  setParams(values: Record<string, number>) {
+    // Live params apply to the worklet; the WAV fallback can't change live.
+    if (!this.failedOver) this.primary.setParams?.(values);
+  }
+
   swapUrl(newUrl: string) {
-    if (this.failedOver) {
-      this.fallback.swapUrl(newUrl);
-    }
-    // If using worklet primary, ignore URL swap
+    if (this.failedOver) this.fallback.swapUrl(newUrl);
   }
 
-  pause() {
-    this.active.pause();
-  }
-
-  stop() {
-    this.active.stop();
-  }
-
-  destroy() {
-    this.primary.destroy();
-    this.fallback.destroy();
-  }
+  pause() { this.active.pause(); }
+  stop() { this.active.stop(); }
+  destroy() { this.primary.destroy(); this.fallback.destroy(); }
 }
 
 const makeSource = (sound: Sound): MixerSource => {
-  if (sound.id === 'fire') return new FireSourceWithFallback(sound.url);
+  const cfg = WORKLET_CONFIGS[sound.id];
+  if (cfg) return new WorkletWithFallback(cfg, sound.url);
   return new CrossfadeAudio(sound.url);
 };
 
@@ -580,8 +595,15 @@ export const useAudioMixer = (sounds: Sound[]) => {
   );
 
   const setSoundTuning = useCallback((soundId: string, values: Record<string, number>) => {
-    // Fire and birdsong use worklets - don't regenerate
+    // Fire and birdsong use worklets driven elsewhere - don't regenerate
     if (soundId === 'fire' || soundId === 'birdsong') return;
+
+    // Worklet-backed sounds (rain, thunder, forest) take params live, no WAV regen.
+    const source = audioMapRef.current[soundId];
+    if (source?.setParams) {
+      source.setParams(values);
+      return;
+    }
 
     lastTuningRef.current[soundId] = values;
 
@@ -707,5 +729,3 @@ export const useAudioMixer = (sounds: Sound[]) => {
     restoreMixerState,
   };
 };
-
-export const openFireContext = () => FireWorkletSource.openContext();

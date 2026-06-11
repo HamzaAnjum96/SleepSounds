@@ -7,7 +7,8 @@
 
 **drift** (repo name Sleep Mixer) is a mobile-first ambient sound app for
 relaxation and sleep. All 25 sounds are generated in the browser; nothing is
-streamed or downloaded.
+streamed or downloaded. Rain, Thunder, Windy Forest, Fire, and Birdsong are
+synthesised live via AudioWorklet (event-based); the rest are procedural WAV loops.
 
 ## Features
 
@@ -96,6 +97,13 @@ npm run preview
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 2.1.0
+- **Real-time synthesis for Rain, Thunder, and Windy Forest** (sound generation overhaul, fully in-browser via AudioWorklet). These three were the least recognisable because they were stationary noise loops; environmental sounds are identified from *temporal events*, not static spectra. Each is now generated live off the main thread (`public/worklets/`), with the previous WAV kept as an automatic fallback if the worklet can't load:
+  - **Rain** (`rain.worklet.js`): an airy filtered-noise bed under three drop families — solid hits (with occasional modal rings), leaf hits, and water chirps — scheduled as independent Poisson processes across near/mid/far lanes with slow density drift. You hear impacts first, bed second.
+  - **Thunder** (`thunder.worklet.js`): sparse storm events over silence, each a sequence of 1–4 staggered claps → a downward-sweeping rumble → an undulating afterimage → a sub-bass deepener, all from one seed (62% of strikes are 1–2 claps, per the model).
+  - **Windy Forest** (`windyforest.worklet.js`, renamed from "Forest"): four wind-speed-driven canopy bands with leaf rustle emitted as a *child of the gust field* (rustle swells with the whoosh), plus rare branch creaks/whistles on stronger gusts.
+  - The 3-slider editors for these now drive the worklet **live** (k-rate params) instead of regenerating a WAV; the generic worklet source + WAV-fallback path is unified in `useAudioMixer.ts` (fire reuses it too). Saved mixes are unaffected (sound ids unchanged).
 
 ### 2.0.0
 - **Full product overhaul** (revert point: branch `backup/pre-overhaul-v1.2.0` / tag `v1.2.0-pre-overhaul`). The in-browser sound generation engine is untouched; everything above it was rebuilt around a browse-first, player-persistent architecture:

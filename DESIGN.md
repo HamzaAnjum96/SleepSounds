@@ -214,6 +214,17 @@ horizontal shelves bleed to the viewport edge for the scroll. Safe-area insets
 are honored top and bottom. Responsiveness is structural; type is fixed-rem,
 not fluid, except the wordmark.
 
+## Sound engine
+
+All sound is generated in the browser; nothing is streamed. Two synthesis
+paths: most sounds are procedural WAV loops crossfaded by `useAudioMixer`,
+while the event-driven ones run as live **AudioWorklet** generators off the
+main thread — Fire and Birdsong, and (v2.1) Rain, Thunder, and Windy Forest.
+The worklets follow a bed + movement + discrete-event model (drops, claps,
+leaf bursts), which is what makes environmental sound read as real rather than
+as stationary noise. Each worklet source carries the old WAV as an automatic
+fallback, and its editor sliders drive k-rate worklet params live.
+
 ## Atmosphere
 
 Three fixed layers behind the shell: the `bg-layer` gradients, the **aurora**

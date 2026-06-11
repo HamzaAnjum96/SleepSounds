@@ -1288,7 +1288,7 @@ export const SOUND_LIBRARY: Sound[] = [
   { id: 'thunder',       name: 'Thunder',       category: 'Air',      url: genThunder() },
   { id: 'fan',           name: 'Fan',           category: 'Air',      url: genFan() },
   // Earth
-  { id: 'forest',        name: 'Forest',        category: 'Earth',    url: genForest() },
+  { id: 'forest',        name: 'Windy Forest',  category: 'Earth',    url: genForest() },
   // Noise
   { id: 'white-noise',   name: 'White Noise',   category: 'Noise',    url: genWhite() },
   { id: 'pink-noise',    name: 'Pink Noise',    category: 'Noise',    url: genPink() },

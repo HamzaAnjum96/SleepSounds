@@ -130,10 +130,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'whistle', label: 'Whistle', def: 0.30 },
     { key: 'tone', label: 'Tone', def: 0.50 },
   )},
-  forest: { label: 'Forest', mode: 'simple', groups: simpleGroup(
-    { key: 'leaves', label: 'Leaves', def: 0.70 },
-    { key: 'twigs', label: 'Twigs', def: 0.35 },
-    { key: 'breeze', label: 'Breeze', def: 0.50 },
+  forest: { label: 'Windy Forest', mode: 'simple', groups: simpleGroup(
+    { key: 'leaves', label: 'Leaf Rustle', def: 0.70 },
+    { key: 'twigs', label: 'Branch Detail', def: 0.35 },
+    { key: 'breeze', label: 'Wind Speed', def: 0.50 },
   )},
   stream: { label: 'Stream', mode: 'simple', groups: simpleGroup(
     { key: 'flow', label: 'Flow', def: 0.60 },
