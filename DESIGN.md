@@ -87,12 +87,15 @@ the dev sound-editor readouts. Never more than these three.
 - `--font-mono`: SF Mono / Fira Code — sound-editor values.
 
 ### Scale
-A deliberately compact product scale. The label tier is consolidated to a single
-size; small controls sit one step up for legibility and one-handed tapping.
+A deliberately compact product scale, with Cormorant italic carrying the brand
+moments: the wordmark, the greeting, section headings (22px), scene and mix
+names, the sheet title, and the drift-mode clock.
 
 | Token | Size | Role |
 |---|---|---|
 | `--fs-display` | `clamp(2.4rem, 7vw, 3.2rem)` | Wordmark |
+| (serif) | 22px | Section headings, sheet title |
+| (serif) | 15–18px | Scene/mix names, mini-player title, greeting |
 | `--fs-lead` | 13px | Footer line, emphasis |
 | `--fs-body` | 12px | Sound names, inputs, list rows |
 | `--fs-control` | 11px | Chips, buttons, secondary controls |
@@ -139,14 +142,34 @@ parallax), and freezes the equaliser as a static mark so "playing" still reads.
 
 ## Z-index
 
-A semantic scale, never arbitrary values: `--z-bg 0` (background, starfield,
-watermark) · `--z-scene 1` (moon) · `--z-app 2` (app shell) · `--z-overlay 10`
-(version stamp). `--z-modal 50` and `--z-toast 60` are reserved for future
-layers.
+A semantic scale, never arbitrary values: `--z-bg 0` (background, aurora,
+starfield) · `--z-scene 1` (moon) · `--z-app 2` (app shell) · `--z-overlay 10`
+(floating chrome) · `--z-player 30` (mini player) · `--z-sheet 40` (now-playing
+sheet) · `--z-modal 50` (drift mode) · `--z-toast 60` (reserved).
+
+## Architecture
+
+Browse-first, player-persistent. One scrolling surface (scenes → your mixes →
+the library) plus three layers above it:
+
+- **Mini player** (`MiniPlayer.tsx`): a floating pill at the bottom whenever a
+  mix is active. Play/pause with the sleep-timer ring, the mix title in serif,
+  countdown or layer count, one tap into the sheet.
+- **Now-playing sheet** (`NowPlayingSheet.tsx`): the mix's control room. Every
+  active layer on its own category-colored slider with remove, master volume,
+  the sleep timer (chips, countdown, "ends ~time"), and the doorways to drift
+  mode and saving the mix. Glass panel, dialog semantics, Esc/backdrop closes.
+- **Drift mode** (`DriftMode.tsx`): the fullscreen night surface (see below).
+
+**Scenes** are the eight built-in presets presented as gradient-art cards in a
+snap-scrolling shelf (`scenes.ts` holds the mood line + CSS-generated art per
+scene). Tapping plays instantly; tapping the playing scene pauses. A hand-edit
+of the mix clears the scene badge so it never lies. **Your mixes** are saved
+presets as warm-bordered serif cards with layer counts and delete.
 
 ## Components
 
-One surface (the mixer). Shared interactive vocabulary:
+Shared interactive vocabulary:
 
 - **Pill / chip** — category filters, preset chips, timer chips, sound-editor
   buttons. 1px border, transparent fill, `--fs-control`, accent or warm on
@@ -184,7 +207,16 @@ line, then never returns.
 ## Layout
 
 Mobile-first, single column, `max-width: 520px`, centered, full-height scroll
-region with hidden scrollbars. Header → master bar (play, timer, master volume)
-→ presets → category filter → sound grid → footer. Safe-area insets are honored
-top and bottom for notched devices. Responsiveness is structural (the column
-caps and centers); type is fixed-rem, not fluid, except the wordmark.
+region with hidden scrollbars. Header (wordmark + time-of-day greeting) →
+scenes shelf → your mixes → the library (category filter + sound grid) →
+footer; the mini player floats above the bottom edge when a mix is active, and
+horizontal shelves bleed to the viewport edge for the scroll. Safe-area insets
+are honored top and bottom. Responsiveness is structural; type is fixed-rem,
+not fluid, except the wordmark.
+
+## Atmosphere
+
+Three fixed layers behind the shell: the `bg-layer` gradients, the **aurora**
+(two transform-animated drifts of indigo/violet/teal at ≤0.10 alpha, 90s loop),
+and the living starfield canvas. The moon floats above them. Everything stills
+under reduced motion.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatCountdown } from '../lib/time';
 
 /**
  * Drift mode: the fullscreen night surface for when the mix is set and the
@@ -27,12 +28,6 @@ const QUIET_AFTER_MS = 5000;
 
 function formatClock(d: Date) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-function formatCountdown(seconds: number) {
-  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-  const s = (seconds % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
 }
 
 export default function DriftMode({

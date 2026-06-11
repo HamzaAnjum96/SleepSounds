@@ -5,31 +5,30 @@
 > - Add an entry to the `## Changelog` section at the bottom of this file describing what changed and why.
 > - If sound generation changes significantly, bump `PRESET_STORAGE_KEY` in `src/data.ts` (e.g. `v2` → `v3`).
 
-Sleep Mixer is a mobile-first ambient sound blending web app designed for relaxation and better sleep.
+**drift** (repo name Sleep Mixer) is a mobile-first ambient sound app for
+relaxation and sleep. All 25 sounds are generated in the browser; nothing is
+streamed or downloaded.
 
 ## Features
 
-- Premium dark blue, minimal UI optimized for one-handed mobile use.
-- Mix multiple calming sounds simultaneously, fully generated in-app (no external audio APIs/files), including:
-  - Nature: Rain, Tent Rain, Rain on Tin Roof, Ocean, Wind, Forest, Thunder, Stream, Waterfall, Night Insects, Birdsong, Frogs, Underwater
-  - Cozy: Fireplace, Café, Shower
-  - Noise/Transport: White/Pink/Brown Noise, Deep Space, Heartbeat, Fan, Airplane, Dryer, Train
-- Per-sound controls:
-  - On/off toggle
-  - Individual volume slider
-- Master controls:
-  - Play all active sounds
-  - Pause all sounds
-  - Stop all sounds
-  - Master volume slider
-- Sleep timer with automatic stop.
-- Preset save/load/delete using `localStorage`.
+- **Scenes**: eight curated mixes as gradient-art cards; tap to play instantly.
+- **The library**: 25 procedurally generated sounds in 8 categories, layered
+  freely with per-sound volume and (for select sounds) deep parameter editors.
+- **Mini player + now-playing sheet**: persistent player bar; the sheet holds
+  per-layer sliders, master volume, sleep timer, save-mix, and drift mode.
+- **Drift mode**: fullscreen night surface with clock, breathing play orb, and
+  screen wake lock for the nightstand.
+- **Sleep timer** (15m/30m/1h/90m) with a progress ring and a gentle 90-second
+  wind-down fade; the night sky dims with it.
+- **Your mixes**: save/load/delete via `localStorage`; lock-screen media
+  controls (Media Session API); installable PWA with custom install prompt.
 
 ## Tech Stack
 
 - React + TypeScript + Vite
-- Tailwind CSS
-- HTMLAudioElement API for audio playback and mixing
+- Hand-rolled CSS design system (`src/index.css`, documented in `DESIGN.md`);
+  Tailwind present only for its base reset
+- HTMLAudioElement + Web Audio worklets for playback and mixing
 
 ## Project Structure
 
@@ -44,22 +43,24 @@ sleep-mixer/
 ├── tsconfig.node.json
 ├── vite.config.ts
 └── src/
-    ├── App.tsx
-    ├── data.ts
-    ├── index.css
+    ├── App.tsx              # shell: scenes, mixes, library, player state
+    ├── data.ts              # procedural sound synthesis + presets
+    ├── index.css            # the design system (see DESIGN.md)
     ├── main.tsx
     ├── types.ts
     ├── components/
-    │   ├── ActiveMixer.tsx
-    │   ├── Header.tsx
-    │   ├── MasterControls.tsx
-    │   ├── PresetManager.tsx
-    │   ├── SleepTimer.tsx
-    │   ├── SoundCard.tsx
-    │   ├── SoundLibrary.tsx
-    │   └── VolumeSlider.tsx
-    └── hooks/
-        └── useAudioMixer.ts
+    │   ├── DriftMode.tsx        # fullscreen night surface
+    │   ├── InstallPrompt.tsx    # PWA install affordance
+    │   ├── MiniPlayer.tsx       # persistent bottom player
+    │   ├── NightSky.tsx         # living canvas starfield
+    │   ├── NowPlayingSheet.tsx  # mix control room
+    │   ├── SoundCard.tsx        # library tile
+    │   ├── SoundEditor.tsx      # per-sound parameter editor
+    │   └── soundEditorDefs.ts
+    ├── hooks/
+    │   └── useAudioMixer.ts     # playback engine wrapper
+    └── lib/
+        ├── categoryIcons.ts · haptics.ts · scenes.ts · sliderFill.ts · time.ts
 ```
 
 ## Setup
@@ -92,9 +93,19 @@ npm run preview
 
 - All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime (mono 16-bit PCM).
 - No backend is required.
-- The version number (from `package.json`) is displayed as a tiny fixed label in the bottom-right corner of the screen. It is rendered in `src/App.tsx` inside the `.app-footer` as a `.footer-version` element, styled in `src/index.css` with `position: fixed; bottom: 6px; right: 8px` at 8px font size and low opacity so it stays unobtrusive.
+- The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 2.0.0
+- **Full product overhaul** (revert point: branch `backup/pre-overhaul-v1.2.0` / tag `v1.2.0-pre-overhaul`). The in-browser sound generation engine is untouched; everything above it was rebuilt around a browse-first, player-persistent architecture:
+  - **Scenes**: the eight built-in presets become curated gradient-art cards in a snap-scrolling shelf, each with a mood line and CSS-generated art (`src/lib/scenes.ts`). Tap to play instantly; tap the playing scene to pause. Hand-editing the mix clears the scene badge.
+  - **Mini player** (`src/components/MiniPlayer.tsx`): a floating glass pill at the bottom whenever a mix is active: play/pause with the sleep-timer ring, serif mix title, countdown/layer count, one tap into the sheet.
+  - **Now-playing sheet** (`src/components/NowPlayingSheet.tsx`): the mix's control room. Per-layer category-colored sliders with remove, master volume, the sleep timer (with "ends ~11:42 pm"), and doorways to drift mode and saving the mix. Replaces the old master bar entirely.
+  - **Your mixes**: saved presets as warm serif cards with layer counts, replacing the chip row. Saving lives in the sheet.
+  - **Typography**: Cormorant italic now carries the brand moments: greeting ("good evening"), section headings (tonight / your mixes / the library), scene and mix names, sheet title.
+  - **Atmosphere**: a slow aurora layer (indigo/violet/teal, 90s transform loop) joins the starfield; stilled under reduced motion.
+  - **Details**: time-of-day greeting, spacebar play/pause, footer simplified (rest well · privacy · version inline; privacy moved off fixed positioning since the mini player now owns the bottom edge), `formatCountdown` deduplicated into `src/lib/time.ts`.
 
 ### 1.2.0
 - **Reusable install prompt**: Chrome only shows its native install banner once, then suppresses it. Added an early `beforeinstallprompt` capture (`index.html`) plus an in-app install row (`src/components/InstallPrompt.tsx`) that appears under the header whenever the app is installable and triggers the native prompt on demand. It hides once installed or dismissed, never shows when already running standalone, and falls back to a short "Add to Home Screen" hint on iOS Safari (which has no install event).
