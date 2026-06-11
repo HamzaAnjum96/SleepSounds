@@ -98,6 +98,10 @@ npm run preview
 
 ## Changelog
 
+### 2.6.0
+- **Storage notice ("cookie" popup).** drift away sets no tracking/advertising cookies, so instead of a misleading banner it shows an honest one-time note: mixes and settings are kept on-device (localStorage) and fonts load from Google, no tracking/ads — with a privacy link and a "Got it" button, styled to match the playback bar's glass. Remembered after dismissal.
+- **Train rebalanced.** A broadband pink-noise "carriage" wash (mixed at 0.33) was overwhelming the wheel-clatter rhythm (only 0.10). The carriage bed is now darker and much quieter (0.11) and the clatter leads (0.24), so the train reads as a train.
+
 ### 2.5.1
 - Reordered the scene shelf to lead with the strongest presets: Rainfall, Fireside, Deep Rest, then the rest.
 

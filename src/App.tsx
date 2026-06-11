@@ -1,5 +1,6 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { version } from '../package.json';
+import CookieNotice from './components/CookieNotice';
 import DriftMode from './components/DriftMode';
 import InstallPrompt from './components/InstallPrompt';
 import MiniPlayer from './components/MiniPlayer';
@@ -611,6 +612,8 @@ export default function App() {
         mixNames={activeSounds.map((s) => s.name)}
         secondsLeft={secondsLeft}
       />
+
+      <CookieNotice />
     </>
   );
 }

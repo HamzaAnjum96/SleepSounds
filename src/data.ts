@@ -767,9 +767,10 @@ function genTrain(params?: Record<string, number>): string {
   hp1(rumble, 40);
   lp1(rumble, 460);
 
+  // A faint, dark carriage bed — kept low so it never washes over the rhythm.
   const carriage = pinkNoise();
-  hp1(carriage, 180);
-  lp1(carriage, 1900);
+  hp1(carriage, 160);
+  lp1(carriage, 1100);
 
   const clicks = new Float32Array(N);
   let pos = Math.floor(SR * 0.25);
@@ -787,7 +788,7 @@ function genTrain(params?: Record<string, number>): string {
   const sway = smoothRandomLfo(0.78, 1.18, 0.8, 3.8);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = rumble[i] * rumbleMix * sway[i] + carriage[i] * 0.33 + clicks[i] * 0.1;
+    mix[i] = rumble[i] * rumbleMix * sway[i] + carriage[i] * 0.11 + clicks[i] * 0.24;
   }
   return gen(mix, 0.68);
 }
