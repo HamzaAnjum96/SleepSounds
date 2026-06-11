@@ -29,7 +29,7 @@ const ART: Record<string, { mood: string; art: string }> = {
           linear-gradient(150deg, rgba(22,41,31,0.55) 0%, rgba(10,20,16,0.42) 72%)`,
   },
   'builtin-campfire-night': {
-    mood: 'embers under tall trees',
+    mood: 'embers under a still night',
     art: `radial-gradient(110% 95% at 20% 100%, rgba(224,158,96,0.32) 0%, transparent 55%),
           radial-gradient(90% 80% at 85% 10%, rgba(120,70,40,0.20) 0%, transparent 60%),
           linear-gradient(160deg, rgba(43,26,16,0.55) 0%, rgba(18,10,6,0.42) 72%)`,

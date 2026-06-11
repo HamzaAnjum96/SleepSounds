@@ -156,9 +156,9 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'clatter', label: 'Clatter', def: 0.35 },
   )},
   night: { label: 'Night', mode: 'simple', groups: simpleGroup(
-    { key: 'crickets', label: 'Crickets', def: 0.50 },
-    { key: 'depth', label: 'Depth', def: 0.50 },
-    { key: 'rustling', label: 'Rustling', def: 0.40 },
+    { key: 'void', label: 'Void', def: 0.60 },
+    { key: 'cosmic', label: 'Shimmer', def: 0.40 },
+    { key: 'pulse', label: 'Drift', def: 0.30 },
   )},
   'white-noise': { label: 'White Noise', mode: 'simple', groups: simpleGroup(
     { key: 'brightness', label: 'Brightness', def: 0.55 },
@@ -177,21 +177,6 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   )},
 
   // New sounds
-  waterfall: { label: 'Waterfall', mode: 'simple', groups: simpleGroup(
-    { key: 'power', label: 'Power', def: 0.60 },
-    { key: 'mist', label: 'Mist', def: 0.40 },
-    { key: 'distance', label: 'Distance', def: 0.30 },
-  )},
-  'tent-rain': { label: 'Tent Rain', mode: 'simple', groups: simpleGroup(
-    { key: 'intensity', label: 'Intensity', def: 0.60 },
-    { key: 'fabric', label: 'Fabric', def: 0.50 },
-    { key: 'wind', label: 'Wind', def: 0.30 },
-  )},
-  'tin-roof-rain': { label: 'Tin Roof Rain', mode: 'simple', groups: simpleGroup(
-    { key: 'intensity', label: 'Intensity', def: 0.60 },
-    { key: 'metallic', label: 'Metallic', def: 0.50 },
-    { key: 'gutters', label: 'Gutters', def: 0.40 },
-  )},
   underwater: { label: 'Underwater', mode: 'simple', groups: simpleGroup(
     { key: 'depth', label: 'Depth', def: 0.60 },
     { key: 'bubbles', label: 'Bubbles', def: 0.40 },
@@ -202,11 +187,6 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'steam', label: 'Steam', def: 0.30 },
     { key: 'room', label: 'Room', def: 0.50 },
   )},
-  frogs: { label: 'Frogs', mode: 'simple', groups: simpleGroup(
-    { key: 'chorus', label: 'Chorus', def: 0.50 },
-    { key: 'pitch', label: 'Pitch', def: 0.50 },
-    { key: 'swamp', label: 'Swamp', def: 0.40 },
-  )},
   cafe: { label: 'Café', mode: 'simple', groups: simpleGroup(
     { key: 'crowd', label: 'Crowd', def: 0.60 },
     { key: 'clinks', label: 'Clinks', def: 0.30 },
@@ -216,16 +196,6 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'altitude', label: 'Altitude', def: 0.50 },
     { key: 'cabin', label: 'Cabin', def: 0.60 },
     { key: 'turbulence', label: 'Turbulence', def: 0.30 },
-  )},
-  dryer: { label: 'Dryer', mode: 'simple', groups: simpleGroup(
-    { key: 'speed', label: 'Speed', def: 0.50 },
-    { key: 'hum', label: 'Hum', def: 0.50 },
-    { key: 'tumble', label: 'Tumble', def: 0.40 },
-  )},
-  space: { label: 'Deep Space', mode: 'simple', groups: simpleGroup(
-    { key: 'void', label: 'Void', def: 0.60 },
-    { key: 'cosmic', label: 'Cosmic', def: 0.40 },
-    { key: 'pulse', label: 'Pulse', def: 0.30 },
   )},
   heartbeat: { label: 'Heartbeat', mode: 'simple', groups: simpleGroup(
     { key: 'rate', label: 'Rate', def: 0.50 },
