@@ -96,6 +96,13 @@ npm run preview
 
 ## Changelog
 
+### 0.6.0
+- **Per-sound character + tactile micro-interactions** (Stage 5 of the design roadmap):
+  - **Category accents**: each sound family now carries its own muted hue when active (Fire ember, Air pale cyan, Earth sage, Noise dusty violet, Urban steel, Wildlife moss, Cozy warm gold; Water keeps the signature blue). Applied to the active card's border, glow, icon, indicator dot, equaliser, volume slider, and editor handle. All hues ≥7:1 contrast on the background.
+  - **Element watermark returns**: reinstated the per-card category watermark (it had become orphaned CSS after an earlier refactor) and gave each family motion that fits its nature while playing: water bobs, fire flickers, air/wildlife sway, cozy breathes; earth, noise, and urban hold still.
+  - **Tactile controls**: slider tracks 2→4px and thumbs 10→14px with a soft glow and press scale; cards compress slightly on press; new preset chips ease in when saved; long preset names now ellipsize.
+  - **Haptics**: tiny vibration confirmations (8–12ms, best-effort, no-op on iOS Safari) on sound toggle, play/pause, timer set, and preset save.
+
 ### 0.5.0
 - **Drift mode + wind-down timer** (Stage 4 of the design roadmap):
   - New fullscreen **drift mode** (`src/components/DriftMode.tsx`), entered via the moon button in the master bar once sounds are active: the mixer chrome fades away, the living sky shows through, and a large Cormorant clock, the mix names, the countdown, and a breathing play orb remain. Controls quiet down after 5 still seconds (the clock stays); any touch wakes them. Esc or the close button exits; exiting is automatic if the mix empties.

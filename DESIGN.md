@@ -59,6 +59,22 @@ for WCAG AA on `--bg` (contrast noted).
 | `--warm-glow` / `--warm-line` | gold alphas | Timer active/hover |
 | `--danger` | `#e07070` | Destructive hover (delete) |
 
+### Category accents
+Each sound family has a muted hue (`--cat` rgb triplet, set per `data-cat` on
+the card; `--card-accent` resolves it). Active cards use it for border, glow,
+icon, indicator, equaliser, and slider fill. All ≥7:1 on `--bg`.
+
+| Category | Triplet | Character |
+|---|---|---|
+| Water (default) | `123,167,232` | the signature blue |
+| Fire | `224,158,96` | ember |
+| Air | `159,196,216` | pale cyan |
+| Earth | `163,179,138` | sage |
+| Noise | `170,156,196` | dusty violet |
+| Urban | `143,161,184` | steel |
+| Wildlife | `143,191,154` | moss |
+| Cozy | `209,166,114` | warm gold |
+
 ## Typography
 
 Two families on a contrast axis (serif display + humanist sans), plus mono for

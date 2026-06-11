@@ -420,12 +420,15 @@ header {
 }
 
 /* ── Range Slider ────────────────────────────────────────────────── */
+/* `--fill` is the track/thumb color: the global accent by default, the
+   card's category accent inside a sound card (see Category accents). */
 
 .drift-slider {
   -webkit-appearance: none;
   appearance: none;
+  --fill: var(--card-accent, var(--accent));
   width: 100%;
-  height: 2px;
+  height: 4px;
   border-radius: var(--sp-2);
   outline: none;
   cursor: pointer;
@@ -434,23 +437,30 @@ header {
 .drift-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border-radius: var(--r-full);
-  background: var(--accent);
+  background: var(--fill);
+  box-shadow: 0 0 8px rgba(123,167,232,0.25);
   cursor: pointer;
   transition: transform var(--dur-1);
 }
 .drift-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
+  transform: scale(1.2);
+}
+.drift-slider:active::-webkit-slider-thumb {
+  transform: scale(1.25);
 }
 .drift-slider::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   border: none;
   border-radius: var(--r-full);
-  background: var(--accent);
+  background: var(--fill);
   cursor: pointer;
+}
+.drift-slider:active::-moz-range-thumb {
+  transform: scale(1.25);
 }
 
 /* ── Section Header ──────────────────────────────────────────────── */
@@ -549,7 +559,20 @@ header {
 
 /* ── Sound Card ──────────────────────────────────────────────────── */
 
+/* Category accents: each family carries its own muted hue (rgb triplet in
+   `--cat`), so the active grid reads as a collection, not a template. All
+   triplets sit at >=7:1 against the bg; alphas match the old accent levels. */
+.sound-card                      { --cat: 123,167,232; }  /* default: accent blue */
+.sound-card[data-cat="Fire"]     { --cat: 224,158,96; }
+.sound-card[data-cat="Air"]      { --cat: 159,196,216; }
+.sound-card[data-cat="Earth"]    { --cat: 163,179,138; }
+.sound-card[data-cat="Noise"]    { --cat: 170,156,196; }
+.sound-card[data-cat="Urban"]    { --cat: 143,161,184; }
+.sound-card[data-cat="Wildlife"] { --cat: 143,191,154; }
+.sound-card[data-cat="Cozy"]     { --cat: 209,166,114; }
+
 .sound-card {
+  --card-accent: rgb(var(--cat));
   position: relative;
   display: flex;
   flex-direction: column;
@@ -560,10 +583,13 @@ header {
   border-radius: var(--r-xl);
   cursor: pointer;
   outline: none;
-  transition: background var(--dur-2), border-color var(--dur-2), box-shadow var(--dur-2);
+  transition: background var(--dur-2), border-color var(--dur-2), box-shadow var(--dur-2),
+              transform var(--dur-1);
   text-align: left;
   width: 100%;
-  animation: fadeSlideUp 0.55s var(--ease) both;
+  /* `backwards` (not `both`): the end keyframe equals the natural state, and
+     holding it would block the :active press transform below. */
+  animation: fadeSlideUp 0.55s var(--ease) backwards;
   overflow: hidden;
 }
 .sound-card-toggle {
@@ -575,10 +601,13 @@ header {
   background: var(--surface-hover);
   border-color: rgba(255,255,255,0.11);
 }
+.sound-card:active {
+  transform: scale(0.985);
+}
 .sound-card.active {
   background: var(--surface-active);
-  border-color: var(--border-active);
-  box-shadow: var(--glow-accent);
+  border-color: rgba(var(--cat), 0.28);
+  box-shadow: 0 0 24px rgba(var(--cat), 0.16);
 }
 
 .card-top {
@@ -595,7 +624,7 @@ header {
   transition: color var(--dur-2);
 }
 .sound-card.active .card-icon {
-  color: var(--accent);
+  color: var(--card-accent);
   font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 /* ── Card Indicator (dot ↔ EQ crossfade) ─────────────────────────── */
@@ -630,8 +659,8 @@ header {
   transition: background var(--dur-3), box-shadow var(--dur-3), opacity 0.28s, transform 0.28s;
 }
 .card-dot.active {
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
+  background: var(--card-accent);
+  box-shadow: 0 0 6px var(--card-accent);
 }
 .sound-card.playing .card-dot {
   opacity: 0;
@@ -661,8 +690,8 @@ header {
   display: block;
   width: 2.5px;
   border-radius: var(--sp-2);
-  background: var(--accent);
-  box-shadow: 0 0 4px var(--accent);
+  background: var(--card-accent);
+  box-shadow: 0 0 4px var(--card-accent);
   min-height: 3px;
 }
 .eq-bars span:nth-child(1) { animation: eqBounce 1.6s 0.0s  ease-in-out infinite paused; }
@@ -689,6 +718,37 @@ header {
 }
 .sound-card.active .element-mark {
   color: rgba(255, 255, 255, 0.13);
+}
+
+/* While playing, each element moves the way its family does: water bobs,
+   fire flickers, air and wildlife sway, cozy breathes. Earth, noise, and
+   urban hold still; stillness is part of the range. */
+.sound-card.playing .element-mark                      { animation: markBob 7s ease-in-out infinite; }
+.sound-card.playing[data-cat="Fire"] .element-mark     { animation: markFlicker 4s ease-in-out infinite; }
+.sound-card.playing[data-cat="Air"] .element-mark      { animation: markSway 9s ease-in-out infinite; }
+.sound-card.playing[data-cat="Wildlife"] .element-mark { animation: markSway 8s ease-in-out infinite; }
+.sound-card.playing[data-cat="Cozy"] .element-mark     { animation: markBreathe 6s ease-in-out infinite; }
+.sound-card.playing[data-cat="Earth"] .element-mark,
+.sound-card.playing[data-cat="Noise"] .element-mark,
+.sound-card.playing[data-cat="Urban"] .element-mark    { animation: none; }
+
+@keyframes markBob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+@keyframes markSway {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50%       { transform: translateX(2px) rotate(1.2deg); }
+}
+@keyframes markFlicker {
+  0%, 100% { opacity: 1; }
+  30%       { opacity: 0.6; }
+  55%       { opacity: 0.9; }
+  75%       { opacity: 0.7; }
+}
+@keyframes markBreathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.06); }
 }
 
 .card-name {
@@ -752,9 +812,9 @@ header {
   border-color: rgba(255,255,255,0.2);
 }
 .card-editor-icon.active {
-  color: var(--accent);
-  border-color: var(--border-active);
-  background: rgba(123,167,232,0.10);
+  color: var(--card-accent);
+  border-color: rgba(var(--cat), 0.3);
+  background: rgba(var(--cat), 0.1);
 }
 
 .sound-editor-inline {
@@ -779,6 +839,10 @@ header {
 }
 
 .builtin-preset-btn {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: var(--sp-5) 11px;
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
@@ -822,6 +886,8 @@ header {
 .preset-chip-wrap {
   display: inline-flex;
   align-items: stretch;
+  /* New chips ease in when a mix is saved. */
+  animation: fadeSlideUp 0.3s var(--ease) backwards;
 }
 .preset-chip-wrap .builtin-preset-btn.saved {
   border-radius: var(--r-pill) 0 0 var(--r-pill);

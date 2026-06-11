@@ -8,21 +8,11 @@ import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
+import { CATEGORY_ICONS } from './lib/categoryIcons';
+import { haptic } from './lib/haptics';
 import { sliderFill } from './lib/sliderFill';
 
 const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
-
-const CATEGORY_ICONS: Record<string, string> = {
-  All:      'apps',
-  Water:    'water_drop',
-  Fire:     'local_fire_department',
-  Air:      'air',
-  Earth:    'landscape',
-  Noise:    'music_note',
-  Urban:    'location_city',
-  Wildlife: 'raven',
-  Cozy:     'self_care',
-};
 
 const TIMER_PRESETS = [
   { label: '15m', secs: 15 * 60 },
@@ -162,6 +152,7 @@ export default function App() {
 
   const handleSavePreset = () => {
     if (!presetName.trim()) return;
+    haptic(12);
     persistPresets([...presets, {
       id: crypto.randomUUID(),
       name: presetName.trim(),
@@ -218,6 +209,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   }, [isPlaying, activeSounds, mediaArtwork, playAllActive, pauseAll, stopAll]);
 
   const handleMasterToggle = useCallback(async () => {
+    haptic(10);
     if (isPlaying) {
       pauseAll();
       setIsPaused(true);
@@ -228,6 +220,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   }, [isPlaying, activeSounds.length, pauseAll, playAllActive]);
 
   const handleSoundToggle = useCallback(async (soundId: string) => {
+    haptic(8);
     const wasEnabled = soundState[soundId]?.enabled;
     if (!wasEnabled && isPaused) setIsPaused(false);
     await toggleSound(soundId);
@@ -267,6 +260,7 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
   }, [secondsLeft, setMasterFade]);
 
   const handleTimerSelect = (secs: number) => {
+    haptic(8);
     if (timerTotal === secs && secondsLeft !== null) {
       setSecondsLeft(null);
       setTimerTotal(null);
