@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.8.3
+- **Fixed the scene cards going solid** ("something pops in behind"). The culprit was `backdrop-filter` on the preset cards: over the near-black sky the blur had nothing useful to frost, so it composited a near-solid dark layer that popped in behind the translucent gradient. Removed `backdrop-filter` from the scene and mix cards (and reverted 2.8.2's frosted-white film). The cards are now just their translucent colour gradient over the night sky — colour + transparency, no pop. The mini player, sheet, and storage notice keep their blur since they sit over real content.
+
 ### 2.8.2
 - Fixed the scene cards looking "transparent on fade-in, then solid at rest." They were a dark colour gradient with no frosted base, so over the near-black sky they read as solid (the only translucency was the entrance fade). Gave them a faint frosted-white film under the colour tint — the same trick the mix cards use — by moving the gradient to `background-image` and adding `background-color: rgba(255,255,255,0.06)`. They now read as a lighter glass pane, tinted by the scene colour, at rest.
 

@@ -432,7 +432,7 @@ export default function App() {
                   type="button"
                   role="listitem"
                   className={`scene-card${current ? ' current' : ''}`}
-                  style={{ backgroundImage: scene.art }}
+                  style={{ background: scene.art }}
                   onClick={() => handlePlayPreset(scene.preset)}
                   aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
                 >

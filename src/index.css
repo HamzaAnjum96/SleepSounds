@@ -1136,13 +1136,10 @@ header {
   outline: none;
   overflow: hidden;
   text-align: left;
-  /* Tinted glass: a faint frosted-white film (so the pane reads as glass over
-     the dark sky, not a solid dark tile) carries the colour gradient as a tint,
-     a backdrop blur frosts the night sky behind, a top hairline catches the
-     light, and a soft drop shadow lifts it off the page. */
-  background-color: rgba(255,255,255,0.06);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  /* Translucent colour gradient straight over the night sky — no backdrop
+     blur, which on the near-black background frosted into a near-solid layer
+     that "popped in" behind the card. A top hairline and soft drop shadow
+     still give it edge and depth. */
   box-shadow:
     0 6px 22px rgba(2,8,20,0.42),
     inset 0 1px 0 rgba(255,255,255,0.14);
@@ -1267,9 +1264,8 @@ header {
   cursor: pointer;
   outline: none;
   text-align: left;
-  /* Warm-tinted glass, same material as the scene cards. */
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  /* Warm-tinted glass via the --surface film + hairline; no backdrop blur
+     (nothing useful to frost over the dark sky, and it popped in as solid). */
   box-shadow:
     0 6px 20px rgba(2,8,20,0.35),
     inset 0 1px 0 rgba(255,255,255,0.10);
