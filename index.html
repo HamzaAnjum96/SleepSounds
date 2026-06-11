@@ -20,6 +20,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Capture the install prompt as early as possible: Chrome fires
+      // beforeinstallprompt before React mounts, and only shows its own
+      // banner once. We stash the event so the in-app install button can
+      // trigger it any time the app is installable.
+      window.__driftInstall = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__driftInstall = e;
+        window.dispatchEvent(new Event('drift-installable'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__driftInstall = null;
+        window.dispatchEvent(new Event('drift-installed'));
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

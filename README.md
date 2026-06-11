@@ -96,6 +96,9 @@ npm run preview
 
 ## Changelog
 
+### 1.2.0
+- **Reusable install prompt**: Chrome only shows its native install banner once, then suppresses it. Added an early `beforeinstallprompt` capture (`index.html`) plus an in-app install row (`src/components/InstallPrompt.tsx`) that appears under the header whenever the app is installable and triggers the native prompt on demand. It hides once installed or dismissed, never shows when already running standalone, and falls back to a short "Add to Home Screen" hint on iOS Safari (which has no install event).
+
 ### 1.1.1
 - Pinned the footer "privacy" link to the very bottom of the screen (fixed, centered) instead of trailing the "rest well" footer line.
 - Made the privacy page typography match the app: loads Cormorant + Inter, with the Cormorant italic wordmark replacing the Georgia serif fallback.

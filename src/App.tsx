@@ -1,6 +1,7 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { version } from '../package.json';
 import DriftMode from './components/DriftMode';
+import InstallPrompt from './components/InstallPrompt';
 import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
 import { BUILTIN_PRESETS, CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
@@ -371,6 +372,8 @@ const isPlaying = activeSounds.length > 0 && !isPaused;
           <div className="wordmark">drift</div>
           <div className="tagline">sleep sounds</div>
         </header>
+
+        <InstallPrompt />
 
         <div className="master">
           {/* Row 1: play + timer chips */}
