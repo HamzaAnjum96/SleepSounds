@@ -444,8 +444,8 @@ export default function App() {
 
         <section className="section" style={{ animationDelay: '0.1s' }}>
           <div className="section-head">
-            <h2 className="section-title">tonight</h2>
-            <span className="section-meta">curated scenes</span>
+            <h2 className="section-title">the scenes</h2>
+            <span className="section-meta">curated mixes</span>
           </div>
           <div className="scene-row" role="list">
             {SCENES.map((scene) => {

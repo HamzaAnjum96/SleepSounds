@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.11.3
+- Renamed the "tonight" section heading to "the scenes" (meta line now "curated mixes"), matching the "the library" naming pattern.
+
 ### 2.11.2
 - **Fixed the odd line under the presets shelf.** The scene/mix rows are horizontal scroll containers, which clip vertically — so the cards' soft drop shadows were being sliced into a hard dark band at the shelf's bottom edge (background looked different below vs above). Removed the outer drop shadows on shelf cards; the border + inset top hairline carry the depth.
 
