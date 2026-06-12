@@ -12,7 +12,7 @@ import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
-import { CATEGORY_ICONS } from './lib/categoryIcons';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
 import { haptic } from './lib/haptics';
 import { primeBackgroundAudio, setKeepAlive } from './lib/backgroundAudio';
 import { SCENES, presetSoundIds } from './lib/scenes';
@@ -22,6 +22,26 @@ const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 
 /** Seconds before timer end over which the mix gently fades out. */
 const FADE_WINDOW_S = 90;
+
+/** The categories of a preset's layers, in library order, deduplicated. */
+function presetCategories(preset: Preset): string[] {
+  const cats: string[] = [];
+  for (const sound of SOUND_LIBRARY) {
+    if (preset.state[sound.id]?.enabled && !cats.includes(sound.category)) {
+      cats.push(sound.category);
+    }
+  }
+  return cats;
+}
+
+/** A saved mix's card tint, derived from the hues of its own layers — each
+ *  blend gets a quiet color identity, the way scenes carry their art. */
+function mixArt(preset: Preset): string {
+  const colors = presetCategories(preset).map((cat) => CATEGORY_COLORS[cat] ?? '123,167,232');
+  const a = colors[0] ?? '184,154,106';
+  const b = colors[1] ?? a;
+  return `linear-gradient(135deg, rgba(${a},0.16) 0%, rgba(${b},0.09) 52%, rgba(8,12,20,0.25) 100%)`;
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -99,6 +119,8 @@ export default function App() {
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
   const [driftOpen, setDriftOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** Open the sheet straight into the naming field (the save-this-mix card). */
+  const [savePrompt, setSavePrompt] = useState(false);
   /** Id of the last loaded scene or saved mix; cleared once the user edits
    *  the mix by hand, so the "playing" badge never lies. */
   const [activeMixId, setActiveMixId] = useState<string | null>(null);
@@ -225,6 +247,7 @@ export default function App() {
       setIsPaused(false);
       setDriftOpen(false);
       setSheetOpen(false);
+      setSavePrompt(false);
       setActiveMixId(null);
     }
   }, [activeSounds.length]);
@@ -497,23 +520,42 @@ export default function App() {
           </div>
         </section>
 
-        {presets.length > 0 && (
+        {(presets.length > 0 || (hasPlayer && activeMixId === null)) && (
           <section className="section" style={{ animationDelay: '0.18s' }}>
             <div className="section-head">
               <h2 className="section-title">your mixes</h2>
+              {presets.length > 0 && (
+                <span className="section-meta">
+                  {presets.length} saved
+                </span>
+              )}
             </div>
             <div className="mix-row" role="list">
               {presets.map((preset) => {
                 const current = activeMixId === preset.id && activeSounds.length > 0;
                 const count = presetSoundIds(preset).length;
+                const cats = presetCategories(preset);
                 return (
                   <div key={preset.id} role="listitem" className={`mix-card${current ? ' current' : ''}`}>
                     <button
                       type="button"
                       className="mix-card-body"
+                      style={{ backgroundImage: mixArt(preset) }}
                       onClick={() => handlePlayPreset(preset)}
                       aria-label={`${current && isPlaying ? 'Pause' : 'Play'} mix ${preset.name}`}
                     >
+                      <span className="mix-icons" aria-hidden="true">
+                        {cats.slice(0, 3).map((cat) => (
+                          <span key={cat} className="material-symbols-rounded">
+                            {CATEGORY_ICONS[cat] ?? 'music_note'}
+                          </span>
+                        ))}
+                      </span>
+                      {current && (
+                        <span className={`mix-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
+                          <span /><span /><span />
+                        </span>
+                      )}
                       <span className="mix-name">{preset.name}</span>
                       <span className="mix-count">{count} layer{count === 1 ? '' : 's'}</span>
                     </button>
@@ -526,6 +568,17 @@ export default function App() {
                   </div>
                 );
               })}
+              {hasPlayer && activeMixId === null && (
+                <button
+                  type="button"
+                  role="listitem"
+                  className="mix-add"
+                  onClick={() => { haptic(8); setSavePrompt(true); setSheetOpen(true); }}
+                >
+                  <span className="material-symbols-rounded" aria-hidden="true">bookmark_add</span>
+                  <span className="mix-add-label">save this mix</span>
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -626,7 +679,8 @@ export default function App() {
 
       <NowPlayingSheet
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        promptSave={savePrompt}
+        onClose={() => { setSheetOpen(false); setSavePrompt(false); }}
         title={mixTitle || 'your mix'}
         activeSounds={activeSounds}
         soundState={soundState}

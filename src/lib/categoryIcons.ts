@@ -11,3 +11,16 @@ export const CATEGORY_ICONS: Record<string, string> = {
   Wildlife: 'raven',
   Cozy:     'self_care',
 };
+
+/** Category accent triplets (`r,g,b`), mirroring the `--cat` values in
+ *  index.css. Used to derive each saved mix's card tint from its layers. */
+export const CATEGORY_COLORS: Record<string, string> = {
+  Water:    '123,167,232',
+  Fire:     '224,158,96',
+  Air:      '159,196,216',
+  Earth:    '163,179,138',
+  Noise:    '170,156,196',
+  Urban:    '143,161,184',
+  Wildlife: '143,191,154',
+  Cozy:     '209,166,114',
+};

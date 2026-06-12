@@ -858,40 +858,44 @@ header::after {
 
 /* ── Presets ─────────────────────────────────────────────────────── */
 
+/* The naming row speaks the same warm language as the save action that
+   reveals it, and slides in rather than popping. */
 .preset-save-row {
   display: flex;
   gap: var(--sp-8);
   margin-bottom: var(--sp-10);
   flex-shrink: 0;
+  animation: fadeSlideUp var(--dur-3) var(--ease) backwards;
 }
 
 .preset-input {
   flex: 1;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 7px var(--sp-12);
+  border: 1px solid var(--warm-line);
+  border-radius: var(--r-md);
+  padding: var(--sp-8) var(--sp-12);
   font-family: var(--font-body);
   font-size: var(--fs-body);
   font-weight: 300;
   color: var(--text-primary);
   outline: none;
-  transition: border-color var(--dur-1);
+  transition: border-color var(--dur-1), background var(--dur-1);
   min-width: 0;
 }
 .preset-input:focus {
-  border-color: rgba(123,167,232,0.3);
+  border-color: rgba(184,154,106,0.5);
+  background: var(--warm-glow);
 }
 .preset-input::placeholder {
   color: var(--text-secondary);
 }
 
 .preset-save-btn {
-  padding: 7px var(--sp-14);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--accent-line);
-  background: var(--accent-tint);
-  color: var(--accent);
+  padding: var(--sp-8) var(--sp-14);
+  border-radius: var(--r-md);
+  border: 1px solid var(--warm-line);
+  background: var(--warm-glow);
+  color: var(--warm);
   font-family: var(--font-body);
   font-size: var(--fs-control);
   font-weight: 400;
@@ -902,8 +906,8 @@ header::after {
   flex-shrink: 0;
 }
 .preset-save-btn:hover:not(:disabled) {
-  background: var(--accent-tint-2);
-  border-color: rgba(123,167,232,0.5);
+  background: rgba(184,154,106,0.2);
+  border-color: rgba(184,154,106,0.5);
 }
 .preset-save-btn:disabled {
   opacity: 0.35;
@@ -1253,7 +1257,9 @@ header::after {
   display: flex;
   gap: var(--sp-10);
   margin: 0 calc(-1 * var(--sp-24));
-  padding: var(--sp-2) var(--sp-24) var(--sp-8);
+  /* Enough vertical padding that focus rings and hover glows never get
+     sliced by the scroll container. */
+  padding: var(--sp-6) var(--sp-24) var(--sp-8);
   overflow-x: auto;
   scroll-snap-type: x proximity;
   /* Snap to the content edge, not the bleed edge: without this, snapped cards
@@ -1262,6 +1268,14 @@ header::after {
   scrollbar-width: none;
 }
 .scene-row::-webkit-scrollbar { display: none; }
+
+/* Shelves dissolve at their side edges instead of hard-clipping mid-card. */
+.scene-row, .mix-row {
+  -webkit-mask-image: linear-gradient(to right,
+    transparent, #000 var(--sp-14), #000 calc(100% - var(--sp-14)), transparent);
+  mask-image: linear-gradient(to right,
+    transparent, #000 var(--sp-14), #000 calc(100% - var(--sp-14)), transparent);
+}
 
 .scene-card {
   position: relative;
@@ -1373,12 +1387,15 @@ header::after {
 }
 
 /* ── Your mixes ──────────────────────────────────────────────────── */
+/* Saved blends as warm-bordered glass cards, each tinted by the hues of its
+   own layers (inline gradient from mixArt()), with the layer-category icons
+   and the same dot-equaliser language as the scenes. */
 
 .mix-row {
   display: flex;
-  gap: var(--sp-8);
+  gap: var(--sp-10);
   margin: 0 calc(-1 * var(--sp-24));
-  padding: var(--sp-2) var(--sp-24) var(--sp-6);
+  padding: var(--sp-6) var(--sp-24) var(--sp-8);
   overflow-x: auto;
   scroll-snap-type: x proximity;
   scroll-padding-inline: var(--sp-24);
@@ -1393,40 +1410,79 @@ header::after {
 }
 .mix-card-body {
   position: relative;
+  width: 148px;
+  height: 104px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-end;
   gap: 3px;
-  min-width: 120px;
-  padding: var(--sp-12) var(--sp-28) var(--sp-12) var(--sp-14);
-  background: var(--surface);
+  padding: var(--sp-10) var(--sp-12) var(--sp-12);
+  background-color: var(--surface);
   border: 1px solid var(--warm-line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   cursor: pointer;
   outline: none;
   text-align: left;
-  /* Warm-tinted glass via the --surface film + hairline; no backdrop blur,
-     and no outer shadow (the scroll row clips it into a hard band). */
+  overflow: hidden;
+  /* Layer-tinted glass via the inline gradient over the --surface film, with
+     the shared light-catching hairline; no outer shadow (the scroll row
+     would clip it into a hard band). */
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
-  transition: background var(--dur-2), border-color var(--dur-2), transform var(--dur-1);
+  transition: border-color var(--dur-2), box-shadow var(--dur-2), transform var(--dur-1);
 }
 .mix-card-body:hover {
-  background: var(--warm-glow);
   border-color: rgba(184,154,106,0.45);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
 }
 .mix-card-body:active { transform: scale(0.98); }
 .mix-card.current .mix-card-body {
-  background: var(--warm-glow);
   border-color: rgba(184,154,106,0.55);
+  box-shadow:
+    0 0 0 1px rgba(184,154,106,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.16);
 }
+.mix-icons {
+  position: absolute;
+  top: var(--sp-10);
+  left: var(--sp-12);
+  display: flex;
+  gap: var(--sp-5);
+  color: rgba(235,238,248,0.55);
+}
+.mix-icons .material-symbols-rounded {
+  font-size: 13px;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+.mix-state {
+  position: absolute;
+  right: var(--sp-12);
+  bottom: var(--sp-14);
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+.mix-state span {
+  display: block;
+  width: 2.5px;
+  height: 7px;
+  border-radius: var(--sp-2);
+  background: rgba(232,222,200,0.85);
+  box-shadow: 0 0 4px rgba(216,194,150,0.5);
+}
+.mix-state.playing span:nth-child(1) { animation: eqBounce 1.6s 0.0s  ease-in-out infinite; }
+.mix-state.playing span:nth-child(2) { animation: eqBounce 1.6s 0.38s ease-in-out infinite; }
+.mix-state.playing span:nth-child(3) { animation: eqBounce 1.6s 0.76s ease-in-out infinite; }
 .mix-name {
+  width: 100%;
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
   font-size: 16px;
   letter-spacing: 0.03em;
+  line-height: 1.15;
   color: var(--text-bright);
-  max-width: 9.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1440,8 +1496,8 @@ header::after {
   position: absolute;
   top: var(--sp-6);
   right: var(--sp-6);
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1450,13 +1506,49 @@ header::after {
   background: transparent;
   color: var(--text-dim);
   font-family: var(--font-body);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   cursor: pointer;
   transition: color var(--dur-1), background var(--dur-1);
   outline: none;
 }
 .mix-del:hover { color: var(--danger); background: var(--danger-tint); }
+
+/* The ghost card: invites saving the hand-built mix that's playing now.
+   Dashed warm outline, same footprint as a saved card. */
+.mix-add {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: 148px;
+  height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-6);
+  background: transparent;
+  border: 1px dashed var(--warm-line);
+  border-radius: var(--r-xl);
+  color: var(--warm);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--dur-2), background var(--dur-2);
+}
+.mix-add .material-symbols-rounded {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+}
+.mix-add-label {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+.mix-add:hover {
+  border-color: rgba(184,154,106,0.45);
+  background: var(--warm-glow);
+}
 
 /* ── Cookie / storage notice ─────────────────────────────────────── */
 
@@ -1971,6 +2063,7 @@ header::after {
 .cat-pill:focus-visible,
 .scene-card:focus-visible,
 .mix-card-body:focus-visible,
+.mix-add:focus-visible,
 .mix-del:focus-visible,
 .mp-play:focus-visible,
 .mp-body:focus-visible,
