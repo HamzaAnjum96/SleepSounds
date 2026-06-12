@@ -862,13 +862,13 @@ header::after {
 
 /* ── Presets ─────────────────────────────────────────────────────── */
 
-/* The naming row speaks the same warm language as the save action that
-   reveals it, and slides in rather than popping. */
+/* The naming row takes the save-mix button's own slot (right half of the
+   actions row), so it never sprawls a full-width line of its own. */
 .preset-save-row {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  gap: var(--sp-8);
-  margin-bottom: var(--sp-10);
-  flex-shrink: 0;
+  gap: var(--sp-6);
   animation: fadeSlideUp var(--dur-3) var(--ease) backwards;
 }
 
@@ -877,7 +877,7 @@ header::after {
   background: var(--surface);
   border: 1px solid var(--warm-line);
   border-radius: var(--r-md);
-  padding: var(--sp-8) var(--sp-12);
+  padding: var(--sp-8) var(--sp-10);
   font-family: var(--font-body);
   font-size: var(--fs-body);
   font-weight: 300;

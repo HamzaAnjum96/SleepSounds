@@ -334,39 +334,39 @@ export default function NowPlayingSheet({
               <span className="material-symbols-rounded">bedtime</span>
               drift mode
             </button>
-            <button
-              type="button"
-              className="sheet-action warm"
-              onClick={() => setSaving((v) => !v)}
-              disabled={activeSounds.length === 0}
-            >
-              <span className="material-symbols-rounded">bookmark_add</span>
-              save mix
-            </button>
-          </div>
-
-          {saving && (
-            <div className="preset-save-row">
-              <input
-                className="preset-input"
-                placeholder="name this mix…"
-                value={name}
-                maxLength={40}
-                autoFocus
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSave();
-                  if (e.key === 'Escape') { e.stopPropagation(); setSaving(false); setName(''); }
-                }}
-              />
+            {!saving ? (
               <button
                 type="button"
-                className="preset-save-btn"
-                disabled={!name.trim()}
-                onClick={handleSave}
-              >save</button>
-            </div>
-          )}
+                className="sheet-action warm"
+                onClick={() => setSaving(true)}
+                disabled={activeSounds.length === 0}
+              >
+                <span className="material-symbols-rounded">bookmark_add</span>
+                save mix
+              </button>
+            ) : (
+              <div className="preset-save-row">
+                <input
+                  className="preset-input"
+                  placeholder="name this mix…"
+                  value={name}
+                  maxLength={40}
+                  autoFocus
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSave();
+                    if (e.key === 'Escape') { e.stopPropagation(); setSaving(false); setName(''); }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="preset-save-btn"
+                  disabled={!name.trim()}
+                  onClick={handleSave}
+                >save</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
