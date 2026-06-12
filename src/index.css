@@ -1540,40 +1540,10 @@ header::after {
 }
 .mix-del:hover { color: var(--danger); background: var(--danger-tint); }
 
-/* The ghost card: invites saving the hand-built mix that's playing now.
-   Dashed warm outline, same footprint as a saved card. */
-.mix-add {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  width: 148px;
-  height: 104px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-6);
-  background: transparent;
-  border: 1px dashed var(--warm-line);
-  border-radius: var(--r-xl);
-  color: var(--warm);
-  cursor: pointer;
-  outline: none;
-  transition: border-color var(--dur-2), background var(--dur-2);
-}
-.mix-add .material-symbols-rounded {
-  font-size: 18px;
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
-}
-.mix-add-label {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 15px;
-  letter-spacing: 0.04em;
-}
-.mix-add:hover {
-  border-color: rgba(184,154,106,0.45);
-  background: var(--warm-glow);
+/* Italic serif overhangs its advance width; ellipsized titles need a hair of
+   inner end-padding or overflow:hidden shaves the last letter's slant. */
+.mix-name, .mp-title, .sheet-title, .sb-title {
+  padding-right: 0.14em;
 }
 
 /* ── Cookie / storage notice ─────────────────────────────────────── */
@@ -2092,7 +2062,6 @@ header::after {
 .cat-pill:focus-visible,
 .scene-card:focus-visible,
 .mix-card-body:focus-visible,
-.mix-add:focus-visible,
 .mix-del:focus-visible,
 .mp-play:focus-visible,
 .mp-body:focus-visible,

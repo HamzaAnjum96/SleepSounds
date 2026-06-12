@@ -173,9 +173,7 @@ scene). Tapping plays instantly; tapping the playing scene pauses. A hand-edit
 of the mix clears the scene badge so it never lies. **Your mixes** are saved
 presets as warm-bordered glass cards, each tinted by a gradient derived from
 its own layers' category hues, with the layer icons, a serif name, layer
-count, the dot-equaliser playing mark, and delete. While a hand-built (unsaved)
-mix plays, the shelf ends in a dashed "save this mix" ghost card that opens
-the now-playing sheet straight into the naming field. Both shelves dissolve at
+count, the dot-equaliser playing mark, and delete. Both shelves dissolve at
 their side edges (mask fade) instead of hard-clipping mid-card.
 
 ## Components

@@ -30,8 +30,6 @@ function endsAround(secondsLeft: number) {
 
 interface NowPlayingSheetProps {
   open: boolean;
-  /** Open straight into the naming field (the save-this-mix card). */
-  promptSave?: boolean;
   onClose: () => void;
   title: string;
   activeSounds: Sound[];
@@ -62,7 +60,6 @@ interface DragState {
 
 export default function NowPlayingSheet({
   open,
-  promptSave = false,
   onClose,
   title,
   activeSounds,
@@ -113,11 +110,6 @@ export default function NowPlayingSheet({
       restoreFocusRef.current = null;
     }
   }, [open]);
-
-  // Arriving via "save this mix": open with the naming field ready.
-  useEffect(() => {
-    if (open && promptSave) setSaving(true);
-  }, [open, promptSave]);
 
   useEffect(() => {
     if (!open) return;

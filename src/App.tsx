@@ -119,8 +119,6 @@ export default function App() {
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
   const [driftOpen, setDriftOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  /** Open the sheet straight into the naming field (the save-this-mix card). */
-  const [savePrompt, setSavePrompt] = useState(false);
   /** Id of the last loaded scene or saved mix; cleared once the user edits
    *  the mix by hand, so the "playing" badge never lies. */
   const [activeMixId, setActiveMixId] = useState<string | null>(null);
@@ -247,7 +245,6 @@ export default function App() {
       setIsPaused(false);
       setDriftOpen(false);
       setSheetOpen(false);
-      setSavePrompt(false);
       setActiveMixId(null);
     }
   }, [activeSounds.length]);
@@ -520,15 +517,13 @@ export default function App() {
           </div>
         </section>
 
-        {(presets.length > 0 || (hasPlayer && activeMixId === null)) && (
+        {presets.length > 0 && (
           <section className="section" style={{ animationDelay: '0.18s' }}>
             <div className="section-head">
               <h2 className="section-title">your mixes</h2>
-              {presets.length > 0 && (
-                <span className="section-meta">
-                  {presets.length} saved
-                </span>
-              )}
+              <span className="section-meta">
+                {presets.length} saved
+              </span>
             </div>
             <div className="mix-row" role="list">
               {presets.map((preset) => {
@@ -568,17 +563,6 @@ export default function App() {
                   </div>
                 );
               })}
-              {hasPlayer && activeMixId === null && (
-                <button
-                  type="button"
-                  role="listitem"
-                  className="mix-add"
-                  onClick={() => { haptic(8); setSavePrompt(true); setSheetOpen(true); }}
-                >
-                  <span className="material-symbols-rounded" aria-hidden="true">bookmark_add</span>
-                  <span className="mix-add-label">save this mix</span>
-                </button>
-              )}
             </div>
           </section>
         )}
@@ -686,8 +670,7 @@ export default function App() {
 
       <NowPlayingSheet
         open={sheetOpen}
-        promptSave={savePrompt}
-        onClose={() => { setSheetOpen(false); setSavePrompt(false); }}
+        onClose={() => setSheetOpen(false)}
         title={mixTitle || 'your mix'}
         activeSounds={activeSounds}
         soundState={soundState}
