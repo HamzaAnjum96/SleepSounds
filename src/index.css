@@ -493,20 +493,16 @@ header::after {
 
 /* ── Category Pills ──────────────────────────────────────────────── */
 
-/* One quiet line that scrolls, like the shelves above it — the wrapped grid
-   of pills cost three rows of vertical calm on phones. */
+/* The filters wrap in place — no scrolling shelf here; every family stays
+   visible at a glance. */
 .cat-pills {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  width: 100%;
   gap: var(--sp-4);
-  margin: 0 calc(-1 * var(--sp-24)) var(--sp-12);
-  padding: var(--sp-2) var(--sp-24) var(--sp-4);
-  overflow-x: auto;
-  scroll-padding-inline: var(--sp-24);
-  scrollbar-width: none;
+  margin-bottom: var(--sp-12);
 }
-.cat-pills::-webkit-scrollbar { display: none; }
-.cat-pill { flex-shrink: 0; white-space: nowrap; }
+.cat-pill { white-space: nowrap; }
 
 .cat-pill {
   --cat: 123,167,232;            /* "All" falls back to the accent blue */
@@ -544,8 +540,8 @@ header::after {
 .cat-pill.active .cat-icon {
   opacity: 1;
 }
-/* The count badge holds its slot invisibly until a sound in that family is
-   actually playing — the old hollow ring on every pill was pure noise. */
+/* The count badge rests as an empty ring — a quiet "nothing from this family
+   yet" — and fills with the category hue once its sounds are playing. */
 .cat-count {
   display: inline-flex;
   align-items: center;
@@ -553,21 +549,19 @@ header::after {
   width: 15px;
   height: 15px;
   border-radius: var(--r-full);
+  border: 1px solid rgba(255,255,255,0.18);
   background: var(--surface-faint);
   color: transparent;
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
-  opacity: 0;
-  transform: scale(0.6);
-  transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+  transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
 }
 .cat-count.active {
+  border-color: transparent;
   background: rgb(var(--cat));
   color: #0a0f1a;
-  opacity: 1;
-  transform: scale(1);
 }
 
 /* ── First-run whisper ───────────────────────────────────────────── */
@@ -1316,7 +1310,7 @@ header::after {
 .scene-row::-webkit-scrollbar { display: none; }
 
 /* Shelves dissolve at their side edges instead of hard-clipping mid-card. */
-.scene-row, .mix-row, .cat-pills {
+.scene-row, .mix-row {
   -webkit-mask-image: linear-gradient(to right,
     transparent, #000 var(--sp-14), #000 calc(100% - var(--sp-14)), transparent);
   mask-image: linear-gradient(to right,
