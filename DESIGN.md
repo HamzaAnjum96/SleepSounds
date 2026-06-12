@@ -81,7 +81,9 @@ All ≥7:1 on `--bg`.
 Two families on a contrast axis (serif display + humanist sans), plus mono for
 the dev sound-editor readouts. Never more than these three.
 
-- `--font-display`: **Cormorant** italic — the `drift` wordmark and footer line only.
+- `--font-display`: **Cormorant** italic — the `drift` wordmark, the brand
+  moments in the scale below, and the whole footer (rest-well line, privacy
+  link, version).
 - `--font-body`: **Inter** (300/400/500) — everything else.
 - `--font-mono`: SF Mono / Fira Code — sound-editor values.
 
@@ -178,7 +180,8 @@ Shared interactive vocabulary:
 - **Pill / chip** — category filters, preset chips, timer chips, sound-editor
   buttons. 1px border, transparent fill, `--fs-control`, accent or warm on
   active. The recurring control primitive.
-- **Card** — sound tile: icon, name, dot↔equaliser indicator, reveal-on-active
+- **Card** — sound tile: category-tinted icon (a quiet trace of the family hue
+  even at rest), name, dot↔equaliser indicator, reveal-on-active
   volume slider, optional editor handle. `--r-xl`, `--surface`, accent glow when
   active. Two-column grid.
 - **Slider** — `.drift-slider`: 2px track, 10px accent thumb, accent fill via the

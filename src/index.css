@@ -215,8 +215,20 @@ button, .material-symbols-rounded {
 /* ── Header / wordmark lockup ────────────────────────────────────── */
 
 header {
-  padding: calc(env(safe-area-inset-top, 0px) + var(--sp-44)) 0 var(--sp-28);
+  position: relative;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--sp-44)) 0 var(--sp-24);
+  margin-bottom: var(--sp-16);
   animation: fadeSlideDown var(--dur-enter) var(--ease) both;
+}
+/* A hairline that breathes out at the edges: quiet structure under the
+   wordmark without a hard rule. */
+header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent, rgba(255,255,255,0.09) 28%, rgba(255,255,255,0.09) 72%, transparent);
 }
 
 .wordmark {
@@ -505,6 +517,8 @@ header {
 .cat-pill.active .cat-icon {
   opacity: 1;
 }
+/* The count badge holds its slot invisibly until a sound in that family is
+   actually playing — the old hollow ring on every pill was pure noise. */
 .cat-count {
   display: inline-flex;
   align-items: center;
@@ -512,18 +526,21 @@ header {
   width: 15px;
   height: 15px;
   border-radius: var(--r-full);
-  border: 1px solid rgba(255,255,255,0.18);
   background: var(--surface-faint);
   color: transparent;
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
 }
 .cat-count.active {
-  border-color: transparent;
   background: rgb(var(--cat));
   color: #0a0f1a;
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* ── First-run whisper ───────────────────────────────────────────── */
@@ -605,6 +622,10 @@ header {
   cursor: pointer;
   display: block;
 }
+.sound-card {
+  /* The same light-catching top hairline as the glass surfaces. */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
 .sound-card:hover {
   background: var(--surface-hover);
   border-color: rgba(255,255,255,0.11);
@@ -615,7 +636,9 @@ header {
 .sound-card.active {
   background: rgba(var(--cat), 0.07);
   border-color: rgba(var(--cat), 0.32);
-  box-shadow: 0 0 24px rgba(var(--cat), 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--cat), 0.18),
+    0 0 24px rgba(var(--cat), 0.16);
 }
 
 .card-top {
@@ -624,12 +647,17 @@ header {
   justify-content: space-between;
   margin-bottom: var(--sp-12);
 }
+/* Icons carry a quiet trace of their family hue even at rest, so the grid
+   reads as a collection rather than a wall of identical gray tiles. */
 .card-icon {
   font-size: 18px;
-  color: var(--text-secondary);
+  color: rgba(var(--cat), 0.62);
   font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 20;
   line-height: 1;
   transition: color var(--dur-2);
+}
+.sound-card:hover .card-icon {
+  color: rgba(var(--cat), 0.85);
 }
 .sound-card.active .card-icon {
   color: var(--card-accent);
@@ -891,15 +919,15 @@ header {
   color: var(--text-dim);
 }
 
-/* Lowercase and quiet, in the app's own voice: the old uppercase eyebrow
-   treatment turned "v2.11.3" into "V2.11.3" and read as a different font. */
+/* The footer signs off in the display serif, like the wordmark it echoes. */
 .footer-meta {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--sp-8);
-  font-family: var(--font-body);
-  font-size: var(--fs-control);
-  font-weight: 300;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14px;
   letter-spacing: 0.08em;
   color: var(--text-dim);
 }
@@ -1856,8 +1884,32 @@ header {
   font-size: var(--fs-eyebrow);
   font-weight: 300;
   letter-spacing: 0.04em;
-  color: var(--text-dim);
+  color: var(--text-secondary);
 }
+
+/* Quiet text affordance: ends and clears the whole mix from the sheet. */
+.sheet-clear {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-eyebrow);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  transition: color var(--dur-1);
+}
+.sheet-clear::before {
+  content: '';
+  position: absolute;
+  inset: -10px -6px;
+}
+.sheet-clear:hover { color: var(--danger); }
+.sheet-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .sheet-actions {
   display: flex;

@@ -641,6 +641,7 @@ export default function App() {
         onTimerSelect={handleTimerSelect}
         onTimerExtend={handleTimerExtend}
         onTimerClear={handleTimerClear}
+        onClearMix={() => { stopAll(); setIsPaused(false); }}
         onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
         onSave={handleSaveMix}
       />

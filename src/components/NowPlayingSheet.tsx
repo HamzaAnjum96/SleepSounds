@@ -16,8 +16,9 @@ export const TIMER_PRESETS = [
   { label: '15m', secs: 15 * 60 },
   { label: '30m', secs: 30 * 60 },
   { label: '1h',  secs: 60 * 60 },
-  { label: '90m', secs: 90 * 60 },
   { label: '2h',  secs: 120 * 60 },
+  { label: '4h',  secs: 240 * 60 },
+  { label: '8h',  secs: 480 * 60 },
 ];
 
 const CLOSE_MS = 260;
@@ -44,6 +45,7 @@ interface NowPlayingSheetProps {
   onTimerSelect: (secs: number) => void;
   onTimerExtend: (secs: number) => void;
   onTimerClear: () => void;
+  onClearMix: () => void;
   onDrift: () => void;
   onSave: (name: string) => void;
 }
@@ -73,6 +75,7 @@ export default function NowPlayingSheet({
   onTimerSelect,
   onTimerExtend,
   onTimerClear,
+  onClearMix,
   onDrift,
   onSave,
 }: NowPlayingSheetProps) {
@@ -160,6 +163,13 @@ export default function NowPlayingSheet({
     setSaving(false);
   }, [name, onSave]);
 
+  /** End the whole mix: let the sheet slide away first, then stop the sound. */
+  const handleClearMix = useCallback(() => {
+    haptic(10);
+    requestClose();
+    window.setTimeout(onClearMix, CLOSE_MS);
+  }, [onClearMix, requestClose]);
+
   if (!open) return null;
 
   return (
@@ -204,6 +214,17 @@ export default function NowPlayingSheet({
 
         <div className="sheet-scroll">
           <div className="sheet-layers">
+            <div className="sheet-row-head">
+              <span className="sheet-label">the mix</span>
+              {activeSounds.length > 0 && (
+                <button
+                  type="button"
+                  className="sheet-clear"
+                  onClick={handleClearMix}
+                  aria-label="Stop and clear the whole mix"
+                >clear all</button>
+              )}
+            </div>
             {activeSounds.map((sound) => {
               const volume = soundState[sound.id]?.volume ?? 0.5;
               return (
