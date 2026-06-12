@@ -235,6 +235,21 @@ export default function App() {
     setKeepAlive(isPlaying);
   }, [isPlaying]);
 
+  // Scene deep links (?scene=builtin-rainfall) power the app-icon shortcuts.
+  // If autoplay is blocked (no gesture on launch), the mix loads paused with
+  // the mini player ready: one tap to play.
+  const launchedRef = useRef(false);
+  useEffect(() => {
+    if (launchedRef.current) return;
+    launchedRef.current = true;
+    const sceneId = new URLSearchParams(window.location.search).get('scene');
+    if (!sceneId) return;
+    const scene = SCENES.find((s) => s.preset.id === sceneId);
+    if (scene) handlePlayPreset(scene.preset);
+    // Clean the param so refreshes don't re-trigger.
+    window.history.replaceState(null, '', window.location.pathname);
+  }, [handlePlayPreset]);
+
   // Media Session API — powers lock-screen / notification player on Android & iOS
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;

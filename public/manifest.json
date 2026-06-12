@@ -1,10 +1,14 @@
 {
+  "id": "./",
   "name": "drift away — sleep sounds",
   "short_name": "drift away",
   "description": "Blend soothing layers to relax, focus, or drift to sleep.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#080c14",
   "theme_color": "#080c14",
   "orientation": "portrait",
@@ -39,6 +43,23 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Rainfall",
+      "url": "./?scene=builtin-rainfall",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Fireside",
+      "url": "./?scene=builtin-fireside",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Deep Rest",
+      "url": "./?scene=builtin-deep-rest",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

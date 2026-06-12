@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.11.0
+- **App-icon shortcuts + scene deep links.** Long-press the installed app icon (Android; right-click on desktop) for Rainfall / Fireside / Deep Rest shortcuts. They use `?scene=<id>` deep links, which the app now resolves on launch (autoplay-blocked launches load the mix paused, one tap to play). Manifest also gains `id`, `lang`, `dir`, and `display_override`.
+
 ### 2.10.0
 - **Offline support.** Added a service worker (`public/sw.js`, registered in production): the app shell, hashed assets, icons, worklets, and fonts are cached so drift away opens and plays with no signal — sounds are generated on-device, so offline is fully functional. Navigations stay network-first, so deploys are picked up on the next online visit.
 
