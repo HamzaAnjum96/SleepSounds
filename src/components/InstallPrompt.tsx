@@ -19,6 +19,20 @@ interface BeforeInstallPromptEvent extends Event {
 type Win = typeof window & { __driftInstall?: BeforeInstallPromptEvent | null };
 
 const DISMISS_KEY = 'drift-install-dismissed';
+/** A dismissal hides the row for this long, not forever — so the prompt comes
+ *  back after an uninstall (or a change of heart). */
+const DISMISS_FOR_MS = 14 * 24 * 60 * 60 * 1000;
+
+function dismissedRecently(): boolean {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY);
+    if (raw === null) return false;
+    const at = Number(raw);
+    // Legacy value ('1') or garbage: treat as expired so the row can return.
+    if (!Number.isFinite(at)) return false;
+    return Date.now() - at < DISMISS_FOR_MS;
+  } catch { return false; }
+}
 
 function isStandalone() {
   return (
@@ -37,10 +51,7 @@ function isIosSafari() {
 }
 
 export default function InstallPrompt() {
-  const [dismissed, setDismissed] = useState(() => {
-    try { return localStorage.getItem(DISMISS_KEY) !== null; }
-    catch { return false; }
-  });
+  const [dismissed, setDismissed] = useState(dismissedRecently);
   const [installable, setInstallable] = useState(() => Boolean((window as Win).__driftInstall));
   const [ios, setIos] = useState(false);
 
@@ -48,9 +59,12 @@ export default function InstallPrompt() {
     if (isStandalone()) { setInstallable(false); setIos(false); return; }
 
     const onInstallable = () => setInstallable(true);
+    // Once installed, Chrome stops firing beforeinstallprompt, so the row
+    // hides naturally — do NOT persist a flag here, or the prompt could never
+    // return after an uninstall (localStorage outlives the app).
     const onInstalled = () => {
       setInstallable(false);
-      try { localStorage.setItem(DISMISS_KEY, '1'); } catch { /* private mode */ }
+      try { localStorage.removeItem(DISMISS_KEY); } catch { /* private mode */ }
     };
     window.addEventListener('drift-installable', onInstallable);
     window.addEventListener('drift-installed', onInstalled);
@@ -79,9 +93,12 @@ export default function InstallPrompt() {
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);
-    try { localStorage.setItem(DISMISS_KEY, '1'); } catch { /* private mode */ }
+    try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* private mode */ }
   }, []);
 
+  // Hide while recently dismissed, or when there's nothing to offer. A stale
+  // legacy flag never suppresses: dismissedRecently() treats it as expired,
+  // so the row returns after an uninstall once Chrome fires the event again.
   if (dismissed || (!installable && !ios)) return null;
 
   return (
