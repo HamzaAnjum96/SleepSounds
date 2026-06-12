@@ -493,13 +493,20 @@ header::after {
 
 /* ── Category Pills ──────────────────────────────────────────────── */
 
+/* One quiet line that scrolls, like the shelves above it — the wrapped grid
+   of pills cost three rows of vertical calm on phones. */
 .cat-pills {
   display: flex;
-  flex-wrap: wrap;
-  width: 100%;
+  flex-wrap: nowrap;
   gap: var(--sp-4);
-  margin-bottom: var(--sp-12);
+  margin: 0 calc(-1 * var(--sp-24)) var(--sp-12);
+  padding: var(--sp-2) var(--sp-24) var(--sp-4);
+  overflow-x: auto;
+  scroll-padding-inline: var(--sp-24);
+  scrollbar-width: none;
 }
+.cat-pills::-webkit-scrollbar { display: none; }
+.cat-pill { flex-shrink: 0; white-space: nowrap; }
 
 .cat-pill {
   --cat: 123,167,232;            /* "All" falls back to the accent blue */
@@ -705,6 +712,9 @@ header::after {
   to { transform: rotate(360deg); }
 }
 
+/* The dot appears only once a sound is in the mix (accent when paused, then
+   crossfades to the equaliser while playing). A gray dot on all 18 resting
+   cards was grid noise that said nothing. */
 .card-dot {
   position: absolute;
   top: 50%; left: 50%;
@@ -712,11 +722,13 @@ header::after {
   width: 5px; height: 5px;
   border-radius: var(--r-full);
   background: var(--text-dim);
+  opacity: 0;
   transition: background var(--dur-3), box-shadow var(--dur-3), opacity 0.28s, transform 0.28s;
 }
 .card-dot.active {
   background: var(--card-accent);
   box-shadow: 0 0 6px var(--card-accent);
+  opacity: 1;
 }
 .sound-card.playing .card-dot {
   opacity: 0;
@@ -817,6 +829,9 @@ header::after {
   flex-shrink: 0;
 }
 
+/* A bare dim glyph at rest; the circle chrome only materialises when the
+   card is hovered, active, or the editor is open. Eighteen outlined circles
+   at once read as buttons shouting from every tile. */
 .card-editor-icon {
   position: absolute;
   right: var(--sp-10);
@@ -824,14 +839,19 @@ header::after {
   width: 24px;
   height: 24px;
   border-radius: var(--r-full);
-  border: 1px solid var(--border);
-  background: var(--surface-faint);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-dim);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1);
+}
+.sound-card:hover .card-editor-icon,
+.sound-card.active .card-editor-icon {
+  border-color: var(--border);
+  background: var(--surface-faint);
 }
 .card-editor-icon .material-symbols-rounded {
   font-size: 14px;
@@ -841,7 +861,7 @@ header::after {
   color: var(--text-secondary);
   border-color: rgba(255,255,255,0.2);
 }
-.card-editor-icon.active {
+.sound-card .card-editor-icon.active {
   color: var(--card-accent);
   border-color: rgba(var(--cat), 0.3);
   background: rgba(var(--cat), 0.1);
@@ -1296,7 +1316,7 @@ header::after {
 .scene-row::-webkit-scrollbar { display: none; }
 
 /* Shelves dissolve at their side edges instead of hard-clipping mid-card. */
-.scene-row, .mix-row {
+.scene-row, .mix-row, .cat-pills {
   -webkit-mask-image: linear-gradient(to right,
     transparent, #000 var(--sp-14), #000 calc(100% - var(--sp-14)), transparent);
   mask-image: linear-gradient(to right,

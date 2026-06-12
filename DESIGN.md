@@ -233,7 +233,9 @@ not fluid, except the wordmark.
 
 ## Sound engine
 
-All sound is generated in the browser; nothing is streamed. Two synthesis
+All sound is generated in the browser; nothing is streamed. Synthesis is
+lazy: no WAV is rendered at page load — each sound pays its ~50ms generation
+cost inside the tap that first plays it, under the card spinner. Two synthesis
 paths: most sounds are procedural WAV loops crossfaded by `useAudioMixer`,
 while the event-driven ones run as live **AudioWorklet** generators off the
 main thread — Fire and Birdsong, and (v2.1) Rain, Thunder, and Windy Forest.

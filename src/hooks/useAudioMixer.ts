@@ -32,8 +32,13 @@ interface MixerSource {
 }
 
 class CrossfadeAudio implements MixerSource {
-  private _url: string;
-  private _els: [HTMLAudioElement, HTMLAudioElement];
+  /** Lazily resolved: the WAV is synthesized and elements built on first
+   *  play, never at page load. */
+  private _getUrl: () => string;
+  private _url: string | null = null;
+  /** Set by swapUrl() before the elements exist (tuning an unplayed sound). */
+  private _urlOverride: string | null = null;
+  private _els: [HTMLAudioElement, HTMLAudioElement] | null = null;
   private _cur = 0;
   private _targetVol = 0;
   private _xfading = false;
@@ -45,26 +50,37 @@ class CrossfadeAudio implements MixerSource {
   private _playbackRate = 1;
   private _gainMultiplier = 1;
 
-  constructor(url: string) {
-    this._url = url;
-    this._els = [this._make(), this._make()];
+  constructor(getUrl: () => string) {
+    this._getUrl = getUrl;
     this._timeupdateA = () => this._check(0);
     this._timeupdateB = () => this._check(1);
+  }
+
+  private _ensureEls(): [HTMLAudioElement, HTMLAudioElement] {
+    if (this._els) return this._els;
+    this._url = this._urlOverride ?? this._getUrl();
+    this._urlOverride = null;
+    this._els = [this._make(), this._make()];
     this._els[0].addEventListener('timeupdate', this._timeupdateA);
     this._els[1].addEventListener('timeupdate', this._timeupdateB);
+    this._els.forEach((el) => {
+      el.playbackRate = this._playbackRate;
+      el.defaultPlaybackRate = this._playbackRate;
+    });
+    return this._els;
   }
 
   private _make() {
-    const el = new Audio(this._url);
+    const el = new Audio(this._url ?? undefined);
     el.preload = 'auto';
     return el;
   }
 
   private get _primary() {
-    return this._els[this._cur];
+    return this._ensureEls()[this._cur];
   }
   private get _secondary() {
-    return this._els[1 - this._cur];
+    return this._ensureEls()[1 - this._cur];
   }
 
   private _startMonitor() {
@@ -87,7 +103,7 @@ class CrossfadeAudio implements MixerSource {
   }
 
   private _check(idx: number) {
-    if (idx !== this._cur || this._xfading) return;
+    if (!this._els || idx !== this._cur || this._xfading) return;
     const el = this._els[idx];
     if (el.paused || !isFinite(el.duration) || el.duration <= 0) return;
     const timeLeft = el.duration - el.currentTime;
@@ -139,14 +155,17 @@ class CrossfadeAudio implements MixerSource {
 
   set volume(v: number) {
     this._targetVol = v;
-    if (!this._xfading) this._primary.volume = Math.min(1, v * this._gainMultiplier);
+    if (this._els && !this._xfading) {
+      this._els[this._cur].volume = Math.min(1, v * this._gainMultiplier);
+    }
   }
 
   get paused() {
-    return this._primary.paused;
+    return !this._els || this._els[this._cur].paused;
   }
 
   async play() {
+    this._ensureEls();
     this._active = true;
     this._startMonitor();
     this._primary.volume = Math.min(1, this._targetVol * this._gainMultiplier);
@@ -156,16 +175,23 @@ class CrossfadeAudio implements MixerSource {
   applyTuning(tuning: { playbackRate: number; gainMultiplier: number }) {
     this._playbackRate = Math.min(1.7, Math.max(0.6, tuning.playbackRate));
     this._gainMultiplier = Math.min(1.45, Math.max(0.6, tuning.gainMultiplier));
-    this._els.forEach((el) => {
+    this._els?.forEach((el) => {
       el.playbackRate = this._playbackRate;
       el.defaultPlaybackRate = this._playbackRate;
     });
-    if (!this._xfading) {
-      this._primary.volume = Math.min(1, this._targetVol * this._gainMultiplier);
+    if (this._els && !this._xfading) {
+      this._els[this._cur].volume = Math.min(1, this._targetVol * this._gainMultiplier);
     }
   }
 
   swapUrl(newUrl: string) {
+    // Never played: just remember the new URL for when the elements are built.
+    if (!this._els) {
+      if (this._urlOverride) URL.revokeObjectURL(this._urlOverride);
+      this._urlOverride = newUrl;
+      return;
+    }
+
     const oldUrl = this._url;
     this._url = newUrl;
 
@@ -184,24 +210,25 @@ class CrossfadeAudio implements MixerSource {
         el.playbackRate = this._playbackRate;
         el.defaultPlaybackRate = this._playbackRate;
       });
-      URL.revokeObjectURL(oldUrl);
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
       return;
     }
 
     // Currently playing: quick crossfade to new URL
     this._clearXfade();
+    const els = this._els;
     const outEl = this._primary;
     const secIdx = 1 - this._cur as 0 | 1;
 
     // Replace secondary element with new URL
-    this._els[secIdx].removeEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
-    this._els[secIdx].pause();
-    this._els[secIdx] = this._make();
-    this._els[secIdx].playbackRate = this._playbackRate;
-    this._els[secIdx].defaultPlaybackRate = this._playbackRate;
-    this._els[secIdx].addEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
+    els[secIdx].removeEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
+    els[secIdx].pause();
+    els[secIdx] = this._make();
+    els[secIdx].playbackRate = this._playbackRate;
+    els[secIdx].defaultPlaybackRate = this._playbackRate;
+    els[secIdx].addEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
 
-    const inEl = this._els[secIdx];
+    const inEl = els[secIdx];
     inEl.currentTime = 0;
     inEl.volume = 0;
     void inEl.play();
@@ -229,31 +256,30 @@ class CrossfadeAudio implements MixerSource {
 
         // Update the now-inactive element with new URL too
         const nowSecIdx = 1 - this._cur as 0 | 1;
-        this._els[nowSecIdx].removeEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
-        this._els[nowSecIdx].pause();
-        this._els[nowSecIdx] = this._make();
-        this._els[nowSecIdx].playbackRate = this._playbackRate;
-        this._els[nowSecIdx].defaultPlaybackRate = this._playbackRate;
-        this._els[nowSecIdx].addEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
+        els[nowSecIdx].removeEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
+        els[nowSecIdx].pause();
+        els[nowSecIdx] = this._make();
+        els[nowSecIdx].playbackRate = this._playbackRate;
+        els[nowSecIdx].defaultPlaybackRate = this._playbackRate;
+        els[nowSecIdx].addEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
       }
     }, SWAP_MS / SWAP_STEPS);
 
-    URL.revokeObjectURL(oldUrl);
+    if (oldUrl) URL.revokeObjectURL(oldUrl);
   }
 
   pause() {
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
-    this._primary.pause();
-    this._secondary.pause();
+    this._els?.forEach((el) => el.pause());
   }
 
   stop() {
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
-    this._els.forEach((el) => {
+    this._els?.forEach((el) => {
       el.pause();
       el.currentTime = 0;
     });
@@ -264,6 +290,7 @@ class CrossfadeAudio implements MixerSource {
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
+    if (!this._els) return;
     this._els[0].removeEventListener('timeupdate', this._timeupdateA);
     this._els[1].removeEventListener('timeupdate', this._timeupdateB);
     this._els.forEach((el) => {
@@ -431,9 +458,9 @@ class WorkletWithFallback implements MixerSource {
   private _volume = 0;
   private failedOver = false;
 
-  constructor(cfg: WorkletConfig, fallbackUrl: string) {
+  constructor(cfg: WorkletConfig, getFallbackUrl: () => string) {
     this.primary = new WorkletSource(cfg);
-    this.fallback = new CrossfadeAudio(fallbackUrl);
+    this.fallback = new CrossfadeAudio(getFallbackUrl);
     this.active = this.primary;
   }
 
@@ -470,9 +497,11 @@ class WorkletWithFallback implements MixerSource {
 }
 
 const makeSource = (sound: Sound): MixerSource => {
+  // `sound.url` stays a lazy getter behind these closures: no WAV is
+  // synthesized until a source actually needs to play it.
   const cfg = WORKLET_CONFIGS[sound.id];
-  if (cfg) return new WorkletWithFallback(cfg, sound.url);
-  return new CrossfadeAudio(sound.url);
+  if (cfg) return new WorkletWithFallback(cfg, () => sound.url);
+  return new CrossfadeAudio(() => sound.url);
 };
 
 export const useAudioMixer = (sounds: Sound[]) => {

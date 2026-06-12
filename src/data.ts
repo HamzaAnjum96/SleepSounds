@@ -1015,33 +1015,47 @@ function genHeartbeat(params?: Record<string, number>): string {
 
 // ── Sound library ──────────────────────────────────────────────────────────
 
+/** A sound whose WAV is synthesized on first use, not at page load. Eagerly
+ *  generating all 18 loops blocked startup for over a second on mid-range
+ *  phones; lazily, the app paints instantly and each sound pays its ~50ms
+ *  synthesis cost inside the tap that first plays it (under its spinner). */
+function lazySound(id: string, name: string, category: string, make: () => string): Sound {
+  let url: string | null = null;
+  return {
+    id,
+    name,
+    category,
+    get url() { return (url ??= make()); },
+  };
+}
+
 export const SOUND_LIBRARY: Sound[] = [
   // Water
-  { id: 'rain',          name: 'Rain',          category: 'Water',    url: genRain() },
-  { id: 'stream',        name: 'Stream',        category: 'Water',    url: genStream() },
-  { id: 'ocean',         name: 'Ocean',         category: 'Water',    url: genOcean() },
-  { id: 'underwater',    name: 'Underwater',    category: 'Water',    url: genUnderwater() },
-  { id: 'shower',        name: 'Shower',        category: 'Water',    url: genShower() },
+  lazySound('rain',        'Rain',         'Water',    genRain),
+  lazySound('stream',      'Stream',       'Water',    genStream),
+  lazySound('ocean',       'Ocean',        'Water',    genOcean),
+  lazySound('underwater',  'Underwater',   'Water',    genUnderwater),
+  lazySound('shower',      'Shower',       'Water',    genShower),
   // Fire
-  { id: 'fire',          name: 'Fire',          category: 'Fire',     url: genFire() },
+  lazySound('fire',        'Fire',         'Fire',     genFire),
   // Air
-  { id: 'wind',          name: 'Wind',          category: 'Air',      url: genWind() },
-  { id: 'thunder',       name: 'Thunder',       category: 'Air',      url: genThunder() },
-  { id: 'fan',           name: 'Fan',           category: 'Air',      url: genFan() },
+  lazySound('wind',        'Wind',         'Air',      genWind),
+  lazySound('thunder',     'Thunder',      'Air',      genThunder),
+  lazySound('fan',         'Fan',          'Air',      genFan),
   // Earth
-  { id: 'forest',        name: 'Windy Forest',  category: 'Earth',    url: genForest() },
+  lazySound('forest',      'Windy Forest', 'Earth',    genForest),
   // Noise
-  { id: 'white-noise',   name: 'White Noise',   category: 'Noise',    url: genWhite() },
-  { id: 'pink-noise',    name: 'Pink Noise',    category: 'Noise',    url: genPink() },
-  { id: 'brown-noise',   name: 'Brown Noise',   category: 'Noise',    url: genBrown() },
+  lazySound('white-noise', 'White Noise',  'Noise',    genWhite),
+  lazySound('pink-noise',  'Pink Noise',   'Noise',    genPink),
+  lazySound('brown-noise', 'Brown Noise',  'Noise',    genBrown),
   // Urban
-  { id: 'train',         name: 'Train',         category: 'Urban',    url: genTrain() },
-  { id: 'airplane',      name: 'Airplane',      category: 'Urban',    url: genAirplane() },
+  lazySound('train',       'Train',        'Urban',    genTrain),
+  lazySound('airplane',    'Airplane',     'Urban',    genAirplane),
   // Wildlife
-  { id: 'night',         name: 'Night',         category: 'Wildlife', url: genSpace() },
-  { id: 'birdsong',      name: 'Birdsong',      category: 'Wildlife', url: genBirdsong() },
+  lazySound('night',       'Night',        'Wildlife', genSpace),
+  lazySound('birdsong',    'Birdsong',     'Wildlife', genBirdsong),
   // Cozy
-  { id: 'heartbeat',     name: 'Heartbeat',     category: 'Cozy',    url: genHeartbeat() },
+  lazySound('heartbeat',   'Heartbeat',    'Cozy',     genHeartbeat),
 ];
 
 export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
