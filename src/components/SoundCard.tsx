@@ -1,27 +1,7 @@
 import type { Sound } from '../types';
 import { EDITABLE_SOUND_IDS } from './soundEditorDefs';
+import { SOUND_ICONS } from '../lib/soundIcons';
 import { sliderFill } from '../lib/sliderFill';
-
-const SOUND_ICONS: Record<string, string> = {
-  rain:            'rainy',
-  ocean:           'waves',
-  wind:            'air',
-  forest:          'forest',
-  fire:            'local_fire_department',
-  'white-noise':   'graphic_eq',
-  'pink-noise':    'equalizer',
-  'brown-noise':   'noise_aware',
-  night:           'bedtime',
-  thunder:         'thunderstorm',
-  stream:          'stream',
-  fan:             'mode_fan',
-  airplane:        'flight',
-  birdsong:        'raven',
-  underwater:      'scuba_diving',
-  train:           'train',
-  heartbeat:       'cardiology',
-  shower:          'shower',
-};
 
 interface SoundCardProps {
   sound: Sound;

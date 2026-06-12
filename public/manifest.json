@@ -15,6 +15,22 @@
   "categories": ["lifestyle", "health", "music"],
   "launch_handler": { "client_mode": "navigate-existing" },
   "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "./screenshots/home.png",
+      "sizes": "1080x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Blend rain, fire, ocean and more under a living night sky"
+    },
+    {
+      "src": "./screenshots/sheet.png",
+      "sizes": "1080x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Shape the mix and set a sleep timer that fades you out"
+    }
+  ],
   "icons": [
     {
       "src": "./icon.svg",

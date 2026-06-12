@@ -194,6 +194,11 @@ Shared interactive vocabulary:
   helper (`src/lib/sliderFill.ts`), and a bright 16px thumb (so the knob reads
   as a handle, never a same-color blob). Used for master volume, per-sound
   volume, and editor parameters.
+- **Sound editor** — the shape-the-sound panel, inline in the library grid and
+  tinted by its sound's category: sound glyph + serif title header, a "play"
+  pill while the sound is silent (so shaping is always audible), icon-circle
+  reset/close, and param rows that flow into two columns where the panel is
+  wide enough. Groups divide with hairlines, never nested boxes.
 - **Play control** — 48px circular accent button; pulses while playing. When a
   sleep timer is set, a warm 1.5px progress ring around it empties clockwise.
 - **Drift mode** — the fullscreen night surface (`DriftMode.tsx`): app chrome

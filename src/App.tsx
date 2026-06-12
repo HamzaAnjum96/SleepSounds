@@ -636,6 +636,13 @@ export default function App() {
                     <Suspense fallback={<div className="sb-loading">opening the controls…</div>}>
                       <LazySoundEditor
                         soundId={openEditorSoundId}
+                        active={(soundState[openEditorSoundId]?.enabled ?? false) && !isPaused}
+                        onPlay={() => {
+                          // Resume the paused mix if the sound is already in it;
+                          // otherwise add the sound so the shaping is audible.
+                          if (soundState[openEditorSoundId]?.enabled) void handleMasterToggle();
+                          else void handleSoundToggle(openEditorSoundId);
+                        }}
                         initialValues={editorValuesBySound[openEditorSoundId]}
                         onValuesChange={(values) => {
                           setEditorValuesBySound((prev) => ({ ...prev, [openEditorSoundId]: values }));

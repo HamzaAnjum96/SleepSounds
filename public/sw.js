@@ -19,9 +19,15 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k.startsWith('drift-away-') && k !== CACHE).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(keys.filter((k) => k.startsWith('drift-away-') && k !== CACHE).map((k) => caches.delete(k))),
+      ),
+      // Start the navigation request in parallel with SW boot: faster opens.
+      self.registration.navigationPreload
+        ? self.registration.navigationPreload.enable()
+        : Promise.resolve(),
+    ]).then(() => self.clients.claim()),
   );
 });
 
@@ -30,16 +36,20 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // App navigations: network-first with shell fallback.
+  // App navigations: network-first (via the preloaded response when the
+  // browser already started it) with shell fallback.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
+      (async () => {
+        try {
+          const res = (await event.preloadResponse) || (await fetch(req));
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put('./', copy));
           return res;
-        })
-        .catch(() => caches.match('./')),
+        } catch {
+          return caches.match('./');
+        }
+      })(),
     );
     return;
   }
