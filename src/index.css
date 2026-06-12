@@ -1137,12 +1137,10 @@ header {
   overflow: hidden;
   text-align: left;
   /* Translucent colour gradient straight over the night sky — no backdrop
-     blur, which on the near-black background frosted into a near-solid layer
-     that "popped in" behind the card. A top hairline and soft drop shadow
-     still give it edge and depth. */
-  box-shadow:
-    0 6px 22px rgba(2,8,20,0.42),
-    inset 0 1px 0 rgba(255,255,255,0.14);
+     blur, and no outer drop shadow: the snap-scroll row clips vertically, so
+     a soft shadow gets sliced into a hard band below the shelf. The border
+     and inset top hairline carry the edge instead. */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
   transition: border-color var(--dur-2), box-shadow var(--dur-2), transform var(--dur-1);
 }
 /* top-left glass sheen */
@@ -1163,14 +1161,13 @@ header {
 }
 .scene-card:hover {
   border-color: rgba(255,255,255,0.20);
-  box-shadow: 0 10px 30px rgba(2,9,30,0.5), inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
 }
 .scene-card:active { transform: scale(0.98); }
 .scene-card.current {
   border-color: rgba(255,255,255,0.28);
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.12),
-    0 10px 30px rgba(2,9,30,0.55),
     inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
@@ -1264,11 +1261,9 @@ header {
   cursor: pointer;
   outline: none;
   text-align: left;
-  /* Warm-tinted glass via the --surface film + hairline; no backdrop blur
-     (nothing useful to frost over the dark sky, and it popped in as solid). */
-  box-shadow:
-    0 6px 20px rgba(2,8,20,0.35),
-    inset 0 1px 0 rgba(255,255,255,0.10);
+  /* Warm-tinted glass via the --surface film + hairline; no backdrop blur,
+     and no outer shadow (the scroll row clips it into a hard band). */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
   transition: background var(--dur-2), border-color var(--dur-2), transform var(--dur-1);
 }
 .mix-card-body:hover {
@@ -1279,7 +1274,6 @@ header {
 .mix-card.current .mix-card-body {
   background: var(--warm-glow);
   border-color: rgba(184,154,106,0.55);
-  box-shadow: 0 0 18px rgba(184,154,106,0.12);
 }
 .mix-name {
   font-family: var(--font-display);

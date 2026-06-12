@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.11.2
+- **Fixed the odd line under the presets shelf.** The scene/mix rows are horizontal scroll containers, which clip vertically — so the cards' soft drop shadows were being sliced into a hard dark band at the shelf's bottom edge (background looked different below vs above). Removed the outer drop shadows on shelf cards; the border + inset top hairline carry the depth.
+
 ### 2.11.1
 - **Fixed: couldn't reinstall after uninstalling.** Installing wrote a permanent "dismissed" flag to localStorage, which outlives the app — so after an uninstall the in-app install prompt never returned. Installing no longer writes the flag (Chrome stops firing `beforeinstallprompt` while installed anyway, and clears it instead), dismissal now hides the row for 14 days rather than forever, and the old legacy flag is treated as expired so existing devices recover automatically.
 
