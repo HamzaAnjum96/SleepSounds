@@ -8,3 +8,13 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <App />
   </React.StrictMode>,
 );
+
+// Offline support: register the service worker (production only, so dev
+// never fights a cache). Best-effort — the app works fine without it.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`)
+      .catch(() => { /* offline support is progressive enhancement */ });
+  });
+}

@@ -98,6 +98,9 @@ npm run preview
 
 ## Changelog
 
+### 2.10.0
+- **Offline support.** Added a service worker (`public/sw.js`, registered in production): the app shell, hashed assets, icons, worklets, and fonts are cached so drift away opens and plays with no signal — sounds are generated on-device, so offline is fully functional. Navigations stay network-first, so deploys are picked up on the next online visit.
+
 ### 2.9.0
 - **iOS background playback + best-possible media notification.** New `src/lib/backgroundAudio.ts`: declares `navigator.audioSession.type = 'playback'` (iOS 16.4+) so audio keeps playing when the tab is backgrounded or the screen locks, and runs a looping *silent* `<audio>` keep-alive (started inside the play gesture, synced to play/pause) so the lock-screen / notification player reliably appears even for worklet-generated sounds, on both iPhone and Android.
 - **Polished webapp head.** Brand-blue browser tab/address-bar (`theme-color #7ba7e8`, with a dark-scheme variant), `color-scheme: dark`, Open Graph + Twitter cards (icon artwork), canonical URL, `application-name`, `mobile-web-app-capable`, and `format-detection` off for phone numbers.
