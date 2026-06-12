@@ -98,6 +98,10 @@ npm run preview
 
 ## Changelog
 
+### 2.9.0
+- **iOS background playback + best-possible media notification.** New `src/lib/backgroundAudio.ts`: declares `navigator.audioSession.type = 'playback'` (iOS 16.4+) so audio keeps playing when the tab is backgrounded or the screen locks, and runs a looping *silent* `<audio>` keep-alive (started inside the play gesture, synced to play/pause) so the lock-screen / notification player reliably appears even for worklet-generated sounds, on both iPhone and Android.
+- **Polished webapp head.** Brand-blue browser tab/address-bar (`theme-color #7ba7e8`, with a dark-scheme variant), `color-scheme: dark`, Open Graph + Twitter cards (icon artwork), canonical URL, `application-name`, `mobile-web-app-capable`, and `format-detection` off for phone numbers.
+
 ### 2.8.3
 - **Fixed the scene cards going solid** ("something pops in behind"). The culprit was `backdrop-filter` on the preset cards: over the near-black sky the blur had nothing useful to frost, so it composited a near-solid dark layer that popped in behind the translucent gradient. Removed `backdrop-filter` from the scene and mix cards (and reverted 2.8.2's frosted-white film). The cards are now just their translucent colour gradient over the night sky — colour + transparency, no pop. The mini player, sheet, and storage notice keep their blur since they sit over real content.
 

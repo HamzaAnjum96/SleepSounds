@@ -14,6 +14,7 @@ import type { Preset } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 import { CATEGORY_ICONS } from './lib/categoryIcons';
 import { haptic } from './lib/haptics';
+import { primeBackgroundAudio, setKeepAlive } from './lib/backgroundAudio';
 import { SCENES, presetSoundIds } from './lib/scenes';
 import { formatCountdown } from './lib/time';
 
@@ -195,6 +196,7 @@ export default function App() {
 
   const handleMasterToggle = useCallback(async () => {
     haptic(10);
+    primeBackgroundAudio();
     if (isPlaying) {
       pauseAll();
       setIsPaused(true);
@@ -207,6 +209,7 @@ export default function App() {
   const handlePlayPreset = useCallback((preset: Preset) => {
     dismissHint();
     haptic(10);
+    primeBackgroundAudio();
     if (activeMixId === preset.id && activeSounds.length > 0) {
       // Tapping the playing scene pauses/resumes it.
       void handleMasterToggle();
@@ -225,6 +228,12 @@ export default function App() {
       setActiveMixId(null);
     }
   }, [activeSounds.length]);
+
+  // Keep the silent background-audio element in sync with playback, so iOS
+  // keeps the session alive and the lock-screen player reflects true state.
+  useEffect(() => {
+    setKeepAlive(isPlaying);
+  }, [isPlaying]);
 
   // Media Session API — powers lock-screen / notification player on Android & iOS
   useEffect(() => {
@@ -257,6 +266,7 @@ export default function App() {
 
   const handleSoundToggle = useCallback(async (soundId: string) => {
     haptic(8);
+    primeBackgroundAudio();
     dismissHint();
     // A hand-edited mix is its own thing; the scene badge comes off.
     setActiveMixId(null);
