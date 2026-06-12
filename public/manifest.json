@@ -10,7 +10,7 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "background_color": "#080c14",
-  "theme_color": "#7ba7e8",
+  "theme_color": "#080c14",
   "orientation": "portrait",
   "categories": ["lifestyle", "health", "music"],
   "launch_handler": { "client_mode": "navigate-existing" },

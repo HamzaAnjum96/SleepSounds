@@ -184,9 +184,11 @@ Shared interactive vocabulary:
   even at rest), name, dot↔equaliser indicator, reveal-on-active
   volume slider, optional editor handle. `--r-xl`, `--surface`, accent glow when
   active. Two-column grid.
-- **Slider** — `.drift-slider`: 2px track, 10px accent thumb, accent fill via the
-  shared `sliderFill()` helper (`src/lib/sliderFill.ts`). Used for master volume,
-  per-sound volume, and editor parameters.
+- **Slider** — `.drift-slider`: a 6px track drawn on the track pseudo-element
+  inside a 28px touch box, category/accent fill via the shared `sliderFill()`
+  helper (`src/lib/sliderFill.ts`), and a bright 16px thumb (so the knob reads
+  as a handle, never a same-color blob). Used for master volume, per-sound
+  volume, and editor parameters.
 - **Play control** — 48px circular accent button; pulses while playing. When a
   sleep timer is set, a warm 1.5px progress ring around it empties clockwise.
 - **Drift mode** — the fullscreen night surface (`DriftMode.tsx`): app chrome
