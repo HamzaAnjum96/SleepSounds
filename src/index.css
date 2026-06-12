@@ -116,10 +116,21 @@ html, body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  /* No font inflation on iOS rotation, no pull-to-refresh killing the mix. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-y: none;
 }
 
 /* Kill double-tap zoom delays on controls; pinch zoom stays available. */
 button, input { touch-action: manipulation; }
+
+/* Long-press on a control should never select its label or icon ligature. */
+button, .material-symbols-rounded {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
 /* ── Background ──────────────────────────────────────────────────── */
 
@@ -347,6 +358,18 @@ header {
   border-color: rgba(184,154,106,0.45);
   color: var(--warm);
   background: var(--warm-glow);
+}
+/* Live-timer companions: "+30m / +1h" extend the countdown, "off" ends it.
+   They appear only while a timer runs, slightly apart from the presets. */
+.timer-extend {
+  border-style: dashed;
+}
+.timer-off {
+  margin-left: var(--sp-4);
+}
+.timer-off:hover {
+  border-color: var(--danger-line);
+  color: var(--danger);
 }
 /* ── Range Slider ────────────────────────────────────────────────── */
 /* `--fill` is the track/thumb color: the global accent by default, the
@@ -777,11 +800,13 @@ header {
 }
 
 .sound-editor-inline {
+  --cat: 123,167,232;
+  --card-accent: rgb(var(--cat));
   grid-column: 1 / -1;
   background: var(--surface-faint);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(var(--cat), 0.18);
   border-radius: var(--r-xl);
-  padding: var(--sp-10);
+  padding: var(--sp-12);
   margin-top: -2px;
   animation: fadeSlideUp var(--dur-4) var(--ease) both;
 }
@@ -866,26 +891,32 @@ header {
   color: var(--text-dim);
 }
 
+/* Lowercase and quiet, in the app's own voice: the old uppercase eyebrow
+   treatment turned "v2.11.3" into "V2.11.3" and read as a different font. */
 .footer-meta {
   display: flex;
   align-items: center;
-  gap: var(--sp-6);
-  font-size: var(--fs-eyebrow);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  gap: var(--sp-8);
+  font-family: var(--font-body);
+  font-size: var(--fs-control);
+  font-weight: 300;
+  letter-spacing: 0.08em;
   color: var(--text-dim);
 }
 .footer-sep { opacity: 0.6; }
 .footer-privacy {
-  color: var(--text-dim);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color var(--dur-2);
 }
-.footer-privacy:hover { color: var(--text-secondary); }
+.footer-privacy:hover { color: var(--text-primary); }
 .footer-privacy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .footer-version { font-variant-numeric: tabular-nums; }
 
 /* ── Sound Editor ────────────────────────────────────────────────── */
+/* The per-sound editor panel, inline in the library grid. It speaks the
+   same language as the rest of the app: serif italic title, lowercase
+   labels, category accent on values and slider fills. */
 
 .sb-panel {
   margin-top: 0;
@@ -894,33 +925,96 @@ header {
   gap: var(--sp-12);
 }
 
-.sb-controls {
+.sb-head {
   display: flex;
+  align-items: center;
   gap: var(--sp-8);
+  padding: var(--sp-2) var(--sp-2) 0;
 }
 
-.sb-reset-btn,
-.sb-close-btn {
+.sb-head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: 400;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.sb-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  color: var(--text-bright);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-reset-btn {
   display: flex;
   align-items: center;
   gap: var(--sp-5);
-  padding: 7px var(--sp-14);
+  padding: var(--sp-6) var(--sp-12);
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: var(--fs-control);
+  font-weight: 400;
   letter-spacing: 0.05em;
   cursor: pointer;
   transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
   outline: none;
+  flex-shrink: 0;
 }
-.sb-reset-btn .material-symbols-rounded,
-.sb-close-btn .material-symbols-rounded { font-size: 15px; }
-.sb-reset-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); }
-.sb-close-btn { margin-left: auto; }
-.sb-close-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); }
+.sb-reset-btn .material-symbols-rounded { font-size: 15px; }
+.sb-reset-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+.sb-close-btn {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--dur-1), color var(--dur-1);
+  outline: none;
+  flex-shrink: 0;
+}
+.sb-close-btn::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.sb-close-btn .material-symbols-rounded { font-size: 16px; }
+.sb-close-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+.sb-loading {
+  padding: var(--sp-12);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
 
 .sb-group {
   background: var(--surface-faint);
@@ -962,8 +1056,9 @@ header {
 .sb-param-val {
   font-size: var(--fs-eyebrow);
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--card-accent, var(--accent));
   letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Drift Mode ──────────────────────────────────────────────────── */
@@ -1116,6 +1211,9 @@ header {
   padding: var(--sp-2) var(--sp-24) var(--sp-8);
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  /* Snap to the content edge, not the bleed edge: without this, snapped cards
+     sit 24px further left than the section headings. */
+  scroll-padding-inline: var(--sp-24);
   scrollbar-width: none;
 }
 .scene-row::-webkit-scrollbar { display: none; }
@@ -1238,6 +1336,7 @@ header {
   padding: var(--sp-2) var(--sp-24) var(--sp-6);
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--sp-24);
   scrollbar-width: none;
 }
 .mix-row::-webkit-scrollbar { display: none; }
@@ -1508,7 +1607,9 @@ header {
   position: absolute;
   inset: 0;
   background: rgba(4,6,12,0.55);
-  animation: sheetFade 0.3s var(--ease) both;
+  /* `backwards`, not `both`: a fill would pin the final keyframe and block
+     the closing animation and the drag-follow transform below. */
+  animation: sheetFade 0.3s var(--ease) backwards;
 }
 @keyframes sheetFade {
   from { opacity: 0; }
@@ -1528,11 +1629,38 @@ header {
   border-bottom: none;
   border-radius: var(--sp-20) var(--sp-20) 0 0;
   padding: var(--sp-8) var(--sp-20) calc(env(safe-area-inset-bottom, 0px) + var(--sp-20));
-  animation: sheetRise 0.4s var(--ease) both;
+  animation: sheetRise 0.4s var(--ease) backwards;
+  /* Spring-back after an abandoned drag. */
+  transition: transform var(--dur-3) var(--ease);
 }
 @keyframes sheetRise {
   from { transform: translateY(40px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Slide-down exit (Esc, backdrop, close, or a completed drag). The drag
+   hand-off position arrives via --sheet-drag-y so the sheet continues from
+   under the finger instead of jumping back to the top. */
+.sheet-root.closing .sheet {
+  animation: sheetDrop 0.26s var(--ease) forwards;
+}
+.sheet-root.closing .sheet-backdrop {
+  animation: sheetFadeOut 0.26s var(--ease) forwards;
+}
+@keyframes sheetDrop {
+  from { transform: translateY(var(--sheet-drag-y, 0px)); opacity: 1; }
+  to   { transform: translateY(105%); opacity: 0.5; }
+}
+@keyframes sheetFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* The drag region: handle + header. touch-action: none keeps the browser
+   from hijacking the downward gesture for scroll or pull-to-refresh. */
+.sheet-grip {
+  flex-shrink: 0;
+  touch-action: none;
 }
 
 .sheet-handle {
@@ -1611,6 +1739,8 @@ header {
 
 .sheet-scroll {
   overflow-y: auto;
+  /* Don't let an overscroll chain through to the shell behind the sheet. */
+  overscroll-behavior: contain;
   scrollbar-width: none;
   display: flex;
   flex-direction: column;
@@ -1646,11 +1776,27 @@ header {
   flex-direction: column;
   gap: var(--sp-5);
 }
+.layer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
 .layer-name {
   font-size: var(--fs-body);
   font-weight: 400;
   letter-spacing: 0.04em;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.layer-pct {
+  font-size: var(--fs-eyebrow);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
 }
 .layer-remove {
   flex-shrink: 0;

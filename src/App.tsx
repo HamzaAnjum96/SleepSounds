@@ -215,7 +215,7 @@ export default function App() {
       void handleMasterToggle();
       return;
     }
-    restoreMixerState(preset.state, undefined, true);
+    restoreMixerState(preset.state, preset.masterVolume, true);
     setActiveMixId(preset.id);
     setIsPaused(false);
   }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState]);
@@ -343,6 +343,19 @@ export default function App() {
       setSecondsLeft(secs);
       setTimerTotal(secs);
     }
+  };
+
+  /** Add time to a running timer (the "+30m" / "+1h" chips). */
+  const handleTimerExtend = (secs: number) => {
+    haptic(8);
+    setSecondsLeft((s) => (s !== null ? s + secs : secs));
+    setTimerTotal((t) => (t !== null ? t + secs : secs));
+  };
+
+  const handleTimerClear = () => {
+    haptic(8);
+    setSecondsLeft(null);
+    setTimerTotal(null);
   };
 
   const visibleSounds = category === 'All'
@@ -563,16 +576,17 @@ export default function App() {
                   onVolumeChange={(v) => setSoundVolume(sound.id, v)}
                 />
                 {i === editorInsertAfter && openEditorSoundId && (
-                  <div className="sound-editor-inline">
-                    <Suspense fallback={<div className="sb-panel">Loading editor…</div>}>
+                  <div
+                    className="sound-editor-inline"
+                    data-cat={SOUND_LIBRARY.find((s) => s.id === openEditorSoundId)?.category}
+                  >
+                    <Suspense fallback={<div className="sb-loading">opening the controls…</div>}>
                       <LazySoundEditor
                         soundId={openEditorSoundId}
                         initialValues={editorValuesBySound[openEditorSoundId]}
                         onValuesChange={(values) => {
                           setEditorValuesBySound((prev) => ({ ...prev, [openEditorSoundId]: values }));
-                          if (SOUND_EDITOR_MODELS[openEditorSoundId]?.mode === 'simple') {
-                            setSoundTuning(openEditorSoundId, values);
-                          }
+                          setSoundTuning(openEditorSoundId, values);
                         }}
                         onClose={() => setOpenEditorSoundId(null)}
                       />
@@ -625,6 +639,8 @@ export default function App() {
         secondsLeft={secondsLeft}
         timerTotal={timerTotal}
         onTimerSelect={handleTimerSelect}
+        onTimerExtend={handleTimerExtend}
+        onTimerClear={handleTimerClear}
         onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
         onSave={handleSaveMix}
       />

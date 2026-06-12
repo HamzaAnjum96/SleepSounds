@@ -126,12 +126,16 @@ function softClip(buf: Float32Array, drive: number): void {
 
 function smoothRandomLfo(min: number, max: number, minHoldS: number, maxHoldS: number): Float32Array {
   const out = new Float32Array(N);
+  const first = min + Math.random() * (max - min);
   let idx = 0;
-  let prev = min + Math.random() * (max - min);
+  let prev = first;
   while (idx < N) {
     const hold = Math.floor((minHoldS + Math.random() * (maxHoldS - minHoldS)) * SR);
     const seg = Math.max(1, Math.min(hold, N - idx));
-    const next = min + Math.random() * (max - min);
+    // Loop-closed: the final segment eases back to the starting value, so the
+    // modulation is continuous across the loop seam instead of drifting to a
+    // random level and snapping back when the buffer repeats.
+    const next = idx + seg >= N ? first : min + Math.random() * (max - min);
     for (let i = 0; i < seg; i++) {
       const t = i / seg;
       const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
@@ -390,10 +394,22 @@ function genOcean(params?: Record<string, number>): string {
   hp1(surf, 220);
   lp1(surf, surfLp);
 
+  // Waves are fitted to the loop: pick whole periods, then scale them so the
+  // final wave completes exactly at the buffer edge. The old version truncated
+  // the last wave mid-crest, which made the loop seam lurch (sharp stop/start)
+  // before settling back into the rhythm.
+  const periods: number[] = [];
+  let totalLen = 0;
+  while (totalLen < N) {
+    const p = Math.floor(SR * rand(waveMin, waveMax));
+    periods.push(p);
+    totalLen += p;
+  }
+  const fit = N / totalLen;
   const waveEnvBuf = new Float32Array(N);
   let wPos = 0;
-  while (wPos < N) {
-    const period = Math.floor(SR * rand(waveMin, waveMax));
+  for (const raw of periods) {
+    const period = Math.max(1, Math.round(raw * fit));
     const wAmp   = rand(0.45, 1.0);
     for (let i = 0; i < period && wPos + i < N; i++) {
       const p = i / period;
@@ -929,14 +945,17 @@ function genSpace(params?: Record<string, number>): string {
   const shimmer2 = whiteNoise();
   bp2(shimmer2, 4000 + cosmic * 2000, 6 + cosmic * 6);
 
-  const pulseLfo = smoothRandomLfo(0.2, 1.0, 4 + pulse * 8, 8 + pulse * 16);
-  const driftLfo = smoothRandomLfo(0.7, 1.1, 3.0, 10.0);
+  // The pulse breathes only the shimmer, within a narrow band; the deep bed
+  // stays steady. The old version swung the entire mix between 0.2 and 1.0,
+  // so a loop could climb louder and busier for half a minute, then reset.
+  const pulseLfo = smoothRandomLfo(0.6, 1.0, 4 + pulse * 8, 8 + pulse * 16);
+  const driftLfo = smoothRandomLfo(0.7, 1.05, 3.0, 10.0);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = (voidBuf[i] * (0.3 + voidParam * 0.3) +
-              shimmer1[i] * 0.1 * (0.5 + cosmic) * driftLfo[i] +
-              shimmer2[i] * 0.06 * (0.5 + cosmic) * driftLfo[i]) * pulseLfo[i];
+    mix[i] = voidBuf[i] * (0.3 + voidParam * 0.3) +
+             (shimmer1[i] * 0.1 * (0.5 + cosmic) +
+              shimmer2[i] * 0.06 * (0.5 + cosmic)) * driftLfo[i] * pulseLfo[i];
   }
   return gen(mix, 0.55);
 }

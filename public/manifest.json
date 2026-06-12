@@ -13,6 +13,8 @@
   "theme_color": "#080c14",
   "orientation": "portrait",
   "categories": ["lifestyle", "health", "music"],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "./icon.svg",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
 import { regenerateSound } from '../data';
+import { SOUND_EDITOR_MODELS } from '../components/soundEditorDefs';
 
 const defaultSoundState = (): SoundState => ({ enabled: false, volume: 0.5 });
 
@@ -285,26 +286,40 @@ interface WorkletConfig {
   paramMap?: Record<string, string>;
 }
 
+/** The editor's defaults are the single source of truth for a worklet's
+ *  initial params, so what plays always matches what the editor shows. */
+const editorDefaults = (soundId: string): Record<string, number> =>
+  Object.fromEntries(
+    (SOUND_EDITOR_MODELS[soundId]?.groups ?? [])
+      .flatMap((group) => group.params)
+      .map((param) => [param.key, param.def]),
+  );
+
 const WORKLET_CONFIGS: Record<string, WorkletConfig> = {
   fire: {
     module: 'fire.worklet.js',
     processor: 'fire-synth',
-    params: { intensity: 0.62, dryness: 0.55, wind: 0.22, size: 0.45, distance: 0.2, crackleBias: 0.5 },
+    params: editorDefaults('fire'),
+  },
+  birdsong: {
+    module: 'birdsong.worklet.js',
+    processor: 'birdsong-synth',
+    params: editorDefaults('birdsong'),
   },
   rain: {
     module: 'rain.worklet.js',
     processor: 'rain-gen',
-    params: { intensity: 0.65, heaviness: 0.5, surface: 0.5 },
+    params: editorDefaults('rain'),
   },
   thunder: {
     module: 'thunder.worklet.js',
     processor: 'thunder-gen',
-    params: { stormIntensity: 0.5, rumble: 0.6, distance: 0.4 },
+    params: editorDefaults('thunder'),
   },
   forest: {
     module: 'windyforest.worklet.js',
     processor: 'windyforest-gen',
-    params: { leaves: 0.7, twigs: 0.35, breeze: 0.5 },
+    params: editorDefaults('forest'),
   },
 };
 
@@ -595,10 +610,8 @@ export const useAudioMixer = (sounds: Sound[]) => {
   );
 
   const setSoundTuning = useCallback((soundId: string, values: Record<string, number>) => {
-    // Fire and birdsong use worklets driven elsewhere - don't regenerate
-    if (soundId === 'fire' || soundId === 'birdsong') return;
-
-    // Worklet-backed sounds (rain, thunder, forest) take params live, no WAV regen.
+    // Worklet-backed sounds (fire, birdsong, rain, thunder, forest) take
+    // their params live; everything else regenerates its WAV loop.
     const source = audioMapRef.current[soundId];
     if (source?.setParams) {
       source.setParams(values);

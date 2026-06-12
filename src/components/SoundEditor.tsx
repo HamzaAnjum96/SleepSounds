@@ -9,6 +9,14 @@ interface SoundEditorProps {
   onValuesChange?: (values: Record<string, number>) => void;
 }
 
+/** Every parameter reads as a percentage of its own range, so a slider at
+ *  half-way always says 50% regardless of the underlying engine units. */
+function asPercent(value: number, min: number, max: number): string {
+  const span = max - min;
+  const pct = span > 0 ? ((value - min) / span) * 100 : 0;
+  return `${Math.round(Math.min(100, Math.max(0, pct)))}%`;
+}
+
 export default function SoundEditor({
   soundId,
   onClose,
@@ -16,10 +24,11 @@ export default function SoundEditor({
   onValuesChange,
 }: SoundEditorProps) {
   const soundType = SOUND_EDITOR_MODELS[soundId];
-  if (!soundType) return null;
   const defaults = useMemo(
-    () => Object.fromEntries(soundType.groups.flatMap(g => g.params).map(p => [p.key, p.def])),
-    [soundType.groups],
+    () => Object.fromEntries(
+      (soundType?.groups ?? []).flatMap(g => g.params).map(p => [p.key, p.def]),
+    ),
+    [soundType],
   );
 
   const [values, setValues] = useState<Record<string, number>>(initialValues ?? defaults);
@@ -38,17 +47,28 @@ export default function SoundEditor({
     onValuesChange?.(defaults);
   }, [defaults, onValuesChange]);
 
+  if (!soundType) return null;
+  const title = soundType.label.toLowerCase();
+
   return (
     <div className="sb-panel">
-      <div className="sb-controls">
+      <div className="sb-head">
+        <div className="sb-head-text">
+          <span className="sb-eyebrow">shape the sound</span>
+          <span className="sb-title">{title}</span>
+        </div>
         <button type="button" className="sb-reset-btn" onClick={handleReset}>
-          <span className="material-symbols-rounded">restart_alt</span>
+          <span className="material-symbols-rounded" aria-hidden="true">restart_alt</span>
           reset
         </button>
         {onClose && (
-          <button type="button" className="sb-close-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="sb-close-btn"
+            onClick={onClose}
+            aria-label={`Close ${title} editor`}
+          >
             <span className="material-symbols-rounded">close</span>
-            close
           </button>
         )}
       </div>
@@ -60,7 +80,7 @@ export default function SoundEditor({
             <div key={p.key} className="sb-row">
               <div className="sb-row-header">
                 <span className="sb-param-label">{p.label}</span>
-                <span className="sb-param-val">{p.fmt(values[p.key] ?? p.def)}</span>
+                <span className="sb-param-val">{asPercent(values[p.key] ?? p.def, p.min, p.max)}</span>
               </div>
               <input
                 type="range"
