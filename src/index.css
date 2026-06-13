@@ -493,16 +493,19 @@ header::after {
 
 /* ── Category Pills ──────────────────────────────────────────────── */
 
-/* The filters wrap in place — no scrolling shelf here; every family stays
-   visible at a glance. */
+/* A fixed 3×3 grid: every family visible, pills stretched to share each row
+   equally, icon + name leading and the count ring anchored to the far edge. */
 .cat-pills {
-  display: flex;
-  flex-wrap: wrap;
-  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--sp-4);
   margin-bottom: var(--sp-12);
 }
-.cat-pill { white-space: nowrap; }
+.cat-pill {
+  white-space: nowrap;
+  min-width: 0;
+}
+.cat-pill .cat-count { margin-left: auto; }
 
 .cat-pill {
   --cat: 123,167,232;            /* "All" falls back to the accent blue */
