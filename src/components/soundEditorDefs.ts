@@ -142,7 +142,7 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'distance', label: 'distance', def: 0.40 },
   )},
   fan: { label: 'Fan', mode: 'simple', groups: simpleGroup(
-    { key: 'speed', label: 'speed', def: 0.50 },
+    { key: 'speed', label: 'speed', def: 0.10 },
     { key: 'hum', label: 'hum', def: 0.40 },
     { key: 'airflow', label: 'airflow', def: 0.60 },
   )},

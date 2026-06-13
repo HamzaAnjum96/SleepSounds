@@ -271,7 +271,7 @@ function genBrown(params?: Record<string, number>): string {
 }
 
 function genFan(params?: Record<string, number>): string {
-  const { speed = 0.5, hum: humParam = 0.4, airflow: airflowParam = 0.6 } = params ?? {};
+  const { speed = 0.1, hum: humParam = 0.4, airflow: airflowParam = 0.6 } = params ?? {};
   // Blade-pass flutter rides the airflow with a slowly wandering phase (a
   // real fan is never a perfect metronome), over a motor bed that carries a
   // faint loop-locked hum at the rotation orders — the tonal identity the
