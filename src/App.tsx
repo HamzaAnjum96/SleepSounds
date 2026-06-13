@@ -695,6 +695,7 @@ export default function App() {
         onClose={() => setDriftOpen(false)}
         isPlaying={isPlaying}
         onTogglePlay={handleMasterToggle}
+        onStop={() => { haptic(10); stopAll(); setIsPaused(false); }}
         mixNames={activeSounds.map((s) => s.name)}
         secondsLeft={secondsLeft}
       />

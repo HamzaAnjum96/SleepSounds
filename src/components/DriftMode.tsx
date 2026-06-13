@@ -20,6 +20,8 @@ interface DriftModeProps {
   onClose: () => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
+  /** Square-stop: end the whole mix (drift mode closes with it). */
+  onStop: () => void;
   mixNames: string[];
   secondsLeft: number | null;
 }
@@ -35,6 +37,7 @@ export default function DriftMode({
   onClose,
   isPlaying,
   onTogglePlay,
+  onStop,
   mixNames,
   secondsLeft,
 }: DriftModeProps) {
@@ -169,8 +172,8 @@ export default function DriftMode({
         <button
           type="button"
           className="drift-stop"
-          onClick={onClose}
-          aria-label="Leave drift mode"
+          onClick={onStop}
+          aria-label="Stop the mix"
         >
           <span className="material-symbols-rounded">stop</span>
         </button>
