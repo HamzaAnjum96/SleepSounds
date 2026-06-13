@@ -318,9 +318,11 @@ header::after {
   transition: background var(--dur-1), border-color var(--dur-1);
   outline: none;
 }
-.install-action:hover {
-  background: rgba(123,167,232,0.2);
-  border-color: rgba(123,167,232,0.5);
+@media (hover: hover) {
+  .install-action:hover {
+    background: rgba(123,167,232,0.2);
+    border-color: rgba(123,167,232,0.5);
+  }
 }
 .install-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .install-dismiss {
@@ -341,7 +343,10 @@ header::after {
   transition: color var(--dur-1), background var(--dur-1);
   outline: none;
 }
-.install-dismiss:hover { color: var(--text-primary); background: var(--surface-hover); }
+@media (hover: hover) {
+  .install-dismiss:hover { color: var(--text-primary); background: var(--surface-hover);
+  }
+}
 .install-dismiss:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Timer Chips (now-playing sheet) ─────────────────────────────── */
@@ -365,9 +370,11 @@ header::after {
   transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
   outline: none;
 }
-.timer-btn:hover {
-  border-color: var(--warm-line);
-  color: var(--warm);
+@media (hover: hover) {
+  .timer-btn:hover {
+    border-color: var(--warm-line);
+    color: var(--warm);
+  }
 }
 .timer-btn.active {
   border-color: rgba(184,154,106,0.45);
@@ -382,9 +389,11 @@ header::after {
 .timer-off {
   margin-left: var(--sp-4);
 }
-.timer-off:hover {
-  border-color: var(--danger-line);
-  color: var(--danger);
+@media (hover: hover) {
+  .timer-off:hover {
+    border-color: var(--danger-line);
+    color: var(--danger);
+  }
 }
 /* ── Range Slider ────────────────────────────────────────────────── */
 /* `--fill` is the track/thumb-fill color: the global accent by default, the
@@ -427,8 +436,10 @@ header::after {
   cursor: pointer;
   transition: transform var(--dur-1);
 }
-.drift-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.12);
+@media (hover: hover) {
+  .drift-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.12);
+  }
 }
 .drift-slider:active::-webkit-slider-thumb {
   transform: scale(1.18);
@@ -525,9 +536,11 @@ header::after {
   transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
   outline: none;
 }
-.cat-pill:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .cat-pill:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
 }
 /* The active filter glows in its own category hue, tying the row to the cards. */
 .cat-pill.active {
@@ -650,9 +663,11 @@ header::after {
   /* The same light-catching top hairline as the glass surfaces. */
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.sound-card:hover {
-  background: var(--surface-hover);
-  border-color: rgba(255,255,255,0.11);
+@media (hover: hover) {
+  .sound-card:hover {
+    background: var(--surface-hover);
+    border-color: rgba(255,255,255,0.11);
+  }
 }
 .sound-card:active {
   transform: scale(0.985);
@@ -680,8 +695,10 @@ header::after {
   line-height: 1;
   transition: color var(--dur-2);
 }
-.sound-card:hover .card-icon {
-  color: rgba(var(--cat), 0.85);
+@media (hover: hover) {
+  .sound-card:hover .card-icon {
+    color: rgba(var(--cat), 0.85);
+  }
 }
 .sound-card.active .card-icon {
   color: var(--card-accent);
@@ -787,7 +804,10 @@ header::after {
   pointer-events: none;
   z-index: -1;
 }
-.sound-card:hover::after { opacity: 0.5; }
+@media (hover: hover) {
+  .sound-card:hover::after { opacity: 0.5;
+  }
+}
 .sound-card.active::after { opacity: 1; }
 
 .card-name {
@@ -845,18 +865,25 @@ header::after {
   cursor: pointer;
   transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1);
 }
-.sound-card:hover .card-editor-icon,
 .sound-card.active .card-editor-icon {
   border-color: var(--border);
   background: var(--surface-faint);
+}
+@media (hover: hover) {
+  .sound-card:hover .card-editor-icon {
+    border-color: var(--border);
+    background: var(--surface-faint);
+  }
 }
 .card-editor-icon .material-symbols-rounded {
   font-size: 14px;
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 16;
 }
-.card-editor-icon:hover {
-  color: var(--text-secondary);
-  border-color: rgba(255,255,255,0.2);
+@media (hover: hover) {
+  .card-editor-icon:hover {
+    color: var(--text-secondary);
+    border-color: rgba(255,255,255,0.2);
+  }
 }
 .sound-card .card-editor-icon.active {
   color: var(--card-accent);
@@ -926,9 +953,11 @@ header::after {
   outline: none;
   flex-shrink: 0;
 }
-.preset-save-btn:hover:not(:disabled) {
-  background: rgba(184,154,106,0.2);
-  border-color: rgba(184,154,106,0.5);
+@media (hover: hover) {
+  .preset-save-btn:hover:not(:disabled) {
+    background: rgba(184,154,106,0.2);
+    border-color: rgba(184,154,106,0.5);
+  }
 }
 .preset-save-btn:disabled {
   opacity: 0.35;
@@ -979,7 +1008,10 @@ header::after {
   text-decoration: none;
   transition: color var(--dur-2);
 }
-.footer-privacy:hover { color: var(--text-primary); }
+@media (hover: hover) {
+  .footer-privacy:hover { color: var(--text-primary);
+  }
+}
 .footer-privacy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .footer-version { font-variant-numeric: tabular-nums; }
 
@@ -1062,9 +1094,11 @@ header::after {
   font-size: 15px;
   font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
-.sb-play-btn:hover {
-  background: rgba(var(--cat), 0.18);
-  border-color: rgba(var(--cat), 0.5);
+@media (hover: hover) {
+  .sb-play-btn:hover {
+    background: rgba(var(--cat), 0.18);
+    border-color: rgba(var(--cat), 0.5);
+  }
 }
 
 .sb-icon-btn {
@@ -1089,7 +1123,10 @@ header::after {
   inset: -8px;
 }
 .sb-icon-btn .material-symbols-rounded { font-size: 16px; }
-.sb-icon-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+@media (hover: hover) {
+  .sb-icon-btn:hover { border-color: var(--border-strong); color: var(--text-primary);
+  }
+}
 
 .sb-loading {
   padding: var(--sp-12);
@@ -1192,7 +1229,10 @@ header::after {
   outline: none;
 }
 .drift-exit .material-symbols-rounded { font-size: 18px; }
-.drift-exit:hover { color: var(--text-primary); border-color: var(--border-strong); }
+@media (hover: hover) {
+  .drift-exit:hover { color: var(--text-primary); border-color: var(--border-strong);
+  }
+}
 .drift-exit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .drift-center {
@@ -1262,7 +1302,10 @@ header::after {
   font-size: 32px;
   font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 40;
 }
-.drift-orb:hover { background: var(--accent-tint-2); }
+@media (hover: hover) {
+  .drift-orb:hover { background: var(--accent-tint-2);
+  }
+}
 .drift-orb:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .drift-orb.playing {
   animation: orbBreathe 7s ease-in-out infinite;
@@ -1289,7 +1332,10 @@ header::after {
   font-size: 22px;
   font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
-.drift-stop:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.24); }
+@media (hover: hover) {
+  .drift-stop:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.24);
+  }
+}
 .drift-stop:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 /* Stillness: controls recede, the clock stays. */
@@ -1386,9 +1432,11 @@ header::after {
   background: linear-gradient(to top, rgba(5,8,15,0.5) 0%, transparent 62%);
   pointer-events: none;
 }
-.scene-card:hover {
-  border-color: rgba(255,255,255,0.20);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+@media (hover: hover) {
+  .scene-card:hover {
+    border-color: rgba(255,255,255,0.20);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+  }
 }
 .scene-card:active { transform: scale(0.98); }
 .scene-card.current {
@@ -1501,9 +1549,11 @@ header::after {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
   transition: border-color var(--dur-2), box-shadow var(--dur-2), transform var(--dur-1);
 }
-.mix-card-body:hover {
-  border-color: rgba(184,154,106,0.45);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+@media (hover: hover) {
+  .mix-card-body:hover {
+    border-color: rgba(184,154,106,0.45);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+  }
 }
 .mix-card-body:active { transform: scale(0.98); }
 .mix-card.current .mix-card-body {
@@ -1582,7 +1632,10 @@ header::after {
   transition: color var(--dur-1), background var(--dur-1);
   outline: none;
 }
-.mix-del:hover { color: var(--danger); background: var(--danger-tint); }
+@media (hover: hover) {
+  .mix-del:hover { color: var(--danger); background: var(--danger-tint);
+  }
+}
 
 /* Italic serif overhangs its advance width; ellipsized titles need a hair of
    inner end-padding or overflow:hidden shaves the last letter's slant. */
@@ -1612,6 +1665,11 @@ header::after {
   box-shadow: 0 18px 48px rgba(2,6,18,0.7);
   animation: playerRise 0.5s var(--ease) backwards;
 }
+/* If the mini player is up, the notice stacks above it instead of covering
+   the play control (both anchor to the same bottom edge otherwise). */
+body:has(.mini-player) .cookie-notice {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+}
 .cookie-text {
   flex: 1;
   min-width: 58%;
@@ -1634,7 +1692,10 @@ header::after {
   text-decoration: none;
   transition: color var(--dur-2);
 }
-.cookie-link:hover { color: var(--text-secondary); }
+@media (hover: hover) {
+  .cookie-link:hover { color: var(--text-secondary);
+  }
+}
 .cookie-ok {
   padding: var(--sp-6) var(--sp-16);
   border-radius: var(--r-pill);
@@ -1649,7 +1710,10 @@ header::after {
   transition: filter var(--dur-1);
   outline: none;
 }
-.cookie-ok:hover { filter: brightness(1.08); }
+@media (hover: hover) {
+  .cookie-ok:hover { filter: brightness(1.08);
+  }
+}
 .cookie-ok:focus-visible,
 .cookie-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -1705,7 +1769,10 @@ header::after {
   font-size: 21px;
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-.mp-play:hover { filter: brightness(1.08); box-shadow: 0 2px 18px rgba(123,167,232,0.6); }
+@media (hover: hover) {
+  .mp-play:hover { filter: brightness(1.08); box-shadow: 0 2px 18px rgba(123,167,232,0.6);
+  }
+}
 .mp-play.playing {
   animation: mpPulse 2.8s ease-in-out infinite;
 }
@@ -1768,7 +1835,10 @@ header::after {
   transition: color var(--dur-1);
 }
 .mp-expand .material-symbols-rounded { font-size: 20px; }
-.mp-expand:hover { color: var(--text-primary); }
+@media (hover: hover) {
+  .mp-expand:hover { color: var(--text-primary);
+  }
+}
 
 /* ── Now-playing sheet ───────────────────────────────────────────── */
 
@@ -1900,7 +1970,10 @@ header::after {
   font-size: 21px;
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
-.sheet-play:hover { filter: brightness(1.08); box-shadow: 0 2px 18px rgba(123,167,232,0.55); }
+@media (hover: hover) {
+  .sheet-play:hover { filter: brightness(1.08); box-shadow: 0 2px 18px rgba(123,167,232,0.55);
+  }
+}
 .sheet-play.playing { animation: mpPulse 2.8s ease-in-out infinite; }
 .sheet-close {
   width: 34px; height: 34px;
@@ -1915,7 +1988,10 @@ header::after {
   outline: none;
 }
 .sheet-close .material-symbols-rounded { font-size: 19px; }
-.sheet-close:hover { color: var(--text-primary); border-color: var(--border-strong); }
+@media (hover: hover) {
+  .sheet-close:hover { color: var(--text-primary); border-color: var(--border-strong);
+  }
+}
 
 .sheet-scroll {
   overflow-y: auto;
@@ -1993,7 +2069,10 @@ header::after {
   transition: color var(--dur-1), background var(--dur-1);
   outline: none;
 }
-.layer-remove:hover { color: var(--danger); background: var(--danger-tint); }
+@media (hover: hover) {
+  .layer-remove:hover { color: var(--danger); background: var(--danger-tint);
+  }
+}
 
 .sheet-empty {
   margin: var(--sp-8) 0;
@@ -2060,7 +2139,10 @@ header::after {
   position: absolute;
   inset: -10px -6px;
 }
-.sheet-clear:hover { color: var(--danger); }
+@media (hover: hover) {
+  .sheet-clear:hover { color: var(--danger);
+  }
+}
 .sheet-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .sheet-actions {
@@ -2089,13 +2171,19 @@ header::after {
   background: var(--accent-tint);
   color: var(--accent);
 }
-.sheet-action.accent:hover { background: var(--accent-tint-2); }
+@media (hover: hover) {
+  .sheet-action.accent:hover { background: var(--accent-tint-2);
+  }
+}
 .sheet-action.warm {
   border: 1px solid var(--warm-line);
   background: transparent;
   color: var(--warm);
 }
-.sheet-action.warm:hover:not(:disabled) { background: var(--warm-glow); }
+@media (hover: hover) {
+  .sheet-action.warm:hover:not(:disabled) { background: var(--warm-glow);
+  }
+}
 .sheet-action:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Keyboard focus ──────────────────────────────────────────────── */

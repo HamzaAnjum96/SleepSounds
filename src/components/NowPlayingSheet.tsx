@@ -170,6 +170,17 @@ export default function NowPlayingSheet({
     window.setTimeout(onClearMix, CLOSE_MS);
   }, [onClearMix, requestClose]);
 
+  /** Removing the final layer empties the mix, which unmounts the sheet —
+   *  so give it the same graceful slide-away as clearing. */
+  const handleRemove = useCallback((id: string) => {
+    if (activeSounds.length <= 1) {
+      requestClose();
+      window.setTimeout(() => onRemoveSound(id), CLOSE_MS);
+    } else {
+      onRemoveSound(id);
+    }
+  }, [activeSounds.length, onRemoveSound, requestClose]);
+
   if (!open) return null;
 
   return (
@@ -252,7 +263,7 @@ export default function NowPlayingSheet({
                   <button
                     type="button"
                     className="layer-remove"
-                    onClick={() => onRemoveSound(sound.id)}
+                    onClick={() => handleRemove(sound.id)}
                     aria-label={`Remove ${sound.name}`}
                   >✕</button>
                 </div>
@@ -286,7 +297,8 @@ export default function NowPlayingSheet({
               <span className="sheet-label">sleep timer</span>
               {secondsLeft !== null && (
                 <span className="sheet-value warm">
-                  {formatCountdown(secondsLeft)} · ends ~{endsAround(secondsLeft)}
+                  {formatCountdown(secondsLeft)}
+                  {isPlaying ? ` · ends ~${endsAround(secondsLeft)}` : ' · paused'}
                 </span>
               )}
             </div>
