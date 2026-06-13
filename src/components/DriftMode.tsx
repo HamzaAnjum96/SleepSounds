@@ -155,16 +155,26 @@ export default function DriftMode({
         )}
       </div>
 
-      <button
-        type="button"
-        className={`drift-orb${isPlaying ? ' playing' : ''}`}
-        onClick={onTogglePlay}
-        aria-label={isPlaying ? 'Pause' : 'Play'}
-      >
-        <span className="material-symbols-rounded">
-          {isPlaying ? 'pause' : 'play_arrow'}
-        </span>
-      </button>
+      <div className="drift-controls">
+        <button
+          type="button"
+          className={`drift-orb${isPlaying ? ' playing' : ''}`}
+          onClick={onTogglePlay}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+        >
+          <span className="material-symbols-rounded">
+            {isPlaying ? 'pause' : 'play_arrow'}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="drift-stop"
+          onClick={onClose}
+          aria-label="Leave drift mode"
+        >
+          <span className="material-symbols-rounded">stop</span>
+        </button>
+      </div>
     </div>
   );
 }

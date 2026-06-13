@@ -151,6 +151,12 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
+/** Snap a frequency to a whole number of cycles per loop, so sinusoidal
+ *  components stay phase-continuous across the loop seam. */
+function lockFreq(f: number): number {
+  return Math.max(1, Math.round(f * SECS)) / SECS;
+}
+
 function chance(p: number): boolean {
   return Math.random() < p;
 }
@@ -266,23 +272,35 @@ function genBrown(params?: Record<string, number>): string {
 
 function genFan(params?: Record<string, number>): string {
   const { speed = 0.5, hum: humParam = 0.4, airflow: airflowParam = 0.6 } = params ?? {};
-  const flutterFreq = 12 + speed * 12;
-  const airflowHp = 150 + speed * 100;
-  const humLpCut = 80 + humParam * 80;
-  const humMix = 0.15 + humParam * 0.2;
-  const airflowMix = 0.5 + airflowParam * 0.5;
+  // Blade-pass flutter rides the airflow with a slowly wandering phase (a
+  // real fan is never a perfect metronome), over a motor bed that carries a
+  // faint loop-locked hum at the rotation orders — the tonal identity the
+  // old pure-noise version lacked.
+  const flutterF = lockFreq(11 + speed * 13);
+  const phaseWobble = smoothRandomLfo(-0.6, 0.6, 1.0, 3.0);
 
   const airflowBuf = pinkNoise();
-  hp1(airflowBuf, airflowHp);
-  lp1(airflowBuf, 2200);
+  hp1(airflowBuf, 140 + speed * 160);
+  lp1(airflowBuf, 2200 + speed * 700);
 
   const humBuf = brownNoise();
+  const humLpCut = 80 + humParam * 80;
   lp1(humBuf, humLpCut); lp1(humBuf, humLpCut);
 
+  const humF = lockFreq(52 + speed * 38);
+  const humSwell = smoothRandomLfo(0.75, 1.0, 1.5, 4.5);
+
+  const airflowMix = 0.5 + airflowParam * 0.5;
+  const humMix = 0.13 + humParam * 0.18;
+  const toneMix = 0.02 + humParam * 0.05;
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const flutter = 0.88 + 0.12 * Math.sin((2 * Math.PI * flutterFreq * i) / SR);
-    mix[i] = airflowBuf[i] * airflowMix * flutter + humBuf[i] * humMix;
+    const flutter = 0.88 + 0.12 * Math.sin((2 * Math.PI * flutterF * i) / SR + phaseWobble[i]);
+    const ph = (2 * Math.PI * humF * i) / SR;
+    const tone = Math.sin(ph) * 0.7 + Math.sin(2 * ph + 1.3) * 0.35;
+    mix[i] = airflowBuf[i] * airflowMix * flutter
+           + humBuf[i] * humMix
+           + tone * toneMix * humSwell[i];
   }
   return gen(mix, 0.65);
 }
@@ -774,37 +792,99 @@ function genThunder(params?: Record<string, number>): string {
 
 function genTrain(params?: Record<string, number>): string {
   const { speed = 0.5, rumble: rumbleParam = 0.5, clatter = 0.35 } = params ?? {};
-  const clickGapScale = 1.5 - speed;
-  const rumbleMix = 0.35 + rumbleParam * 0.44;
-  const clickLp = 3000 + clatter * 4000;
-  const clickAmpScale = 0.7 + clatter * 0.6;
-  // Distant train cabin: wheel rhythm + broad mechanical rumble.
-  const rumble = brownNoise();
-  hp1(rumble, 40);
-  lp1(rumble, 460);
+  // A train carriage carries two time structures at once: a continuous,
+  // speed-dependent floor (body boom, rolling band, rail mid, wheel top,
+  // traction at low speed, aero hiss at high), and an event layer of joint
+  // clacks that arrive in axle pairs at rail-length intervals — never as a
+  // metronome of single clicks.
 
-  // A faint, dark carriage bed — kept low so it never washes over the rhythm.
-  const carriage = pinkNoise();
-  hp1(carriage, 160);
-  lp1(carriage, 1100);
+  // ── Continuous floor ──────────────────────────────────────────────
+  // Body / bogie boom: the deep underfloor weight (sub-220 Hz).
+  const body = brownNoise();
+  hp1(body, 26);
+  lp1(body, 90 + rumbleParam * 130);
+  const sway = smoothRandomLfo(0.8, 1.15, 1.2, 4.5);
 
-  const clicks = new Float32Array(N);
-  let pos = Math.floor(SR * 0.25);
-  while (pos < N) {
-    const len = Math.floor(SR * rand(0.003, 0.012));
-    const amp = rand(0.025, 0.085) * clickAmpScale;
-    for (let i = 0; i < len && pos + i < N; i++) {
-      clicks[pos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-10 * (i / len));
+  // Rolling noise: the broadband wheel-on-rail band, with roughness
+  // micro-flutter so it never reads as static hiss.
+  const rolling = pinkNoise();
+  hp1(rolling, 240);
+  lp1(rolling, 1100 + speed * 1500);
+  const roughness = smoothRandomLfo(0.72, 1.28, 0.08, 0.3);
+
+  // Rail-dominant middle band (~1 kHz) and wheel brightness (2–5 kHz),
+  // split so the texture changes believably with speed.
+  const railMid = whiteNoise();
+  bp2(railMid, 850 + speed * 350, 1.6);
+  const wheelTop = whiteNoise();
+  hp1(wheelTop, 2300);
+  lp1(wheelTop, 5200);
+  const wheelDrift = smoothRandomLfo(0.6, 1.1, 0.5, 2.0);
+
+  // Traction / auxiliaries: motors, compressors, fans. Dominant at low
+  // speed, receding as rolling noise takes over.
+  const traction = pinkNoise();
+  hp1(traction, 85);
+  lp1(traction, 520);
+  const humF = lockFreq(46 + speed * 28);
+
+  // Aerodynamic hiss: only blooms toward the top of the speed range.
+  const aero = whiteNoise();
+  hp1(aero, 1500);
+  lp1(aero, 6400);
+
+  // ── Event layer: joints under axle pairs ──────────────────────────
+  const mps = (40 + speed * 180) / 3.6;     // 40–220 km/h
+  const jointGapS = 19 / mps;               // ~19 m rail lengths
+  const axleGapS = 2.6 / mps;               // bogie axle spacing
+  const clacks = new Float32Array(N);
+  const thumps = new Float32Array(N);
+  let jPos = SR * rand(0.2, 1.0);
+  while (jPos < N) {
+    // Some joints are welded out, so the rhythm breathes instead of ticking.
+    if (chance(0.85)) {
+      const strength = rand(0.5, 1.0) * (0.45 + clatter * 0.9);
+      for (const axle of [0, 1] as const) {
+        const aPos = Math.floor(jPos + axle * axleGapS * SR * rand(0.92, 1.08));
+        const len = Math.floor(SR * rand(0.003, 0.009));
+        const amp = strength * rand(0.6, 1.0) * (axle === 0 ? 1 : rand(0.55, 0.85));
+        for (let i = 0; i < len && aPos + i < N; i++) {
+          clacks[aPos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
+        }
+        // The heavier hits put a soft thump into the floor as well.
+        if (chance(0.4)) {
+          const thLen = Math.floor(SR * rand(0.05, 0.09));
+          const f0 = rand(46, 64);
+          let ph = 0;
+          for (let i = 0; i < thLen && aPos + i < N; i++) {
+            ph += (2 * Math.PI * f0) / SR;
+            thumps[aPos + i] += Math.sin(ph) * Math.exp(-5.5 * (i / thLen)) * amp * 0.5;
+          }
+        }
+      }
     }
-    pos += Math.floor(SR * rand(0.18 * clickGapScale, 0.62 * clickGapScale));
+    jPos += jointGapS * SR * rand(0.85, 1.15);
   }
-  hp1(clicks, 1200);
-  lp1(clicks, clickLp);
+  hp1(clacks, 1100);
+  lp1(clacks, 2400 + clatter * 3800);
+  lp1(thumps, 160);
 
-  const sway = smoothRandomLfo(0.78, 1.18, 0.8, 3.8);
+  const tractionW = 0.12 * (1 - speed * 0.75);
+  const aeroW = 0.05 * speed * speed;
+  const wheelW = (0.015 + speed * 0.05) * (0.5 + clatter * 0.8);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = rumble[i] * rumbleMix * sway[i] + carriage[i] * 0.11 + clicks[i] * 0.24;
+    const humPh = (2 * Math.PI * humF * i) / SR;
+    const hum = Math.sin(humPh) * 0.6 + Math.sin(2 * humPh + 0.8) * 0.3;
+    mix[i] =
+      body[i] * (0.30 + rumbleParam * 0.26) * sway[i] +
+      rolling[i] * (0.09 + speed * 0.15) * roughness[i] +
+      railMid[i] * (0.04 + speed * 0.05) +
+      wheelTop[i] * wheelW * wheelDrift[i] +
+      (traction[i] * 0.8 + hum * 0.18) * tractionW +
+      aero[i] * aeroW +
+      clacks[i] * 0.30 +
+      thumps[i] * (0.30 + rumbleParam * 0.25);
   }
   return gen(mix, 0.68);
 }
@@ -907,28 +987,69 @@ function genShower(params?: Record<string, number>): string {
 
 function genAirplane(params?: Record<string, number>): string {
   const { altitude = 0.5, cabin = 0.6, turbulence = 0.3 } = params ?? {};
-  const drone = brownNoise();
-  hp1(drone, 40 + altitude * 40);
-  lp1(drone, 300 + altitude * 200);
+  // Modeled on in-flight cabin measurements (DLR A320): a broadband engine
+  // bed with a faint tonal scaffold underneath, the turbulent-boundary-layer
+  // "airborne blanket" filling the 0.8–4 kHz mids, a secondary ventilation
+  // bed, sub-80 Hz structural weight, and rough-air swells that arrive as
+  // irregular events rather than a steady wobble.
 
-  const drone2 = pinkNoise();
-  hp1(drone2, 80);
-  lp1(drone2, 600 + altitude * 400);
-  bp2(drone2, 120 + altitude * 80, 2);
+  // 1. Engine bed: the broadband low-frequency body.
+  const engine = brownNoise();
+  hp1(engine, 28 + altitude * 14);
+  lp1(engine, 230 + altitude * 110);
+  lp1(engine, 420);
+  const engDrift = smoothRandomLfo(0.88, 1.05, 3.0, 8.0);
 
-  const cabinNoise = pinkNoise();
-  hp1(cabinNoise, 200);
-  lp1(cabinNoise, 3000 + cabin * 2000);
+  // 2. Faint engine orders, loop-locked, beating slowly under the bed.
+  const f1 = lockFreq(88 + altitude * 38);
+  const f2 = lockFreq(f1 * 2.02);
+  const toneBeat = smoothRandomLfo(0.55, 1.0, 2.5, 7.0);
 
-  const turbBuf = brownNoise();
-  const turbLfo = smoothRandomLfo(0.0, 1.0, 2.0, 8.0);
-  hp1(turbBuf, 20);
-  lp1(turbBuf, 200);
-  for (let i = 0; i < N; i++) turbBuf[i] *= turbLfo[i];
+  // 3. Boundary-layer airflow: what makes a cabin feel airborne, not just
+  //    mechanical. Rises and brightens with altitude (cruise speed).
+  const airflow = pinkNoise();
+  hp1(airflow, 550 + altitude * 450);
+  lp1(airflow, 3200 + altitude * 1500);
+  const airDrift = smoothRandomLfo(0.9, 1.06, 1.5, 5.0);
 
+  // 4. Ventilation: secondary by design — measurements put HVAC well under
+  //    the boundary-layer and jet contributions in cruise.
+  const vents = pinkNoise();
+  hp1(vents, 220);
+  lp1(vents, 2600 + cabin * 1600);
+
+  // 5. Structure: seat-rail and floor weight, felt more than heard.
+  const structure = brownNoise();
+  lp1(structure, 80);
+  lp1(structure, 80);
+  const structureSwell = smoothRandomLfo(0.7, 1.0, 4.0, 10.0);
+
+  // 6. Rough air: shallow raised-cosine swells, seconds long and far apart,
+  //    thickening the low end and slightly widening the mid-band hiss.
+  const turbEnv = new Float32Array(N);
+  let tPos = Math.floor(SR * rand(1, 6));
+  while (tPos < N) {
+    const dur = Math.floor(SR * rand(0.5, 2.8));
+    const depth = rand(0.35, 1.0) * turbulence;
+    for (let i = 0; i < dur && tPos + i < N; i++) {
+      turbEnv[tPos + i] += depth * 0.5 * (1 - Math.cos(2 * Math.PI * (i / dur)));
+    }
+    tPos += dur + Math.floor(SR * rand(3, 6 + 20 * (1 - turbulence)));
+  }
+
+  const airW = 0.15 + altitude * 0.11;
+  const ventW = 0.05 + cabin * 0.11;
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = drone[i] * 0.35 + drone2[i] * 0.2 + cabinNoise[i] * (0.2 + cabin * 0.2) + turbBuf[i] * turbulence * 0.15;
+    const t = (2 * Math.PI * i) / SR;
+    const tone = Math.sin(f1 * t) * 0.7 + Math.sin(f2 * t + 1.1) * 0.45;
+    const turb = turbEnv[i];
+    mix[i] =
+      engine[i] * 0.30 * engDrift[i] * (1 + 0.7 * turb) +
+      tone * 0.035 * toneBeat[i] +
+      airflow[i] * airW * airDrift[i] * (1 + 0.3 * turb) +
+      vents[i] * ventW +
+      structure[i] * 0.16 * structureSwell[i] * (1 + 0.9 * turb);
   }
   return gen(mix, 0.66);
 }

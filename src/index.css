@@ -1241,6 +1241,12 @@ header::after {
   letter-spacing: 0.1em;
 }
 
+.drift-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-24);
+}
+
 .drift-orb {
   width: 84px; height: 84px;
   border-radius: var(--r-full);
@@ -1266,9 +1272,30 @@ header::after {
   50%       { transform: scale(1.05); box-shadow: 0 0 44px rgba(123,167,232,0.26); }
 }
 
+/* The central way out: a square-stop companion to the orb, big enough to
+   find with one eye open. Exits drift mode back to the mixer. */
+.drift-stop {
+  width: 56px; height: 56px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border-strong);
+  background: rgba(8,12,20,0.4);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color var(--dur-2), border-color var(--dur-2), opacity 0.8s var(--ease);
+  outline: none;
+}
+.drift-stop .material-symbols-rounded {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+.drift-stop:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.24); }
+.drift-stop:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
 /* Stillness: controls recede, the clock stays. */
 .drift-mode.quiet .drift-exit      { opacity: 0; pointer-events: none; }
 .drift-mode.quiet .drift-orb       { opacity: 0.3; }
+.drift-mode.quiet .drift-stop      { opacity: 0.3; }
 .drift-mode.quiet .drift-mix,
 .drift-mode.quiet .drift-countdown { opacity: 0.45; }
 .drift-mode.quiet .drift-clock     { opacity: 0.85; }
