@@ -30,6 +30,16 @@ const FADE_WINDOW_S = 90;
 const CSS_SCROLL_TIMELINE =
   typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()');
 
+/** A sleep-timer duration in plain words, for the screen-reader announcement. */
+function humanizeSecs(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.round((secs % 3600) / 60);
+  const parts: string[] = [];
+  if (h) parts.push(`${h} hour${h > 1 ? 's' : ''}`);
+  if (m) parts.push(`${m} minute${m > 1 ? 's' : ''}`);
+  return parts.join(' ') || `${secs} seconds`;
+}
+
 /** "Resume your night": the last active mix + master volume, kept on-device so
  *  reopening the app brings back the soundscape you fell asleep to — paused
  *  and ready, never auto-blaring. */
@@ -433,9 +443,11 @@ export default function App() {
     if (timerTotal === secs && secondsLeft !== null) {
       setSecondsLeft(null);
       setTimerTotal(null);
+      announce('sleep timer off');
     } else {
       setSecondsLeft(secs);
       setTimerTotal(secs);
+      announce(`sleep timer set for ${humanizeSecs(secs)}`);
     }
   };
 
@@ -444,12 +456,14 @@ export default function App() {
     haptic(8);
     setSecondsLeft((s) => (s !== null ? s + secs : secs));
     setTimerTotal((t) => (t !== null ? t + secs : secs));
+    announce(`added ${humanizeSecs(secs)} to the sleep timer`);
   };
 
   const handleTimerClear = () => {
     haptic(8);
     setSecondsLeft(null);
     setTimerTotal(null);
+    announce('sleep timer off');
   };
 
   const visibleSounds = category === 'All'
@@ -525,6 +539,29 @@ export default function App() {
     : `${activeSounds.length} layer${activeSounds.length === 1 ? '' : 's'}`;
 
   const hasPlayer = activeSounds.length > 0;
+
+  // Screen-reader status line: playback and timer state are otherwise only
+  // conveyed visually. A polite live region speaks the changes.
+  const [status, setStatus] = useState('');
+  const announce = useCallback((msg: string) => {
+    // Re-set even if identical so repeated actions still announce.
+    setStatus('');
+    requestAnimationFrame(() => setStatus(msg));
+  }, []);
+
+  const firstStatusRef = useRef(true);
+  useEffect(() => {
+    if (firstStatusRef.current) { firstStatusRef.current = false; return; }
+    if (activeSounds.length === 0) setStatus('stopped');
+    else setStatus(isPlaying ? 'playing' : 'paused');
+  }, [isPlaying, activeSounds.length]);
+
+  // Reflect playback in the tab title, so the app is findable among many tabs
+  // (the awake-but-focused, masking-noise user especially).
+  useEffect(() => {
+    const base = 'drift away — sleep sounds';
+    document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · drift away` : base;
+  }, [isPlaying, mixTitle]);
 
   return (
     <>
@@ -778,6 +815,8 @@ export default function App() {
       />
 
       <CookieNotice />
+
+      <div className="sr-only" role="status" aria-live="polite">{status}</div>
     </>
   );
 }
