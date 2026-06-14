@@ -2,6 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Flag Samsung Internet before first paint: it darkens/recolours pages
+         and renders backdrop-filter and masks differently, so a few scoped CSS
+         overrides keep the night palette from being crushed. Chrome is never
+         flagged, so its rendering is untouched. -->
+    <script>try{if(/SamsungBrowser/i.test(navigator.userAgent))document.documentElement.classList.add('samsung-browser');}catch(e){}</script>
     <!-- interactive-widget: the Android keyboard resizes the page, so the
          mix-naming field in the bottom sheet is never hidden behind it. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />

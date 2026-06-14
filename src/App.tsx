@@ -181,6 +181,7 @@ export default function App() {
     catch { return false; }
   });
   const soundsGridRef = useRef<HTMLDivElement | null>(null);
+  const sceneRowRef = useRef<HTMLDivElement | null>(null);
   const [soundsGridColumns, setSoundsGridColumns] = useState(2);
   const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
     Object.fromEntries(
@@ -564,6 +565,29 @@ export default function App() {
     document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · drift away` : base;
   }, [isPlaying, mixTitle]);
 
+  // Teach the horizontal scroll once: a gentle wink of the scenes shelf so it
+  // reads as "there's more this way," then it never nags again.
+  useEffect(() => {
+    const row = sceneRowRef.current;
+    if (!row) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (row.scrollWidth <= row.clientWidth + 8) return;
+    try { if (localStorage.getItem('drift-shelf-hinted')) return; } catch { return; }
+    try { localStorage.setItem('drift-shelf-hinted', '1'); } catch { /* private mode */ }
+    // Suspend scroll-snap during the wink, or proximity-snap yanks the peek
+    // straight back before it's seen; restore it after.
+    row.style.scrollSnapType = 'none';
+    const peek = window.setTimeout(() => row.scrollTo({ left: 56, behavior: 'smooth' }), 900);
+    const settle = window.setTimeout(() => row.scrollTo({ left: 0, behavior: 'smooth' }), 1650);
+    const restore = window.setTimeout(() => { row.style.scrollSnapType = ''; }, 2250);
+    return () => {
+      window.clearTimeout(peek);
+      window.clearTimeout(settle);
+      window.clearTimeout(restore);
+      row.style.scrollSnapType = '';
+    };
+  }, []);
+
   return (
     <>
       <div className="bg-layer" />
@@ -595,7 +619,7 @@ export default function App() {
             <h2 className="section-title">the scenes</h2>
             <span className="section-meta">curated mixes</span>
           </div>
-          <div className="scene-row" role="list">
+          <div className="scene-row" role="list" ref={sceneRowRef}>
             {SCENES.map((scene) => {
               const current = activeMixId === scene.preset.id && activeSounds.length > 0;
               const ids = presetSoundIds(scene.preset);

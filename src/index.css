@@ -2291,3 +2291,28 @@ body:has(.mini-player) .cookie-notice {
     --text-dim:       #8b93ad;
   }
 }
+
+/* ── Samsung Internet ────────────────────────────────────────────── */
+/* Samsung Internet crushes the near-black canvas (its dark-mode pass darkens
+   the page on top of our already-dark palette) and renders backdrop-filter
+   and CSS masks unreliably, so the app reads as a flat, too-dark void there.
+   These overrides are scoped to the .samsung-browser class (set from the UA in
+   index.html) and never touch Chrome: lift the base ink off pure black, make
+   the glass panels solid, and drop the edge-fade masks that can blank a shelf. */
+html.samsung-browser {
+  --bg: #0d1626;
+}
+html.samsung-browser body { background: #0d1626; }
+html.samsung-browser .mini-player,
+html.samsung-browser .sheet,
+html.samsung-browser .cookie-notice {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: #15203a;
+}
+html.samsung-browser .scene-row,
+html.samsung-browser .mix-row,
+html.samsung-browser .cat-pills {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
