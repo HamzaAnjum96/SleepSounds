@@ -10,7 +10,7 @@ import SoundCard from './components/SoundCard';
 import { CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
-import type { Preset } from './types';
+import type { Preset, SoundState } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
 import { haptic } from './lib/haptics';
@@ -22,6 +22,41 @@ const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 
 /** Seconds before timer end over which the mix gently fades out. */
 const FADE_WINDOW_S = 90;
+
+/** "Resume your night": the last active mix + master volume, kept on-device so
+ *  reopening the app brings back the soundscape you fell asleep to — paused
+ *  and ready, never auto-blaring. */
+const SESSION_KEY = 'drift-last-session';
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+function saveLastSession(state: Record<string, SoundState>, masterVolume: number): void {
+  try {
+    const enabled = Object.entries(state).filter(([, s]) => s.enabled);
+    if (enabled.length === 0) { localStorage.removeItem(SESSION_KEY); return; }
+    const slim = Object.fromEntries(enabled.map(([id, s]) => [id, { enabled: true, volume: s.volume }]));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ state: slim, masterVolume }));
+  } catch { /* private mode / quota */ }
+}
+
+function loadLastSession(): { state: Record<string, SoundState>; masterVolume: number } | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null');
+    if (!raw || typeof raw !== 'object' || typeof raw.state !== 'object') return null;
+    const state: Record<string, SoundState> = {};
+    let any = false;
+    for (const sound of SOUND_LIBRARY) {
+      const item = raw.state[sound.id];
+      if (item && item.enabled) {
+        state[sound.id] = { enabled: true, volume: typeof item.volume === 'number' ? clamp01(item.volume) : 0.5 };
+        any = true;
+      } else {
+        state[sound.id] = { enabled: false, volume: 0.5 };
+      }
+    }
+    if (!any) return null;
+    return { state, masterVolume: typeof raw.masterVolume === 'number' ? clamp01(raw.masterVolume) : 0.8 };
+  } catch { return null; }
+}
 
 /** The categories of a preset's layers, in library order, deduplicated. */
 function presetCategories(preset: Preset): string[] {
@@ -263,12 +298,29 @@ export default function App() {
     if (launchedRef.current) return;
     launchedRef.current = true;
     const sceneId = new URLSearchParams(window.location.search).get('scene');
-    if (!sceneId) return;
-    const scene = SCENES.find((s) => s.preset.id === sceneId);
-    if (scene) handlePlayPreset(scene.preset);
-    // Clean the param so refreshes don't re-trigger.
-    window.history.replaceState(null, '', window.location.pathname);
-  }, [handlePlayPreset]);
+    if (sceneId) {
+      const scene = SCENES.find((s) => s.preset.id === sceneId);
+      if (scene) handlePlayPreset(scene.preset);
+      // Clean the param so refreshes don't re-trigger.
+      window.history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+    // No deep link: bring back last night's mix, paused and ready (autoplay is
+    // blocked without a gesture anyway, and a sudden sound would be jarring).
+    const last = loadLastSession();
+    if (last) {
+      restoreMixerState(last.state, last.masterVolume, false);
+      setIsPaused(true);
+    }
+  }, [handlePlayPreset, restoreMixerState]);
+
+  // Persist the live mix so it survives a reload or a closed tab. Debounced so
+  // a volume drag doesn't hammer storage; clears itself when the mix is empty.
+  useEffect(() => {
+    if (!launchedRef.current) return;
+    const t = window.setTimeout(() => saveLastSession(soundState, masterVolume), 500);
+    return () => window.clearTimeout(t);
+  }, [soundState, masterVolume]);
 
   // Media Session API — powers lock-screen / notification player on Android & iOS
   useEffect(() => {
