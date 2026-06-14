@@ -2214,3 +2214,44 @@ body:has(.mini-player) .cookie-notice {
   /* Hold the equaliser as a static mark so "playing" still reads. */
   .eq-bars span { height: 7px !important; }
 }
+
+/* ── View transitions ────────────────────────────────────────────── */
+/* Switching the library filter crossfades the grid (driven from selectCategory
+   via the View Transitions API) rather than snapping. Reduced-motion users
+   never reach this path. */
+.sounds-grid { view-transition-name: library-grid; }
+::view-transition-group(library-grid) {
+  animation-duration: var(--dur-3);
+  animation-timing-function: var(--ease);
+}
+/* height:auto stops the snapshots stretching to the group box as the grid
+   grows or shrinks (which would squash the cards): a clean crossfade instead. */
+::view-transition-old(library-grid),
+::view-transition-new(library-grid) {
+  height: auto;
+  animation-duration: var(--dur-3);
+  animation-timing-function: var(--ease);
+}
+
+/* ── Reduced transparency ────────────────────────────────────────── */
+/* Some users (and OS "reduce transparency" settings) find blur-behind hard to
+   read. Swap the glass surfaces for solid panels that still sit in the palette. */
+@media (prefers-reduced-transparency: reduce) {
+  .mini-player, .sheet, .cookie-notice {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: #111a2c;
+  }
+}
+
+/* ── Increased contrast ──────────────────────────────────────────── */
+/* Lift the line work and the dimmer text tiers for users who ask the OS for
+   more contrast, without touching the nocturnal palette. */
+@media (prefers-contrast: more) {
+  :root {
+    --border:         rgba(255,255,255,0.20);
+    --border-strong:  rgba(255,255,255,0.34);
+    --text-secondary: #aab2c8;
+    --text-dim:       #8b93ad;
+  }
+}

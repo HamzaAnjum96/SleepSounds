@@ -1,4 +1,5 @@
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { version } from '../package.json';
 import CookieNotice from './components/CookieNotice';
 import DriftMode from './components/DriftMode';
@@ -406,6 +407,21 @@ export default function App() {
     }
   }, [secondsLeft, setMasterFade]);
 
+  // Switch the library filter through a View Transition where supported, so the
+  // grid crossfades instead of snapping. Falls back to a plain set otherwise,
+  // and reduced-motion users get the instant swap (the CSS zeroes the anim).
+  const selectCategory = useCallback((cat: Category) => {
+    if (cat === category) return;
+    type VTDoc = Document & { startViewTransition?: (cb: () => void) => unknown };
+    const doc = document as VTDoc;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (doc.startViewTransition && !reduce) {
+      doc.startViewTransition(() => flushSync(() => setCategory(cat)));
+    } else {
+      setCategory(cat);
+    }
+  }, [category]);
+
   const handleTimerSelect = (secs: number) => {
     haptic(8);
     if (timerTotal === secs && secondsLeft !== null) {
@@ -636,7 +652,7 @@ export default function App() {
                   className={`cat-pill${category === cat ? ' active' : ''}`}
                   data-cat={cat}
                   aria-pressed={category === cat}
-                  onClick={() => setCategory(cat)}
+                  onClick={() => selectCategory(cat)}
                 >
                   {CATEGORY_ICONS[cat] && <span className="material-symbols-rounded cat-icon">{CATEGORY_ICONS[cat]}</span>}
                   {cat}
