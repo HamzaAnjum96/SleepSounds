@@ -201,10 +201,11 @@ Shared interactive vocabulary:
   sleep timer is set, a warm 1.5px progress ring around it empties clockwise.
 - **Drift mode** — the fullscreen night surface (`DriftMode.tsx`): app chrome
   fades (`.app-quiet`), leaving the sky, a large Cormorant clock, mix names,
-  countdown, an 84px breathing play orb, and a 56px square-stop companion
-  that exits back to the mixer. Controls recede after 5 still seconds; the
-  clock stays. Wake lock held while open. The only surface where display
-  type carries UI, a deliberate exception to the product register.
+  countdown, and a centered control trio: an 84px breathing play orb flanked
+  by two 56px companions, back-to-the-mixer on one side and stop-the-mix on
+  the other. Controls recede after 5 still seconds; the clock stays. Wake
+  lock held while open. The only surface where display type carries UI, a
+  deliberate exception to the product register.
 
 Every interactive control has default / hover / focus-visible / active states
 (and disabled where relevant). Focus is keyboard-only (`:focus-visible`) with an

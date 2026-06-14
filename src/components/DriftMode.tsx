@@ -135,16 +135,6 @@ export default function DriftMode({
       aria-label="Drift mode"
       onPointerDown={wake}
     >
-      <button
-        ref={closeRef}
-        type="button"
-        className="drift-exit"
-        aria-label="Exit drift mode"
-        onClick={onClose}
-      >
-        <span className="material-symbols-rounded">close</span>
-      </button>
-
       <div className="drift-center">
         <div className="drift-clock">{formatClock(now)}</div>
         {mixNames.length > 0 && (
@@ -160,6 +150,15 @@ export default function DriftMode({
 
       <div className="drift-controls">
         <button
+          ref={closeRef}
+          type="button"
+          className="drift-side drift-back"
+          onClick={onClose}
+          aria-label="Back to the mixer"
+        >
+          <span className="material-symbols-rounded">arrow_back</span>
+        </button>
+        <button
           type="button"
           className={`drift-orb${isPlaying ? ' playing' : ''}`}
           onClick={onTogglePlay}
@@ -171,7 +170,7 @@ export default function DriftMode({
         </button>
         <button
           type="button"
-          className="drift-stop"
+          className="drift-side drift-stop"
           onClick={onStop}
           aria-label="Stop the mix"
         >
