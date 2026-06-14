@@ -17,6 +17,15 @@
  */
 
 const CACHE = 'drift-away-__CACHE_VERSION__';
+// App version baked in at build (injected). The page compares this against its
+// own version to tell a real pending update from a normal online open.
+const VERSION = '__APP_VERSION__';
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0] && event.ports[0].postMessage(VERSION);
+  }
+});
 
 // Stable shell paths; the build injects the hashed assets, fonts and worklets.
 const PRECACHE = [

@@ -33,10 +33,12 @@ const assets = [
 const version = createHash('sha256').update(assets.sort().join('|')).digest('hex').slice(0, 10);
 
 const literal = assets.map((p) => `  '${p}',`).join('\n');
+const appVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
 
 let sw = readFileSync(SW, 'utf8');
 sw = sw.replace('__CACHE_VERSION__', version);
+sw = sw.replace('__APP_VERSION__', appVersion);
 sw = sw.replace('  /*__INJECT_ASSETS__*/', literal);
 writeFileSync(SW, sw);
 
-console.log(`[sw] precached ${assets.length} assets, cache drift-away-${version}`);
+console.log(`[sw] precached ${assets.length} assets, cache drift-away-${version}, app v${appVersion}`);

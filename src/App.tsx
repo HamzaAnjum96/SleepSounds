@@ -553,6 +553,31 @@ export default function App() {
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
   }, []);
 
+  // Update nudge: the active service worker reports its build version; if it's
+  // newer than the running app, this session is behind, so offer a one-tap
+  // refresh. We never auto-reload — that could cut off a mix mid-night.
+  const [updateReady, setUpdateReady] = useState(false);
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    let cancelled = false;
+    const swVersion = (): Promise<string | null> => new Promise((resolve) => {
+      const ctrl = navigator.serviceWorker.controller;
+      if (!ctrl) { resolve(null); return; }
+      const ch = new MessageChannel();
+      const t = window.setTimeout(() => resolve(null), 2000);
+      ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data as string); };
+      ctrl.postMessage({ type: 'GET_VERSION' }, [ch.port2]);
+    });
+    const check = async () => {
+      const v = await swVersion();
+      if (!cancelled && v && v !== version) setUpdateReady(true);
+    };
+    void check();
+    const onChange = () => { void check(); };
+    navigator.serviceWorker.addEventListener('controllerchange', onChange);
+    return () => { cancelled = true; navigator.serviceWorker.removeEventListener('controllerchange', onChange); };
+  }, []);
+
   // Screen-reader status line: playback and timer state are otherwise only
   // conveyed visually. A polite live region speaks the changes.
   const [status, setStatus] = useState('');
@@ -799,6 +824,16 @@ export default function App() {
         </section>
 
         <div className="app-footer">
+          {updateReady && (
+            <button
+              type="button"
+              className="update-pill"
+              onClick={() => window.location.reload()}
+            >
+              <span className="material-symbols-rounded" aria-hidden="true">auto_awesome</span>
+              a new version is ready — refresh
+            </button>
+          )}
           <div className="footer-rest">rest well</div>
           <div className="footer-meta">
             <span className={`net-badge${online ? '' : ' offline'}`} title={online ? 'Online' : 'Offline — everything still works'}>
