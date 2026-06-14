@@ -96,6 +96,14 @@ function simpleGroup(
   }];
 }
 
+/** A shape group with an arbitrary number of 0..1 sliders. */
+function shapeGroup(...items: { key: string; label: string; def: number }[]): ParamGroup[] {
+  return [{
+    label: 'shape',
+    params: items.map((it) => ({ key: it.key, label: it.label, min: 0, max: 1, step: 0.01, def: it.def })),
+  }];
+}
+
 export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   fire: {
     label: 'Fire',
@@ -111,10 +119,11 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     processor: 'birdsong-synth',
     groups: BIRDSONG_PARAM_GROUPS,
   },
-  rain: { label: 'Rain', mode: 'simple', groups: simpleGroup(
+  rain: { label: 'Rain', mode: 'simple', groups: shapeGroup(
     { key: 'intensity', label: 'intensity', def: 0.65 },
     { key: 'heaviness', label: 'heaviness', def: 0.50 },
     { key: 'surface', label: 'surface', def: 0.50 },
+    { key: 'swell', label: 'swell', def: 0.15 },
   )},
   ocean: { label: 'Ocean', mode: 'simple', groups: simpleGroup(
     { key: 'waveSize', label: 'wave size', def: 0.55 },
@@ -151,8 +160,7 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'rumble', label: 'rumble', def: 0.50 },
     { key: 'clatter', label: 'clatter', def: 0.35 },
   )},
-  night: { label: 'Night Insects', mode: 'simple', groups: simpleGroup(
-    { key: 'void', label: 'void', def: 0.60 },
+  night: { label: 'Night Insects', mode: 'simple', groups: shapeGroup(
     { key: 'cosmic', label: 'shimmer', def: 0.40 },
     { key: 'pulse', label: 'drift', def: 0.30 },
   )},

@@ -333,7 +333,7 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15 } = params ?? {};
   const gapScale = 0.3 + (1 - intensity) * 1.4;
   const bedHp = 120 + (1 - heaviness) * 120;
   const bedLp = 2800 + (1 - heaviness) * 5600;
@@ -392,7 +392,13 @@ function genRain(params?: Record<string, number>): string {
   hp1(impacts, 1400); lp1(impacts, 9000);
   hp1(bubbles, 420); lp1(bubbles, 4200);
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = bed[i] * 0.80 + impacts[i] * 0.12 + bubbles[i] * 0.08;
+  // One full swell cycle per loop, so the shower rises and eases without a
+  // seam (sin is 0 at both ends). Mild by default, deeper as swell climbs.
+  const swellDepth = swell * 0.6;
+  for (let i = 0; i < N; i++) {
+    const s = 1 + swellDepth * Math.sin((2 * Math.PI * i) / N);
+    mix[i] = (bed[i] * 0.80 + impacts[i] * 0.12 + bubbles[i] * 0.08) * s;
+  }
   return gen(mix, 0.7);
 }
 
@@ -1055,10 +1061,10 @@ function genAirplane(params?: Record<string, number>): string {
 }
 
 function genSpace(params?: Record<string, number>): string {
-  const { void: voidParam = 0.6, cosmic = 0.4, pulse = 0.3 } = params ?? {};
-  const voidBuf = brownNoise();
-  lp1(voidBuf, 60 + voidParam * 40);
-  lp1(voidBuf, 60 + voidParam * 40);
+  // Night Insects: a thin nocturnal shimmer that drifts in and out. The deep
+  // void/brown-noise bed is gone by default (void 0) — that low bed belongs to
+  // the noise sounds, not here; it's still wired for any caller that asks.
+  const { void: voidParam = 0, cosmic = 0.4, pulse = 0.3 } = params ?? {};
 
   const shimmer1 = whiteNoise();
   bp2(shimmer1, 2000 + cosmic * 3000, 8 + cosmic * 8);
@@ -1066,17 +1072,22 @@ function genSpace(params?: Record<string, number>): string {
   const shimmer2 = whiteNoise();
   bp2(shimmer2, 4000 + cosmic * 2000, 6 + cosmic * 6);
 
-  // The pulse breathes only the shimmer, within a narrow band; the deep bed
-  // stays steady. The old version swung the entire mix between 0.2 and 1.0,
-  // so a loop could climb louder and busier for half a minute, then reset.
+  // The pulse breathes the shimmer within a narrow band, so the layer waxes
+  // and wanes without ever climbing into a busy wash.
   const pulseLfo = smoothRandomLfo(0.6, 1.0, 4 + pulse * 8, 8 + pulse * 16);
   const driftLfo = smoothRandomLfo(0.7, 1.05, 3.0, 10.0);
 
   const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    mix[i] = voidBuf[i] * (0.3 + voidParam * 0.3) +
-             (shimmer1[i] * 0.1 * (0.5 + cosmic) +
-              shimmer2[i] * 0.06 * (0.5 + cosmic)) * driftLfo[i] * pulseLfo[i];
+  const shimmer = (i: number) =>
+    (shimmer1[i] * 0.1 * (0.5 + cosmic) + shimmer2[i] * 0.06 * (0.5 + cosmic)) * driftLfo[i] * pulseLfo[i];
+
+  if (voidParam > 0) {
+    const voidBuf = brownNoise();
+    lp1(voidBuf, 60 + voidParam * 40);
+    lp1(voidBuf, 60 + voidParam * 40);
+    for (let i = 0; i < N; i++) mix[i] = voidBuf[i] * voidParam * 0.6 + shimmer(i);
+  } else {
+    for (let i = 0; i < N; i++) mix[i] = shimmer(i);
   }
   return gen(mix, 0.55);
 }

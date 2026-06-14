@@ -120,6 +120,9 @@ class RainProcessor extends AudioWorkletProcessor {
       { name: 'intensity', defaultValue: 0.65, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'heaviness', defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'surface',   defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // swell: depth of a very slow rise-and-fall in intensity (the shower
+      // picking up, then easing). 0 = steady; mild by default.
+      { name: 'swell',     defaultValue: 0.15, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',   defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -148,6 +151,8 @@ class RainProcessor extends AudioWorkletProcessor {
     // movement modulators
     this.lfoSlow = Math.random() * TWO_PI;
     this.lfoFast = Math.random() * TWO_PI;
+    // very slow intensity swell (the shower waxing and waning); ~90s period
+    this.swellPhase = Math.random() * TWO_PI;
 
     this.level = 0; // running fade
   }
@@ -228,6 +233,7 @@ class RainProcessor extends AudioWorkletProcessor {
     const intensity = params.intensity[0];
     const heaviness = params.heaviness[0];
     const surface = params.surface[0];
+    const swell = params.swell[0];
     const running = params.running[0];
 
     // Silent + faded out: emit zeros cheaply.
@@ -236,8 +242,16 @@ class RainProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    // lane rates (events/sec), scaled by intensity
-    const k = 0.2 + intensity * 1.25;
+    // Slow swell: advance once per block and fold into the working intensity,
+    // so the drop rates and bed level breathe up and down together. Depth is
+    // gentle even near full swell so it reads as weather, not a volume pump.
+    this.swellPhase += (TWO_PI / (90 * SR)) * n;
+    if (this.swellPhase > TWO_PI) this.swellPhase -= TWO_PI;
+    const swellMod = 1 + swell * 0.85 * Math.sin(this.swellPhase);
+    const effIntensity = Math.min(1, Math.max(0, intensity * swellMod));
+
+    // lane rates (events/sec), scaled by the swelled intensity
+    const k = 0.2 + effIntensity * 1.25;
     const nearRate = 6 * k, midRate = 26 * k, farRate = 78 * k;
 
     const lfoSlowInc = TWO_PI * 0.06 / SR;
@@ -257,7 +271,7 @@ class RainProcessor extends AudioWorkletProcessor {
       const density = 0.82 + 0.18 * Math.sin(this.lfoSlow) + 0.05 * Math.sin(this.lfoFast);
 
       // bed
-      const bedGain = (0.5 + intensity * 0.5) * (0.85 - heaviness * 0.15) * 0.4 * density;
+      const bedGain = (0.5 + effIntensity * 0.5) * (0.85 - heaviness * 0.15) * 0.4 * density;
       let bedL = this.bedLP_L.process(this.bedHP_L.process(this.pink(0))) * bedGain;
       let bedR = this.bedLP_R.process(this.bedHP_R.process(this.pink(1))) * bedGain;
 
