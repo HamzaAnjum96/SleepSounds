@@ -155,11 +155,38 @@ button, .material-symbols-rounded {
 
 /* ── Moon ────────────────────────────────────────────────────────── */
 
-.moon {
+/* The moon parallaxes as you scroll the library. Where the browser supports
+   scroll-driven animations it runs on the compositor (off the main thread, so
+   it stays smooth even while React works); elsewhere the JS scroll handler
+   feeds --moon-scroll into the same transform. The track owns the parallax;
+   the inner .moon owns its own gentle breathing drift, so the two transforms
+   never fight. */
+.moon-track {
   position: fixed;
-  top: calc(7% - var(--moon-scroll, 0px) * 0.7);
+  top: 7%;
   right: 4%;
   width: 52px; height: 52px;
+  z-index: var(--z-scene);
+  transform: translateY(calc(var(--moon-scroll, 0px) * -0.7));
+}
+
+@supports (animation-timeline: scroll()) {
+  /* Scope the scroller's timeline up to the out-of-flow (fixed) moon. */
+  :root { timeline-scope: --drift-scroll; }
+  .app { scroll-timeline: --drift-scroll block; }
+  .moon-track {
+    transform: none;
+    animation: moonParallax linear both;
+    animation-timeline: --drift-scroll;
+  }
+}
+@keyframes moonParallax {
+  to { transform: translateY(-70vh); }
+}
+
+.moon {
+  position: relative;
+  width: 100%; height: 100%;
   border-radius: var(--r-full);
   background: radial-gradient(circle at 38% 38%, #f0e8ca 0%, #d4b878 55%, #a88040 100%);
   box-shadow:
@@ -167,7 +194,6 @@ button, .material-symbols-rounded {
     0 0 55px rgba(200,165,100,0.28),
     0 0 100px rgba(184,154,106,0.12);
   opacity: 0.92;
-  z-index: var(--z-scene);
   animation: moonDrift 14s ease-in-out infinite;
 }
 .moon::before {
@@ -2209,7 +2235,7 @@ body:has(.mini-player) .cookie-notice {
     scroll-behavior: auto !important;
   }
   /* No moon drift and no scroll parallax. */
-  .moon { top: 7% !important; }
+  .moon-track { transform: none !important; }
   /* The starfield canvas handles reduced motion itself (static frame). */
   /* Hold the equaliser as a static mark so "playing" still reads. */
   .eq-bars span { height: 7px !important; }

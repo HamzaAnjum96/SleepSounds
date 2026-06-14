@@ -140,7 +140,10 @@ Easing is a single exponential ease-out, `--ease`
 
 Signature ambient timings are intentionally bespoke and live outside the scale:
 star pulse 12s, moon drift 14s, play-button pulse 2.8s, equaliser bounce 1.6s,
-card spinner 0.8s, the dot↔equaliser crossfade 0.28s.
+card spinner 0.8s, the dot↔equaliser crossfade 0.28s. The moon's scroll
+parallax runs as a CSS scroll-driven animation (`scroll-timeline` on `.app`,
+scoped to the fixed `.moon-track`) on the compositor where supported, with a
+JS `--moon-scroll` handler as the fallback.
 
 **Reduced motion:** `prefers-reduced-motion: reduce` disables all animation,
 makes transitions instant, holds the moon and starfield still (no drift, no

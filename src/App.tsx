@@ -24,6 +24,12 @@ const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 /** Seconds before timer end over which the mix gently fades out. */
 const FADE_WINDOW_S = 90;
 
+/** True when the browser can run the moon parallax as a CSS scroll-driven
+ *  animation (compositor, off main thread). When so, the JS scroll fallback
+ *  stands down. */
+const CSS_SCROLL_TIMELINE =
+  typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()');
+
 /** "Resume your night": the last active mix + master volume, kept on-device so
  *  reopening the app brings back the soundscape you fell asleep to — paused
  *  and ready, never auto-blaring. */
@@ -491,6 +497,9 @@ export default function App() {
   }, []);
 
   const handleAppScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    // Where CSS scroll-driven animation drives the parallax (on the
+    // compositor), skip the JS path entirely; this is only the fallback.
+    if (CSS_SCROLL_TIMELINE) return;
     const scrollY = (e.target as HTMLDivElement).scrollTop;
     document.documentElement.style.setProperty('--moon-scroll', `${scrollY}px`);
   }, []);
@@ -526,7 +535,7 @@ export default function App() {
         intensity={Math.min(1, activeSounds.length / 4)}
         dim={skyDim}
       />
-      <div className="moon" />
+      <div className="moon-track" aria-hidden="true"><div className="moon" /></div>
 
       <div
         className={`app${driftOpen ? ' app-quiet' : ''}${hasPlayer ? ' has-player' : ''}`}
