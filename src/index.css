@@ -318,7 +318,7 @@ header::after {
 .install-icon {
   font-size: 18px;
   color: var(--accent);
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
   flex-shrink: 0;
 }
 .install-text {
@@ -727,7 +727,7 @@ header::after {
 .card-icon {
   font-size: 18px;
   color: rgba(var(--cat), 0.62);
-  font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 1, 'wght' 200, 'GRAD' 0, 'opsz' 20;
   line-height: 1;
   transition: color var(--dur-2);
 }
@@ -878,7 +878,7 @@ header::after {
 .card-vol .material-symbols-rounded {
   font-size: 13px;
   color: var(--text-secondary);
-  font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 16;
+  font-variation-settings: 'FILL' 1, 'wght' 200, 'GRAD' 0, 'opsz' 16;
   flex-shrink: 0;
 }
 
@@ -913,7 +913,7 @@ header::after {
 }
 .card-editor-icon .material-symbols-rounded {
   font-size: 14px;
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 16;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 16;
 }
 @media (hover: hover) {
   .card-editor-icon:hover {
@@ -1103,7 +1103,7 @@ header::after {
 .sb-icon {
   font-size: 20px;
   color: var(--card-accent, var(--accent));
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
   flex-shrink: 0;
 }
 
@@ -1472,7 +1472,7 @@ header::after {
 }
 .scene-icons .material-symbols-rounded {
   font-size: 14px;
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 
 .scene-state {
@@ -1587,7 +1587,7 @@ header::after {
 }
 .mix-icons .material-symbols-rounded {
   font-size: 13px;
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 .mix-state {
   position: absolute;
@@ -2037,7 +2037,7 @@ body:has(.mini-player) .cookie-notice {
 .layer-icon {
   font-size: 16px;
   color: var(--card-accent);
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
   flex-shrink: 0;
 }
 .layer-main {
