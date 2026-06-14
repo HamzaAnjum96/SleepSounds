@@ -9,7 +9,7 @@ export const SOUND_ICONS: Record<string, string> = {
   'white-noise':   'graphic_eq',
   'pink-noise':    'equalizer',
   'brown-noise':   'noise_aware',
-  night:           'bedtime',
+  night:           'grass',
   thunder:         'thunderstorm',
   stream:          'stream',
   fan:             'mode_fan',

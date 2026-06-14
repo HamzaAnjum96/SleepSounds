@@ -1173,7 +1173,7 @@ export const SOUND_LIBRARY: Sound[] = [
   lazySound('train',       'Train',        'Urban',    genTrain),
   lazySound('airplane',    'Airplane',     'Urban',    genAirplane),
   // Wildlife
-  lazySound('night',       'Night',        'Wildlife', genSpace),
+  lazySound('night',       'Night Insects', 'Wildlife', genSpace),
   lazySound('birdsong',    'Birdsong',     'Wildlife', genBirdsong),
   // Cozy
   lazySound('heartbeat',   'Heartbeat',    'Cozy',     genHeartbeat),

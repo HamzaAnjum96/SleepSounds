@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { version } from '../package.json';
 import CookieNotice from './components/CookieNotice';
 import DriftMode from './components/DriftMode';
+import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
@@ -731,24 +732,30 @@ export default function App() {
                     className="sound-editor-inline"
                     data-cat={SOUND_LIBRARY.find((s) => s.id === openEditorSoundId)?.category}
                   >
-                    <Suspense fallback={<div className="sb-loading">opening the controls…</div>}>
-                      <LazySoundEditor
-                        soundId={openEditorSoundId}
-                        active={(soundState[openEditorSoundId]?.enabled ?? false) && !isPaused}
-                        onPlay={() => {
-                          // Resume the paused mix if the sound is already in it;
-                          // otherwise add the sound so the shaping is audible.
-                          if (soundState[openEditorSoundId]?.enabled) void handleMasterToggle();
-                          else void handleSoundToggle(openEditorSoundId);
-                        }}
-                        initialValues={editorValuesBySound[openEditorSoundId]}
-                        onValuesChange={(values) => {
-                          setEditorValuesBySound((prev) => ({ ...prev, [openEditorSoundId]: values }));
-                          setSoundTuning(openEditorSoundId, values);
-                        }}
-                        onClose={() => setOpenEditorSoundId(null)}
-                      />
-                    </Suspense>
+                    <ErrorBoundary
+                      key={openEditorSoundId}
+                      onError={() => setOpenEditorSoundId(null)}
+                      fallback={<div className="sb-loading">couldn’t open these controls — the mix keeps playing</div>}
+                    >
+                      <Suspense fallback={<div className="sb-loading">opening the controls…</div>}>
+                        <LazySoundEditor
+                          soundId={openEditorSoundId}
+                          active={(soundState[openEditorSoundId]?.enabled ?? false) && !isPaused}
+                          onPlay={() => {
+                            // Resume the paused mix if the sound is already in it;
+                            // otherwise add the sound so the shaping is audible.
+                            if (soundState[openEditorSoundId]?.enabled) void handleMasterToggle();
+                            else void handleSoundToggle(openEditorSoundId);
+                          }}
+                          initialValues={editorValuesBySound[openEditorSoundId]}
+                          onValuesChange={(values) => {
+                            setEditorValuesBySound((prev) => ({ ...prev, [openEditorSoundId]: values }));
+                            setSoundTuning(openEditorSoundId, values);
+                          }}
+                          onClose={() => setOpenEditorSoundId(null)}
+                        />
+                      </Suspense>
+                    </ErrorBoundary>
                   </div>
                 )}
               </Fragment>

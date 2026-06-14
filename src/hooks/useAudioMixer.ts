@@ -655,18 +655,18 @@ export const useAudioMixer = (sounds: Sound[]) => {
     }
 
     tuningTimerRef.current[soundId] = setTimeout(() => {
+      delete tuningTimerRef.current[soundId];
       const params = lastTuningRef.current[soundId];
       if (!params) return;
-
-      const newUrl = regenerateSound(soundId, params);
-      if (!newUrl) return;
-
-      const source = audioMapRef.current[soundId];
-      if (source?.swapUrl) {
-        source.swapUrl(newUrl);
+      // Synthesis + element swap is best-effort: a failure here must never take
+      // the app down, it just leaves the current loop playing.
+      try {
+        const newUrl = regenerateSound(soundId, params);
+        if (!newUrl) return;
+        audioMapRef.current[soundId]?.swapUrl?.(newUrl);
+      } catch (err) {
+        console.error('sound retune failed:', err);
       }
-
-      delete tuningTimerRef.current[soundId];
     }, 300);
   }, []);
 

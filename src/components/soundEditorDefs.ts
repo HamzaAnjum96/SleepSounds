@@ -151,7 +151,7 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'rumble', label: 'rumble', def: 0.50 },
     { key: 'clatter', label: 'clatter', def: 0.35 },
   )},
-  night: { label: 'Night', mode: 'simple', groups: simpleGroup(
+  night: { label: 'Night Insects', mode: 'simple', groups: simpleGroup(
     { key: 'void', label: 'void', def: 0.60 },
     { key: 'cosmic', label: 'shimmer', def: 0.40 },
     { key: 'pulse', label: 'drift', def: 0.30 },
