@@ -9,7 +9,7 @@ import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
 import NowPlayingSheet from './components/NowPlayingSheet';
 import SoundCard from './components/SoundCard';
-import { CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY } from './data';
+import { CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY, defaultVolumeFor } from './data';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset, SoundState } from './types';
@@ -203,7 +203,7 @@ export default function App() {
 
   const makeDefaultState = useCallback(() => (
     SOUND_LIBRARY.reduce<Record<string, { enabled: boolean; volume: number }>>((acc, sound) => {
-      acc[sound.id] = { enabled: false, volume: 0.5 };
+      acc[sound.id] = { enabled: false, volume: defaultVolumeFor(sound.id) };
       return acc;
     }, {})
   ), []);
@@ -542,6 +542,17 @@ export default function App() {
 
   const hasPlayer = activeSounds.length > 0;
 
+  // Connectivity badge. The app is fully offline-capable, so this is reassurance
+  // ("offline — still works"), not a warning.
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
+
   // Screen-reader status line: playback and timer state are otherwise only
   // conveyed visually. A polite live region speaks the changes.
   const [status, setStatus] = useState('');
@@ -790,6 +801,11 @@ export default function App() {
         <div className="app-footer">
           <div className="footer-rest">rest well</div>
           <div className="footer-meta">
+            <span className={`net-badge${online ? '' : ' offline'}`} title={online ? 'Online' : 'Offline — everything still works'}>
+              <span className="net-dot" aria-hidden="true" />
+              {online ? 'online' : 'offline'}
+            </span>
+            <span className="footer-sep" aria-hidden="true">·</span>
             <a
               className="footer-privacy"
               href={`${import.meta.env.BASE_URL}privacy.html`}

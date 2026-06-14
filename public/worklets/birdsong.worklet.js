@@ -214,6 +214,10 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       mix = Math.tanh(mix * sat) / Math.tanh(sat);
 
       mix *= gain;
+      // Output headroom (see fire.worklet / data.ts): birdsong is quiet, so lift
+      // it and lower its default volume to match — same loudness by default, more
+      // available at the top of the slider.
+      mix *= 1.5;
 
       const active = running > 0.01 ? 1 : 0;
       // Gentle stereo spread — subtle pan jitter for natural feel

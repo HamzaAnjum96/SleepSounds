@@ -175,6 +175,11 @@ class FireSynthProcessor extends AudioWorkletProcessor {
 
       const sat = 1.2 + size * 1.1;
       mix = Math.tanh(mix * sat) / Math.tanh(sat);
+      // Output headroom: fire reads quiet next to the other sources, so lift it
+      // here. The per-sound default volume is lowered to match (see data.ts),
+      // keeping default/preset loudness unchanged while the slider's top reaches
+      // 1.5x louder.
+      mix *= 1.5;
 
       const active = running > 0.01 ? 1 : 0;
       const panJitter = (this.rnd() * 2 - 1) * 0.11;

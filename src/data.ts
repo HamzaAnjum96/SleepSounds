@@ -639,7 +639,7 @@ function genFire(): string {
       pops[i]       * 0.14 +
       logShifts[i]  * 0.04;
   }
-  return gen(mix, 0.64);
+  return gen(mix, 0.96);  // +1.5x headroom (default volume lowered to match)
 }
 
 function genBirdsong(): string {
@@ -724,7 +724,7 @@ function genBirdsong(): string {
   for (let i = 0; i < N; i++) {
     mix[i] = calls[i] * 0.55 + trills[i] * 0.30 + peeps[i] * 0.15;
   }
-  return gen(mix, 0.62);
+  return gen(mix, 0.93);  // +1.5x headroom (default volume lowered to match)
 }
 
 function genStream(params?: Record<string, number>): string {
@@ -1195,6 +1195,12 @@ export type Category = typeof CATEGORIES[number];
 
 export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';
 
+/** Per-sound starting volume. Fire and birdsong are synthesized +1.5x louder
+ *  for headroom, so their defaults are lowered by the same factor: what you
+ *  hear by default is unchanged, but their sliders can now reach louder. */
+const DEFAULT_VOLUME: Record<string, number> = { fire: 0.34, birdsong: 0.34 };
+export const defaultVolumeFor = (id: string): number => DEFAULT_VOLUME[id] ?? 0.5;
+
 // ── Built-in presets ───────────────────────────────────────────────────────
 
 function builtinState(active: Array<[string, number]>): Record<string, SoundState> {
@@ -1207,9 +1213,10 @@ function builtinState(active: Array<[string, number]>): Record<string, SoundStat
 export const BUILTIN_PRESETS: Preset[] = [
   // Mixed, not toggled-on: the focal layer leads, broad beds (rain, wind,
   // noise, ocean) sit underneath, and accents stay quiet and occasional.
-  { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.62]]) },
-  { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.62], ['night', 0.05]]) },
+  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.50], ['rain', 0.50]]) },
+  { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.41], ['night', 0.05]]) },
   { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
+  { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.62]]) },
   { id: 'builtin-distant-storm', name: 'Distant Storm',     createdAt: '', masterVolume: 0.78, state: builtinState([['thunder', 0.62], ['rain', 0.40], ['wind', 0.16]]) },
   { id: 'builtin-windy-forest',  name: 'Windy Forest',      createdAt: '', masterVolume: 0.8,  state: builtinState([['forest', 0.60], ['wind', 0.32]]) },
   { id: 'builtin-ocean-night',   name: 'Ocean Night',       createdAt: '', masterVolume: 0.78, state: builtinState([['ocean', 0.55], ['wind', 0.18], ['night', 0.08]]) },

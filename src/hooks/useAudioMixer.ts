@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
-import { regenerateSound } from '../data';
+import { regenerateSound, defaultVolumeFor } from '../data';
 import { SOUND_EDITOR_MODELS } from '../components/soundEditorDefs';
-
-const defaultSoundState = (): SoundState => ({ enabled: false, volume: 0.5 });
 
 const createInitialState = (sounds: Sound[]) =>
   sounds.reduce<Record<string, SoundState>>((acc, sound) => {
-    acc[sound.id] = defaultSoundState();
+    acc[sound.id] = { enabled: false, volume: defaultVolumeFor(sound.id) };
     return acc;
   }, {});
 

@@ -19,6 +19,12 @@ export interface Scene {
    near-black tiles: the leading hue carries the card, the counter-glow keeps
    it from going flat, and the linear wash lifts the whole tile off the sky. */
 const ART: Record<string, { mood: string; art: string }> = {
+  'builtin-fan-rain': {
+    mood: 'a fan’s hush over steady rain',
+    art: `radial-gradient(120% 90% at 82% 0%, rgba(143,161,184,0.30) 0%, transparent 62%),
+          radial-gradient(100% 100% at 14% 100%, rgba(123,167,232,0.22) 0%, transparent 64%),
+          linear-gradient(150deg, rgba(38,52,78,0.30) 0%, rgba(16,24,42,0.18) 72%)`,
+  },
   'builtin-rainfall': {
     mood: 'just rain, falling steady',
     art: `radial-gradient(120% 90% at 85% 0%, rgba(123,167,232,0.32) 0%, transparent 62%),

@@ -1051,6 +1051,26 @@ header::after {
 .footer-privacy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .footer-version { font-variant-numeric: tabular-nums; }
 
+/* Connectivity badge: a quiet dot + word. Cool accent when online, warm when
+   offline — never alarming, since the app works fully offline either way. */
+.net-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-5);
+  color: var(--text-dim);
+}
+.net-dot {
+  width: 5px; height: 5px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  box-shadow: 0 0 5px var(--accent-glow);
+}
+.net-badge.offline { color: var(--warm); }
+.net-badge.offline .net-dot {
+  background: var(--warm);
+  box-shadow: none;
+}
+
 /* ── Sound Editor ────────────────────────────────────────────────── */
 /* The per-sound editor panel, inline in the library grid. It speaks the
    same language as the rest of the app: serif italic title, lowercase
