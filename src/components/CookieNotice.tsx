@@ -2,9 +2,10 @@ import { useState } from 'react';
 
 /**
  * One-time storage notice. drift away sets no tracking or advertising cookies;
- * it only keeps your mixes and settings in localStorage and loads fonts from
- * Google. This is an honest transparency note (not a consent gate, since there
- * is nothing non-essential to opt out of), shown once and remembered.
+ * it only keeps your mixes and settings in localStorage, and serves everything
+ * (fonts and icons included) from its own files. This is an honest transparency
+ * note (not a consent gate, since there is nothing non-essential to opt out
+ * of), shown once and remembered.
  */
 
 const KEY = 'drift-cookie-ack';
@@ -25,8 +26,8 @@ export default function CookieNotice() {
   return (
     <div className="cookie-notice" role="region" aria-label="Storage notice">
       <p className="cookie-text">
-        drift away keeps your mixes and settings on this device (like cookies)
-        and loads fonts from Google. No tracking, no ads.
+        drift away keeps your mixes and settings on this device (like cookies).
+        Nothing leaves it. No tracking, no ads, no servers.
       </p>
       <div className="cookie-actions">
         <a

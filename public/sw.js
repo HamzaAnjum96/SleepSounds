@@ -1,19 +1,43 @@
 /* drift away — service worker.
  *
- * Strategy (no version juggling needed):
- *  - navigations: network-first, falling back to the cached shell, so the app
- *    opens with no signal but deploys are picked up on the next online visit
- *  - /assets/ (content-hashed by Vite): cache-first, immutable
- *  - other same-origin files (icons, manifest, worklets): stale-while-revalidate
- *  - cross-origin (Google Fonts): stale-while-revalidate
+ * Full offline: the install step precaches the entire app — the shell, the
+ * content-hashed JS/CSS (injected at build time), the self-hosted fonts and
+ * icons, the audio worklets, the manifest and icons — so once installed the
+ * app needs no network for anything. Generated audio and saved mixes were
+ * always local; with fonts/icons/worklets bundled too, nothing reaches out.
+ *
+ * Strategy:
+ *  - navigations: network-first (to pick up new deploys) with the cached
+ *    shell as the offline fallback
+ *  - everything else same-origin: cache-first (it's all precached or
+ *    content-hashed and immutable), falling back to network + cache
+ *
+ * The cache name carries a build id (injected), so every deploy installs a
+ * fresh cache and the old one is cleared on activate.
  */
 
-const CACHE = 'drift-away-v1';
-const SHELL = ['./', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
+const CACHE = 'drift-away-__CACHE_VERSION__';
+
+// Stable shell paths; the build injects the hashed assets, fonts and worklets.
+const PRECACHE = [
+  './',
+  './manifest.json',
+  './privacy.html',
+  './favicon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png',
+  './fonts.css',
+  /*__INJECT_ASSETS__*/
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()),
+    caches.open(CACHE)
+      // Add each item independently so one missing file can't fail the whole
+      // precache (and the install).
+      .then((c) => Promise.allSettled(PRECACHE.map((url) => c.add(url))))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -23,7 +47,6 @@ self.addEventListener('activate', (event) => {
       caches.keys().then((keys) =>
         Promise.all(keys.filter((k) => k.startsWith('drift-away-') && k !== CACHE).map((k) => caches.delete(k))),
       ),
-      // Start the navigation request in parallel with SW boot: faster opens.
       self.registration.navigationPreload
         ? self.registration.navigationPreload.enable()
         : Promise.resolve(),
@@ -36,8 +59,8 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // App navigations: network-first (via the preloaded response when the
-  // browser already started it) with shell fallback.
+  // App navigations: network-first (via the preloaded response when started)
+  // with the cached shell as the offline fallback.
   if (req.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -47,41 +70,26 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put('./', copy));
           return res;
         } catch {
-          return caches.match('./');
+          return (await caches.match('./')) || Response.error();
         }
       })(),
     );
     return;
   }
 
-  // Hashed build assets: immutable, cache-first.
-  if (url.origin === location.origin && url.pathname.includes('/assets/')) {
+  // Same-origin assets: cache-first, then network (and cache what we fetch).
+  if (url.origin === location.origin) {
     event.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return res;
-      })),
-    );
-    return;
-  }
-
-  // Everything else we care about (same-origin statics, fonts): SWR.
-  const isFont = url.hostname.endsWith('gstatic.com') || url.hostname.endsWith('googleapis.com');
-  if (url.origin === location.origin || isFont) {
-    event.respondWith(
-      caches.match(req).then((hit) => {
-        const refresh = fetch(req)
-          .then((res) => {
-            if (res && (res.ok || res.type === 'opaque')) {
-              const copy = res.clone();
-              caches.open(CACHE).then((c) => c.put(req, copy));
-            }
-            return res;
-          })
-          .catch(() => hit);
-        return hit || refresh;
-      }),
+      caches.match(req).then((hit) =>
+        hit ||
+        fetch(req).then((res) => {
+          if (res && (res.ok || res.type === 'opaque')) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        }).catch(() => hit),
+      ),
     );
   }
 });

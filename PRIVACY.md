@@ -19,12 +19,10 @@ or transmit any personal information.
 
 ## Third parties
 
-drift loads its fonts and icon set from **Google Fonts**. Your browser requests
-those files from Google's servers when the page loads, so Google may receive
-your IP address and basic request information (see
-[Google's privacy policy](https://policies.google.com/privacy)). This is the
-only third-party request drift makes and it carries no information about your
-activity in the app.
+There are none. drift serves everything it needs, including its fonts and
+icons, from its own files. It makes no third-party requests, so no outside
+service receives your IP address or any request from the app. Once the page
+has loaded, it runs entirely offline.
 
 If you install drift from an app store, that store's own privacy terms apply to
 the download and your device.
