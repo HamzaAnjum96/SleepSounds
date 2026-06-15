@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
 import { regenerateSound, defaultVolumeFor } from '../data';
 import { SOUND_EDITOR_MODELS } from '../components/soundEditorDefs';
+import { logger } from '../utils/logger';
 
 const createInitialState = (sounds: Sound[]) =>
   sounds.reduce<Record<string, SoundState>>((acc, sound) => {
@@ -663,7 +664,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         if (!newUrl) return;
         audioMapRef.current[soundId]?.swapUrl?.(newUrl);
       } catch (err) {
-        console.error('sound retune failed:', err);
+        logger.error('sound retune failed:', err);
       }
     }, 300);
   }, []);

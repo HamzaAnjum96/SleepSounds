@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { logger } from '../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -29,7 +30,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: unknown) {
     // Keep a breadcrumb in the console without taking the app down.
-    console.error('Contained UI error:', error);
+    logger.error('Contained UI error:', error);
     this.props.onError?.(error);
   }
 

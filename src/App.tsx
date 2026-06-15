@@ -11,6 +11,7 @@ import NowPlayingSheet from './components/NowPlayingSheet';
 import SoundCard from './components/SoundCard';
 import { CATEGORIES, SOUND_LIBRARY } from './data';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
+import { platform } from './platform';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset } from './types';
@@ -272,11 +273,13 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [soundState, masterVolume]);
 
-  // Media Session API — powers lock-screen / notification player on Android & iOS
+  // Media Session API — powers lock-screen / notification player on Android & iOS.
+  // Metadata goes through the platform bridge; the web-specific transport
+  // (playback state + action handlers) stays here.
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const base = import.meta.env.BASE_URL;
-    navigator.mediaSession.metadata = new MediaMetadata({
+    platform.setMediaMetadata({
       title: activeSounds.length > 0
         ? activeSounds.map((s) => s.name).join(' · ')
         : 'drift away',

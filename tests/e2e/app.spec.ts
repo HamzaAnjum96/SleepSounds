@@ -22,9 +22,13 @@ test('the library renders its sounds', async ({ page }) => {
   await expect(page.locator('.scene-card').first()).toBeVisible();
 });
 
-test('a scene starts and the mini player appears', async ({ page }) => {
+test('a scene starts, the mini player appears, and media metadata is set', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await expect(page.locator('.mini-player')).toBeVisible();
+  // The platform bridge should have populated the OS media-session metadata.
+  await expect
+    .poll(() => page.evaluate(() => navigator.mediaSession?.metadata?.title ?? ''))
+    .not.toBe('');
 });
 
 test('the now-playing sheet opens and master volume can change', async ({ page }) => {

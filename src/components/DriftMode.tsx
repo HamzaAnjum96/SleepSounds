@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatCountdown } from '../lib/time';
+import { platform } from '../platform';
 
 /**
  * Drift mode: the fullscreen night surface for when the mix is set and the
@@ -46,7 +47,6 @@ export default function DriftMode({
   const quietTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
   const wake = useCallback(() => {
     setQuiet(false);
@@ -92,37 +92,12 @@ export default function DriftMode({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // Screen wake lock: keep the bedside display softly lit while drifting.
+  // Screen wake lock: keep the bedside display softly lit while drifting. The
+  // platform bridge owns acquiring, re-acquiring on tab return, and releasing.
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-
-    const acquire = async () => {
-      try {
-        if ('wakeLock' in navigator && !document.hidden) {
-          const sentinel = await (navigator as Navigator & {
-            wakeLock: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> };
-          }).wakeLock.request('screen');
-          if (cancelled) void sentinel.release();
-          else wakeLockRef.current = sentinel;
-        }
-      } catch {
-        // Wake lock is best-effort (low battery, unsupported): drift on.
-      }
-    };
-
-    const onVisibility = () => {
-      if (!document.hidden) void acquire();
-    };
-
-    void acquire();
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      cancelled = true;
-      document.removeEventListener('visibilitychange', onVisibility);
-      void wakeLockRef.current?.release().catch(() => {});
-      wakeLockRef.current = null;
-    };
+    void platform.requestWakeLock();
+    return () => { void platform.releaseWakeLock(); };
   }, [open]);
 
   if (!open) return null;
