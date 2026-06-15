@@ -57,10 +57,7 @@ export default function SoundCard({
         <div className="card-name">{sound.name}</div>
       </button>
 
-      <div
-        className="card-vol"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="card-vol">
         <span className="material-symbols-rounded">volume_down</span>
         <input
           type="range"

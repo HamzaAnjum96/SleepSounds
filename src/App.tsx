@@ -615,30 +615,30 @@ export default function App() {
               const current = activeMixId === scene.preset.id && activeSounds.length > 0;
               const ids = presetSoundIds(scene.preset);
               return (
-                <button
-                  key={scene.preset.id}
-                  type="button"
-                  role="listitem"
-                  className={`scene-card${current ? ' current' : ''}`}
-                  style={{ background: scene.art }}
-                  onClick={() => handlePlayPreset(scene.preset)}
-                  aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
-                >
-                  <span className="scene-icons" aria-hidden="true">
-                    {ids.slice(0, 3).map((id) => (
-                      <span key={id} className="material-symbols-rounded">
-                        {SOUND_ICONS[id] ?? 'music_note'}
-                      </span>
-                    ))}
-                  </span>
-                  {current && (
-                    <span className={`scene-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
-                      <span /><span /><span />
+                <div key={scene.preset.id} role="listitem" className="scene-item">
+                  <button
+                    type="button"
+                    className={`scene-card${current ? ' current' : ''}`}
+                    style={{ background: scene.art }}
+                    onClick={() => handlePlayPreset(scene.preset)}
+                    aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
+                  >
+                    <span className="scene-icons" aria-hidden="true">
+                      {ids.slice(0, 3).map((id) => (
+                        <span key={id} className="material-symbols-rounded">
+                          {SOUND_ICONS[id] ?? 'music_note'}
+                        </span>
+                      ))}
                     </span>
-                  )}
-                  <span className="scene-name">{scene.preset.name}</span>
-                  <span className="scene-mood">{scene.mood}</span>
-                </button>
+                    {current && (
+                      <span className={`scene-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
+                        <span /><span /><span />
+                      </span>
+                    )}
+                    <span className="scene-name">{scene.preset.name}</span>
+                    <span className="scene-mood">{scene.mood}</span>
+                  </button>
+                </div>
               );
             })}
           </div>

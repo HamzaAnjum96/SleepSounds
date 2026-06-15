@@ -1431,6 +1431,10 @@ header::after {
 /* ── Scenes ──────────────────────────────────────────────────────── */
 /* Curated mixes as gradient-art cards in a snap-scrolling shelf. */
 
+/* Semantic list-item wrapper around each scene button; display:contents keeps
+   the button itself as the flex/snap item, so layout is unchanged. */
+.scene-item { display: contents; }
+
 .scene-row {
   display: flex;
   gap: var(--sp-10);

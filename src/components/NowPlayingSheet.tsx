@@ -363,6 +363,9 @@ export default function NowPlayingSheet({
                   placeholder="name this mix…"
                   value={name}
                   maxLength={40}
+                  // Focus is user-initiated: the field only appears after the
+                  // user taps "save mix", so auto-focusing it is expected.
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => {
