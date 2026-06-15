@@ -3,7 +3,6 @@
 // that builds the right one per sound. The React hook orchestrates these.
 
 import type { Sound } from '../types';
-import { SOUND_EDITOR_MODELS } from '../components/soundEditorDefs';
 
 const LOOP_XFADE_MS = 1400;
 const LOOP_XFADE_S = LOOP_XFADE_MS / 1000;
@@ -304,43 +303,6 @@ interface WorkletConfig {
   paramMap?: Record<string, string>;
 }
 
-/** The editor's defaults are the single source of truth for a worklet's
- *  initial params, so what plays always matches what the editor shows. */
-const editorDefaults = (soundId: string): Record<string, number> =>
-  Object.fromEntries(
-    (SOUND_EDITOR_MODELS[soundId]?.groups ?? [])
-      .flatMap((group) => group.params)
-      .map((param) => [param.key, param.def]),
-  );
-
-const WORKLET_CONFIGS: Record<string, WorkletConfig> = {
-  fire: {
-    module: 'fire.worklet.js',
-    processor: 'fire-synth',
-    params: editorDefaults('fire'),
-  },
-  birdsong: {
-    module: 'birdsong.worklet.js',
-    processor: 'birdsong-synth',
-    params: editorDefaults('birdsong'),
-  },
-  rain: {
-    module: 'rain.worklet.js',
-    processor: 'rain-gen',
-    params: editorDefaults('rain'),
-  },
-  thunder: {
-    module: 'thunder.worklet.js',
-    processor: 'thunder-gen',
-    params: editorDefaults('thunder'),
-  },
-  forest: {
-    module: 'windyforest.worklet.js',
-    processor: 'windyforest-gen',
-    params: editorDefaults('forest'),
-  },
-};
-
 /** One AudioContext shared across every worklet source, plus a per-module
  *  load promise so each worklet file is fetched and registered only once. */
 let sharedWorkletCtx: AudioContext | null = null;
@@ -488,11 +450,13 @@ class WorkletWithFallback implements MixerSource {
 }
 
 const makeSource = (sound: Sound): MixerSource => {
-  // `sound.url` stays a lazy getter behind these closures: no WAV is
+  // One factory for both kinds; the generator closures stay lazy, so no WAV is
   // synthesized until a source actually needs to play it.
-  const cfg = WORKLET_CONFIGS[sound.id];
-  if (cfg) return new WorkletWithFallback(cfg, () => sound.url);
-  return new CrossfadeAudio(() => sound.url);
+  const s = sound.source;
+  if (s.mode === 'worklet') {
+    return new WorkletWithFallback({ module: s.module, processor: s.processor, params: s.params }, s.fallback);
+  }
+  return new CrossfadeAudio(s.make);
 };
 
 

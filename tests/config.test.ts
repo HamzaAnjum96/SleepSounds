@@ -28,6 +28,21 @@ describe('sound library', () => {
       expect(v).toBeLessThanOrEqual(1);
     }
   });
+
+  it('every sound declares a well-formed source (worklet or wav)', () => {
+    for (const s of SOUND_LIBRARY) {
+      const src = s.source;
+      if (src.mode === 'worklet') {
+        expect(src.module, `${s.id} module`).toMatch(/\.worklet\.js$/);
+        expect(src.processor, `${s.id} processor`).toBeTruthy();
+        expect(typeof src.params, `${s.id} params`).toBe('object');
+        expect(typeof src.fallback, `${s.id} fallback`).toBe('function');
+      } else {
+        expect(src.mode, `${s.id} mode`).toBe('wav');
+        expect(typeof src.make, `${s.id} make`).toBe('function');
+      }
+    }
+  });
 });
 
 describe('categories', () => {

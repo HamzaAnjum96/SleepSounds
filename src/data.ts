@@ -1,53 +1,70 @@
-import type { Preset, Sound, SoundState } from './types';
+import type { Preset, Sound, SoundSource, SoundState } from './types';
 import {
   genForest, genWhite, genBrown, genFan, genPink, genRain, genOcean, genWind, genFire, genBirdsong, genStream, genThunder, genTrain, genUnderwater, genShower, genAirplane, genSpace, genHeartbeat,
 } from './audio/generators';
+import { SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 
 export { regenerateSound } from './audio/generators';
 
 // ── Sound library ──────────────────────────────────────────────────────────
 
-/** A sound whose WAV is synthesized on first use, not at page load. Eagerly
- *  generating all 18 loops blocked startup for over a second on mid-range
- *  phones; lazily, the app paints instantly and each sound pays its ~50ms
- *  synthesis cost inside the tap that first plays it (under its spinner). */
-function lazySound(id: string, name: string, category: string, make: () => string): Sound {
+/** A worklet's initial params come from its editor defaults, so what plays
+ *  always matches what the editor shows. */
+function editorDefaults(soundId: string): Record<string, number> {
+  return Object.fromEntries(
+    (SOUND_EDITOR_MODELS[soundId]?.groups ?? [])
+      .flatMap((group) => group.params)
+      .map((param) => [param.key, param.def]),
+  );
+}
+
+/** Memoize a generator so its WAV is synthesized once, on first use — never at
+ *  page load (eagerly generating all loops cost a second-plus on mid phones). */
+function lazy(gen: () => string): () => string {
   let url: string | null = null;
-  return {
-    id,
-    name,
-    category,
-    get url() { return (url ??= make()); },
-  };
+  return () => (url ??= gen());
+}
+
+function wavSound(id: string, name: string, category: string, gen: () => string): Sound {
+  return { id, name, category, source: { mode: 'wav', make: lazy(gen) } };
+}
+
+/** A live AudioWorklet sound, with its procedural WAV loop as the fallback. */
+function workletSound(
+  id: string, name: string, category: string,
+  module: string, processor: string, fallbackGen: () => string,
+): Sound {
+  const source: SoundSource = { mode: 'worklet', module, processor, params: editorDefaults(id), fallback: lazy(fallbackGen) };
+  return { id, name, category, source };
 }
 
 export const SOUND_LIBRARY: Sound[] = [
   // Water
-  lazySound('rain',        'Rain',         'Water',    genRain),
-  lazySound('stream',      'Stream',       'Water',    genStream),
-  lazySound('ocean',       'Ocean',        'Water',    genOcean),
-  lazySound('underwater',  'Underwater',   'Water',    genUnderwater),
-  lazySound('shower',      'Shower',       'Water',    genShower),
+  workletSound('rain',     'Rain',         'Water',    'rain.worklet.js',       'rain-gen',       genRain),
+  wavSound('stream',       'Stream',       'Water',    genStream),
+  wavSound('ocean',        'Ocean',        'Water',    genOcean),
+  wavSound('underwater',   'Underwater',   'Water',    genUnderwater),
+  wavSound('shower',       'Shower',       'Water',    genShower),
   // Fire
-  lazySound('fire',        'Fire',         'Fire',     genFire),
+  workletSound('fire',     'Fire',         'Fire',     'fire.worklet.js',       'fire-synth',     genFire),
   // Air
-  lazySound('wind',        'Wind',         'Air',      genWind),
-  lazySound('thunder',     'Thunder',      'Air',      genThunder),
-  lazySound('fan',         'Fan',          'Air',      genFan),
+  wavSound('wind',         'Wind',         'Air',      genWind),
+  workletSound('thunder',  'Thunder',      'Air',      'thunder.worklet.js',    'thunder-gen',    genThunder),
+  wavSound('fan',          'Fan',          'Air',      genFan),
   // Earth
-  lazySound('forest',      'Windy Forest', 'Earth',    genForest),
+  workletSound('forest',   'Windy Forest', 'Earth',    'windyforest.worklet.js', 'windyforest-gen', genForest),
   // Noise
-  lazySound('white-noise', 'White Noise',  'Noise',    genWhite),
-  lazySound('pink-noise',  'Pink Noise',   'Noise',    genPink),
-  lazySound('brown-noise', 'Brown Noise',  'Noise',    genBrown),
+  wavSound('white-noise',  'White Noise',  'Noise',    genWhite),
+  wavSound('pink-noise',   'Pink Noise',   'Noise',    genPink),
+  wavSound('brown-noise',  'Brown Noise',  'Noise',    genBrown),
   // Urban
-  lazySound('train',       'Train',        'Urban',    genTrain),
-  lazySound('airplane',    'Airplane',     'Urban',    genAirplane),
+  wavSound('train',        'Train',        'Urban',    genTrain),
+  wavSound('airplane',     'Airplane',     'Urban',    genAirplane),
   // Wildlife
-  lazySound('night',       'Night Insects', 'Wildlife', genSpace),
-  lazySound('birdsong',    'Birdsong',     'Wildlife', genBirdsong),
+  wavSound('night',        'Night Insects', 'Wildlife', genSpace),
+  workletSound('birdsong', 'Birdsong',     'Wildlife', 'birdsong.worklet.js',   'birdsong-synth', genBirdsong),
   // Cozy
-  lazySound('heartbeat',   'Heartbeat',    'Cozy',     genHeartbeat),
+  wavSound('heartbeat',    'Heartbeat',    'Cozy',     genHeartbeat),
 ];
 
 export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
