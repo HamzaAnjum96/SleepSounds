@@ -15,6 +15,7 @@ import { useAudioMixer } from './hooks/useAudioMixer';
 import type { Preset, SoundState } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
+import { SOUND_ICONS } from './lib/soundIcons';
 import { haptic } from './lib/haptics';
 import { primeBackgroundAudio, setKeepAlive } from './lib/backgroundAudio';
 import { SCENES, presetSoundIds } from './lib/scenes';
@@ -553,10 +554,11 @@ export default function App() {
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
   }, []);
 
-  // Update nudge: the active service worker reports its build version; if it's
-  // newer than the running app, this session is behind, so offer a one-tap
-  // refresh. We never auto-reload — that could cut off a mix mid-night.
-  const [updateReady, setUpdateReady] = useState(false);
+  // Silent auto-update. The active service worker reports its build version;
+  // if it's newer than the running app, this session is behind. The app is
+  // tiny and fully cached, so we just refresh into the new version — but only
+  // while nothing is playing, so an update can never cut off a mix.
+  const [updatePending, setUpdatePending] = useState(false);
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     let cancelled = false;
@@ -570,13 +572,33 @@ export default function App() {
     });
     const check = async () => {
       const v = await swVersion();
-      if (!cancelled && v && v !== version) setUpdateReady(true);
+      if (!cancelled && v && v !== version) setUpdatePending(true);
     };
     void check();
     const onChange = () => { void check(); };
     navigator.serviceWorker.addEventListener('controllerchange', onChange);
     return () => { cancelled = true; navigator.serviceWorker.removeEventListener('controllerchange', onChange); };
   }, []);
+
+  // Apply a pending update at a safe moment: foreground, online, and only when
+  // no mix is loaded — so the refresh is invisible, never interrupts playback,
+  // and never updates in the background while the screen is off. Once per
+  // session (sessionStorage) so it can never loop, even if a stale offline
+  // shell is served.
+  useEffect(() => {
+    if (!updatePending) return;
+    const tryReload = () => {
+      if (activeSounds.length !== 0) return;
+      if (!navigator.onLine) return;
+      if (document.visibilityState !== 'visible') return;
+      if (sessionStorage.getItem('drift-reloaded')) return;
+      sessionStorage.setItem('drift-reloaded', '1');
+      window.location.reload();
+    };
+    tryReload();
+    document.addEventListener('visibilitychange', tryReload);
+    return () => document.removeEventListener('visibilitychange', tryReload);
+  }, [updatePending, activeSounds.length]);
 
   // Screen-reader status line: playback and timer state are otherwise only
   // conveyed visually. A polite live region speaks the changes.
@@ -670,14 +692,11 @@ export default function App() {
                   aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
                 >
                   <span className="scene-icons" aria-hidden="true">
-                    {ids.slice(0, 3).map((id) => {
-                      const sound = SOUND_LIBRARY.find((s) => s.id === id);
-                      return sound ? (
-                        <span key={id} className="material-symbols-rounded">
-                          {CATEGORY_ICONS[sound.category] ?? 'music_note'}
-                        </span>
-                      ) : null;
-                    })}
+                    {ids.slice(0, 3).map((id) => (
+                      <span key={id} className="material-symbols-rounded">
+                        {SOUND_ICONS[id] ?? 'music_note'}
+                      </span>
+                    ))}
                   </span>
                   {current && (
                     <span className={`scene-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
@@ -703,8 +722,8 @@ export default function App() {
             <div className="mix-row" role="list">
               {presets.map((preset) => {
                 const current = activeMixId === preset.id && activeSounds.length > 0;
-                const count = presetSoundIds(preset).length;
-                const cats = presetCategories(preset);
+                const ids = presetSoundIds(preset);
+                const count = ids.length;
                 return (
                   <div key={preset.id} role="listitem" className={`mix-card${current ? ' current' : ''}`}>
                     <button
@@ -715,9 +734,9 @@ export default function App() {
                       aria-label={`${current && isPlaying ? 'Pause' : 'Play'} mix ${preset.name}`}
                     >
                       <span className="mix-icons" aria-hidden="true">
-                        {cats.slice(0, 3).map((cat) => (
-                          <span key={cat} className="material-symbols-rounded">
-                            {CATEGORY_ICONS[cat] ?? 'music_note'}
+                        {ids.slice(0, 3).map((id) => (
+                          <span key={id} className="material-symbols-rounded">
+                            {SOUND_ICONS[id] ?? 'music_note'}
                           </span>
                         ))}
                       </span>
@@ -824,16 +843,6 @@ export default function App() {
         </section>
 
         <div className="app-footer">
-          {updateReady && (
-            <button
-              type="button"
-              className="update-pill"
-              onClick={() => window.location.reload()}
-            >
-              <span className="material-symbols-rounded" aria-hidden="true">auto_awesome</span>
-              a new version is ready — refresh
-            </button>
-          )}
           <div className="footer-rest">rest well</div>
           <div className="footer-meta">
             <span className={`net-badge${online ? '' : ' offline'}`} title={online ? 'Online' : 'Offline — everything still works'}>

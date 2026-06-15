@@ -1098,36 +1098,6 @@ header::after {
   box-shadow: none;
 }
 
-/* Update nudge: appears only when this session is behind a deployed version.
-   A quiet accent pill; tapping reloads into the new version. */
-.update-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-6);
-  margin-bottom: var(--sp-12);
-  padding: var(--sp-6) var(--sp-14);
-  border-radius: var(--r-pill);
-  border: 1px solid var(--accent-line);
-  background: var(--accent-tint);
-  color: var(--accent);
-  font-family: var(--font-body);
-  font-size: var(--fs-control);
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  outline: none;
-  transition: background var(--dur-2), border-color var(--dur-2);
-  animation: fadeSlideUp var(--dur-4) var(--ease) both;
-}
-.update-pill .material-symbols-rounded {
-  font-size: 15px;
-  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
-}
-@media (hover: hover) {
-  .update-pill:hover { background: var(--accent-tint-2); border-color: rgba(123,167,232,0.5); }
-}
-.update-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
 /* ── Sound Editor ────────────────────────────────────────────────── */
 /* The per-sound editor panel, inline in the library grid. It speaks the
    same language as the rest of the app: serif italic title, lowercase

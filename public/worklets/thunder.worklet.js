@@ -92,10 +92,15 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.deepLP.lowpass(70, 0.7); this.deepHP.highpass(30, 0.7);
 
     this.eventPanL = 0.7; this.eventPanR = 0.7;
-    this.nextEvent = Math.floor((2 + Math.random() * 4) * SR);
+    this.nextEvent = Math.floor((1.5 + Math.random() * 3) * SR);
     this.pendingClaps = []; // { at, f, q, peak, decayS, pan, lpHz }
     this.elapsed = 0;       // running sample counter for clap scheduling
     this.level = 0;
+    // Faint continuous far-rumble bed, so a storm never falls fully silent
+    // between strikes (the old version went minutes between events).
+    this.bedLP = new Biquad(); this.bedLP.lowpass(110, 0.6);
+    this.bedHP = new Biquad(); this.bedHP.highpass(34, 0.6);
+    this.bedSwell = 0;
   }
 
   rnd() { this.seed = (1664525 * this.seed + 1013904223) >>> 0; return this.seed / 4294967296; }
@@ -156,9 +161,11 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.deepEnv.to(dPeak * 0.9, 1.0);
     this.deepEnv.to(0, deepLen);
 
-    // next event gap
-    const meanGap = (150 - stormIntensity * 125) * (0.55 + this.rnd() * 0.9);
-    this.nextEvent = Math.floor(Math.max(8, meanGap) * SR);
+    // next event gap: an active storm rolls, it doesn't strike once a minute.
+    // ~6-22s at the default intensity, down to ~3-9s at full, with the long
+    // rumble/deepener tails overlapping into near-continuous thunder.
+    const meanGap = (26 - stormIntensity * 20) * (0.5 + this.rnd() * 1.0);
+    this.nextEvent = Math.floor(Math.max(3, meanGap) * SR);
   }
 
   process(_inputs, outputs, params) {
@@ -213,9 +220,14 @@ class ThunderProcessor extends AudioWorkletProcessor {
       const dg = this.deepEnv.next();
       let dep = dg > 0.0001 ? this.deepHP.process(this.deepLP.process(noise)) * dg * 1.4 : 0;
 
+      // faint distant-rumble bed: a slow random swell of low noise, always
+      // present so the storm keeps a living floor between strikes.
+      this.bedSwell += (Math.abs(this.rnd() - this.rnd()) - this.bedSwell) * 0.000004;
+      const bedG = (0.018 + stormIntensity * 0.03) * (0.4 + rumbleAmt * 0.7) * (0.5 + this.bedSwell * 2.0);
+      const bed = this.bedHP.process(this.bedLP.process(noise)) * bedG;
+
       // mix: claps keep their own pan; bodies get a slight event-wide width.
-      // No constant noise floor — thunder lives over true silence.
-      const body = rum + aft;
+      const body = rum + aft + bed;
       let sl = clL + body * (0.55 + this.eventPanL * 0.45) + dep;
       let sr = clR + body * (0.55 + this.eventPanR * 0.45) + dep;
 

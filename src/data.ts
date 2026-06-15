@@ -1066,16 +1066,22 @@ function genSpace(params?: Record<string, number>): string {
   // the noise sounds, not here; it's still wired for any caller that asks.
   const { void: voidParam = 0, cosmic = 0.4, pulse = 0.3 } = params ?? {};
 
+  // Lower-Q bands than before: a smooth airy shimmer rather than high-Q
+  // resonances that whistle and read as "busy".
   const shimmer1 = whiteNoise();
-  bp2(shimmer1, 2000 + cosmic * 3000, 8 + cosmic * 8);
+  bp2(shimmer1, 2000 + cosmic * 2800, 3.5 + cosmic * 3);
 
   const shimmer2 = whiteNoise();
-  bp2(shimmer2, 4000 + cosmic * 2000, 6 + cosmic * 6);
+  bp2(shimmer2, 3800 + cosmic * 2000, 3 + cosmic * 2.5);
 
-  // The pulse breathes the shimmer within a narrow band, so the layer waxes
-  // and wanes without ever climbing into a busy wash.
-  const pulseLfo = smoothRandomLfo(0.6, 1.0, 4 + pulse * 8, 8 + pulse * 16);
-  const driftLfo = smoothRandomLfo(0.7, 1.05, 3.0, 10.0);
+  // Stationary modulation: shallow depth and short holds, so the texture stays
+  // steady and never swells over the 32s loop. (The old slow/deep LFOs could
+  // ramp the loop upward; with the loop crossfade hiding the reset, that ramp
+  // read as the sound "getting busier the longer it goes on".) The drift slider
+  // sets only how much gentle movement there is, never a slow arc.
+  const depth = 0.1 + pulse * 0.16;
+  const pulseLfo = smoothRandomLfo(1 - depth, 1.0, 1.4, 3.6);
+  const driftLfo = smoothRandomLfo(0.86, 1.0, 1.8, 4.5);
 
   const mix = new Float32Array(N);
   const shimmer = (i: number) =>

@@ -58,7 +58,7 @@ const BIRDSONG_PARAM_GROUPS: ParamGroup[] = [
     params: [
       { key: 'callRate',    label: 'call density',  min: 0.1, max: 8, step: 0.1,  def: 2.0 },
       { key: 'callPitch',   label: 'call pitch',    min: 0,   max: 1, step: 0.01, def: 0.50 },
-      { key: 'callVol',     label: 'call volume',   min: 0,   max: 1, step: 0.01, def: 0.55 },
+      { key: 'callVol',     label: 'call volume',   min: 0,   max: 1, step: 0.01, def: 1.0  },
       { key: 'callVariety', label: 'pitch variety', min: 0,   max: 1, step: 0.01, def: 0.50 },
     ],
   },
@@ -67,7 +67,7 @@ const BIRDSONG_PARAM_GROUPS: ParamGroup[] = [
     params: [
       { key: 'trillRate',  label: 'trill density', min: 0, max: 1, step: 0.01, def: 0.30 },
       { key: 'trillPitch', label: 'trill pitch',   min: 0, max: 1, step: 0.01, def: 0.50 },
-      { key: 'trillVol',   label: 'trill volume',  min: 0, max: 1, step: 0.01, def: 0.30 },
+      { key: 'trillVol',   label: 'trill volume',  min: 0, max: 1, step: 0.01, def: 1.0  },
       { key: 'trillSpeed', label: 'warble speed',  min: 0, max: 1, step: 0.01, def: 0.50 },
     ],
   },
@@ -75,7 +75,7 @@ const BIRDSONG_PARAM_GROUPS: ParamGroup[] = [
     label: 'peeps & level',
     params: [
       { key: 'peepRate', label: 'peep density', min: 0, max: 1,   step: 0.01, def: 0.50 },
-      { key: 'peepVol',  label: 'peep volume',  min: 0, max: 0.5, step: 0.01, def: 0.15 },
+      { key: 'peepVol',  label: 'peep volume',  min: 0, max: 0.5, step: 0.01, def: 0.5  },
       { key: 'gain',     label: 'level',        min: 0, max: 2,   step: 0.01, def: 0.62 },
     ],
   },
