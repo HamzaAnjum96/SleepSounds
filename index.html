@@ -91,6 +91,32 @@
         window.dispatchEvent(new Event('drift-installed'));
       });
     </script>
+    <script>
+      // Self-heal: if the app hasn't mounted a short while after load, the
+      // cached shell is likely inconsistent (e.g. it references an asset that
+      // didn't get cached). When online, clear caches + the service worker once
+      // and reload to fetch a clean copy. Guarded by sessionStorage so it can
+      // never loop, and never runs offline (that would only make things worse).
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (!root || root.childElementCount > 0) return;
+          if (!navigator.onLine || sessionStorage.getItem('drift-healed')) return;
+          sessionStorage.setItem('drift-healed', '1');
+          var done = function () { location.reload(); };
+          var clearCaches = ('caches' in window)
+            ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+            : Promise.resolve();
+          clearCaches.then(function () {
+            if (navigator.serviceWorker) {
+              return navigator.serviceWorker.getRegistrations().then(function (rs) {
+                return Promise.all(rs.map(function (r) { return r.unregister(); }));
+              });
+            }
+          }).then(done, done);
+        }, 6000);
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

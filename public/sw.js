@@ -41,11 +41,12 @@ const PRECACHE = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Atomic precache: addAll rejects if ANY file fails, so a flaky network can't
+  // leave a half-filled cache. If it fails, this worker never activates and the
+  // previous (working) version keeps serving — the app is never left broken.
   event.waitUntil(
     caches.open(CACHE)
-      // Add each item independently so one missing file can't fail the whole
-      // precache (and the install).
-      .then((c) => Promise.allSettled(PRECACHE.map((url) => c.add(url))))
+      .then((c) => c.addAll(PRECACHE))
       .then(() => self.skipWaiting()),
   );
 });

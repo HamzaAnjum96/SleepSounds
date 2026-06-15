@@ -128,6 +128,33 @@ html, body {
 /* Kill double-tap zoom delays on controls; pinch zoom stays available. */
 button, input { touch-action: manipulation; }
 
+/* Last-resort crash screen (top-level error boundary). */
+.crash-screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--sp-20);
+  padding: var(--sp-24);
+  text-align: center;
+}
+.crash-line {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+.crash-btn {
+  padding: var(--sp-10) var(--sp-24);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
 /* Visually hidden, still read by assistive tech (live-region status line). */
 .sr-only {
   position: absolute;

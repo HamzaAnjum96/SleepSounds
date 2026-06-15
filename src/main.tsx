@@ -1,11 +1,32 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
+
+/** Last-resort recovery screen, so a crash is never a bare blank: offer a
+ *  reload that also clears caches in case a stale asset is the cause. */
+function AppCrashFallback() {
+  const recover = () => {
+    if ('caches' in window) {
+      caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))).finally(() => location.reload());
+    } else {
+      location.reload();
+    }
+  };
+  return (
+    <div className="crash-screen">
+      <p className="crash-line">something slipped while loading drift away.</p>
+      <button type="button" className="crash-btn" onClick={recover}>reload</button>
+    </div>
+  );
+}
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary fallback={<AppCrashFallback />}>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 );
 
