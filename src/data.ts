@@ -41,32 +41,24 @@ function workletSound(id: string, name: string, category: string, module: string
 }
 
 export const SOUND_LIBRARY: Sound[] = [
-  // Water
-  workletSound('rain',     'Rain',          'Water',    'rain.worklet.js',        'rain-gen'),
-  wavSound('stream',       'Stream',        'Water'),
-  wavSound('ocean',        'Ocean',         'Water'),
-  wavSound('underwater',   'Underwater',    'Water'),
-  wavSound('shower',       'Shower',        'Water'),
-  // Fire
-  workletSound('fire',     'Fire',          'Fire',     'fire.worklet.js',        'fire-synth'),
-  // Air
-  wavSound('wind',         'Wind',          'Air'),
-  workletSound('thunder',  'Thunder',       'Air',      'thunder.worklet.js',     'thunder-gen'),
-  wavSound('fan',          'Fan',           'Air'),
-  // Earth
-  workletSound('forest',   'Windy Forest',  'Earth',    'windyforest.worklet.js', 'windyforest-gen'),
-  // Noise
-  wavSound('white-noise',  'White Noise',   'Noise'),
-  wavSound('pink-noise',   'Pink Noise',    'Noise'),
-  wavSound('brown-noise',  'Brown Noise',   'Noise'),
-  // Urban
-  wavSound('train',        'Train',         'Urban'),
-  wavSound('airplane',     'Airplane',      'Urban'),
-  // Wildlife
-  wavSound('night',        'Night Insects', 'Wildlife'),
-  workletSound('birdsong', 'Birdsong',      'Wildlife', 'birdsong.worklet.js',    'birdsong-synth'),
-  // Cozy
-  wavSound('heartbeat',    'Heartbeat',     'Cozy'),
+  workletSound('rain',      'Rain',          'Water',    'rain.worklet.js',        'rain-gen'),
+  workletSound('fire',      'Fire',          'Fire',     'fire.worklet.js',        'fire-synth'),
+  wavSound('fan',           'Fan',           'Air'),
+  wavSound('underwater',    'Underwater',    'Water'),
+  workletSound('birdsong',  'Birdsong',      'Wildlife', 'birdsong.worklet.js',    'birdsong-synth'),
+  wavSound('stream',        'Stream',        'Water'),
+  wavSound('ocean',         'Ocean',         'Water'),
+  wavSound('shower',        'Shower',        'Water'),
+  wavSound('wind',          'Wind',          'Air'),
+  workletSound('thunder',   'Thunder',       'Air',      'thunder.worklet.js',     'thunder-gen'),
+  workletSound('forest',    'Windy Forest',  'Earth',    'windyforest.worklet.js', 'windyforest-gen'),
+  wavSound('white-noise',   'White Noise',   'Noise'),
+  wavSound('pink-noise',    'Pink Noise',    'Noise'),
+  wavSound('brown-noise',   'Brown Noise',   'Noise'),
+  wavSound('train',         'Train',         'Urban'),
+  wavSound('airplane',      'Airplane',      'Urban'),
+  wavSound('night',         'Night Insects', 'Wildlife'),
+  wavSound('heartbeat',     'Heartbeat',     'Cozy'),
 ];
 
 /** The library minus unfinished sounds: experimental ones appear only when the
