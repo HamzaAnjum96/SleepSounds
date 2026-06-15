@@ -5,7 +5,7 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       // ── Calls ─────────────────────────────────────────────────────────
       { name: 'callRate',     defaultValue: 2.0,   minValue: 0.1,  maxValue: 8,    automationRate: 'k-rate' },
       { name: 'callPitch',    defaultValue: 0.50,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
-      { name: 'callVol',      defaultValue: 0.55,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
+      { name: 'callVol',      defaultValue: 0.75,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
       { name: 'callVariety',  defaultValue: 0.50,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
       // ── Trills ────────────────────────────────────────────────────────
       { name: 'trillRate',    defaultValue: 0.30,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
@@ -16,7 +16,7 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       { name: 'peepRate',     defaultValue: 0.50,  minValue: 0,    maxValue: 1,    automationRate: 'k-rate' },
       { name: 'peepVol',      defaultValue: 0.15,  minValue: 0,    maxValue: 0.5,  automationRate: 'k-rate' },
       // ── Master ────────────────────────────────────────────────────────
-      { name: 'gain',         defaultValue: 0.62,  minValue: 0,    maxValue: 2,    automationRate: 'k-rate' },
+      { name: 'gain',         defaultValue: 0.90,  minValue: 0,    maxValue: 2,    automationRate: 'k-rate' },
     ];
   }
 
