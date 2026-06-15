@@ -53,8 +53,6 @@ export const SOUND_LIBRARY: Sound[] = [
 export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
 export type Category = typeof CATEGORIES[number];
 
-export const PRESET_STORAGE_KEY = 'sleep-mixer-presets-v2';
-
 /** Per-sound starting volume. Fire and birdsong are synthesized +1.5x louder
  *  for headroom, so their defaults are lowered by the same factor: what you
  *  hear by default is unchanged, but their sliders can now reach louder. */

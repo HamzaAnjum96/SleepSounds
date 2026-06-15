@@ -9,10 +9,11 @@ import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
 import NowPlayingSheet from './components/NowPlayingSheet';
 import SoundCard from './components/SoundCard';
-import { CATEGORIES, PRESET_STORAGE_KEY, SOUND_LIBRARY, defaultVolumeFor } from './data';
+import { CATEGORIES, SOUND_LIBRARY } from './data';
+import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
-import type { Preset, SoundState } from './types';
+import type { Preset } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
 import { SOUND_ICONS } from './lib/soundIcons';
@@ -42,40 +43,8 @@ function humanizeSecs(secs: number): string {
   return parts.join(' ') || `${secs} seconds`;
 }
 
-/** "Resume your night": the last active mix + master volume, kept on-device so
- *  reopening the app brings back the soundscape you fell asleep to — paused
- *  and ready, never auto-blaring. */
-const SESSION_KEY = 'drift-last-session';
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-
-function saveLastSession(state: Record<string, SoundState>, masterVolume: number): void {
-  try {
-    const enabled = Object.entries(state).filter(([, s]) => s.enabled);
-    if (enabled.length === 0) { localStorage.removeItem(SESSION_KEY); return; }
-    const slim = Object.fromEntries(enabled.map(([id, s]) => [id, { enabled: true, volume: s.volume }]));
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ state: slim, masterVolume }));
-  } catch { /* private mode / quota */ }
-}
-
-function loadLastSession(): { state: Record<string, SoundState>; masterVolume: number } | null {
-  try {
-    const raw = JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null');
-    if (!raw || typeof raw !== 'object' || typeof raw.state !== 'object') return null;
-    const state: Record<string, SoundState> = {};
-    let any = false;
-    for (const sound of SOUND_LIBRARY) {
-      const item = raw.state[sound.id];
-      if (item && item.enabled) {
-        state[sound.id] = { enabled: true, volume: typeof item.volume === 'number' ? clamp01(item.volume) : 0.5 };
-        any = true;
-      } else {
-        state[sound.id] = { enabled: false, volume: 0.5 };
-      }
-    }
-    if (!any) return null;
-    return { state, masterVolume: typeof raw.masterVolume === 'number' ? clamp01(raw.masterVolume) : 0.8 };
-  } catch { return null; }
-}
+// Saved mixes and "resume your night" persistence live in src/storage, behind
+// migrations that keep bad/old localStorage from ever breaking startup.
 
 /** The categories of a preset's layers, in library order, deduplicated. */
 function presetCategories(preset: Preset): string[] {
@@ -202,52 +171,13 @@ export default function App() {
     });
   }, []);
 
-  const makeDefaultState = useCallback(() => (
-    SOUND_LIBRARY.reduce<Record<string, { enabled: boolean; volume: number }>>((acc, sound) => {
-      acc[sound.id] = { enabled: false, volume: defaultVolumeFor(sound.id) };
-      return acc;
-    }, {})
-  ), []);
-
-  const normalizePreset = useCallback((raw: unknown): Preset | null => {
-    if (!raw || typeof raw !== 'object') return null;
-    const candidate = raw as Partial<Preset>;
-    if (!candidate.id || !candidate.name || !candidate.createdAt || !candidate.state) return null;
-    const base = makeDefaultState();
-    for (const sound of SOUND_LIBRARY) {
-      const item = (candidate.state as Record<string, { enabled?: unknown; volume?: unknown }>)[sound.id];
-      if (!item) continue;
-      base[sound.id] = {
-        enabled: Boolean(item.enabled),
-        volume: typeof item.volume === 'number' ? Math.min(1, Math.max(0, item.volume)) : 0.5,
-      };
-    }
-    return {
-      id: candidate.id,
-      name: candidate.name,
-      createdAt: candidate.createdAt,
-      state: base,
-      masterVolume: typeof candidate.masterVolume === 'number'
-        ? Math.min(1, Math.max(0, candidate.masterVolume))
-        : undefined,
-    };
-  }, [makeDefaultState]);
-
-  // Saved mixes
-  const [presets, setPresets] = useState<Preset[]>(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '[]');
-      if (!Array.isArray(raw)) return [];
-      return raw
-        .map((preset) => normalizePreset(preset))
-        .filter((preset): preset is Preset => preset !== null);
-    }
-    catch { return []; }
-  });
+  // Saved mixes — loaded through the storage migration, so bad/old data can't
+  // break startup.
+  const [presets, setPresets] = useState<Preset[]>(loadSavedMixes);
 
   const persistPresets = (next: Preset[]) => {
     setPresets(next);
-    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(next));
+    saveSavedMixes(next);
   };
 
   const handleDeletePreset = (id: string) => {
