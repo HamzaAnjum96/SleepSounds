@@ -150,10 +150,11 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'rumble', label: 'rumble', def: 0.60 },
     { key: 'distance', label: 'distance', def: 0.40 },
   )},
-  fan: { label: 'Fan', mode: 'simple', groups: simpleGroup(
+  fan: { label: 'Fan', mode: 'simple', groups: shapeGroup(
     { key: 'speed', label: 'speed', def: 0.10 },
     { key: 'hum', label: 'hum', def: 0.40 },
     { key: 'airflow', label: 'airflow', def: 0.60 },
+    { key: 'size', label: 'fan size', def: 0.20 },
   )},
   train: { label: 'Train', mode: 'simple', groups: simpleGroup(
     { key: 'speed', label: 'speed', def: 0.50 },
