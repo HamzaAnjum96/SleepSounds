@@ -1,0 +1,110 @@
+import { describe, it, expect } from 'vitest';
+import { SOUND_LIBRARY, CATEGORIES, BUILTIN_PRESETS, defaultVolumeFor } from '../src/data';
+import { SCENES, presetSoundIds } from '../src/lib/scenes';
+import { SOUND_EDITOR_MODELS, EDITABLE_SOUND_IDS } from '../src/components/soundEditorDefs';
+import { CATEGORY_ICONS, CATEGORY_COLORS } from '../src/lib/categoryIcons';
+import { SOUND_ICONS } from '../src/lib/soundIcons';
+
+const soundIds = new Set(SOUND_LIBRARY.map((s) => s.id));
+const validCategory = new Set(CATEGORIES.filter((c) => c !== 'All'));
+
+describe('sound library', () => {
+  it('has unique ids', () => {
+    expect(soundIds.size).toBe(SOUND_LIBRARY.length);
+  });
+
+  it('every sound has a non-empty name and a known category', () => {
+    for (const s of SOUND_LIBRARY) {
+      expect(s.name.trim().length, `${s.id} name`).toBeGreaterThan(0);
+      expect(validCategory.has(s.category as never), `${s.id} category "${s.category}"`).toBe(true);
+    }
+  });
+
+  it('every sound has an icon and a default volume in [0,1]', () => {
+    for (const s of SOUND_LIBRARY) {
+      expect(SOUND_ICONS[s.id], `${s.id} icon`).toBeTruthy();
+      const v = defaultVolumeFor(s.id);
+      expect(v, `${s.id} default volume`).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe('categories', () => {
+  it('every category has an icon and (non-All) a colour triplet', () => {
+    for (const c of CATEGORIES) {
+      expect(CATEGORY_ICONS[c], `${c} icon`).toBeTruthy();
+      if (c !== 'All') {
+        const triplet = CATEGORY_COLORS[c];
+        expect(triplet, `${c} colour`).toMatch(/^\d{1,3},\d{1,3},\d{1,3}$/);
+      }
+    }
+  });
+});
+
+describe('built-in presets', () => {
+  it('have unique ids and names', () => {
+    const ids = BUILTIN_PRESETS.map((p) => p.id);
+    const names = BUILTIN_PRESETS.map((p) => p.name);
+    expect(new Set(ids).size, 'unique ids').toBe(ids.length);
+    expect(new Set(names).size, 'unique names').toBe(names.length);
+  });
+
+  it('reference only valid sounds, with at least one enabled layer', () => {
+    for (const p of BUILTIN_PRESETS) {
+      const enabled = presetSoundIds(p);
+      expect(enabled.length, `${p.id} has layers`).toBeGreaterThan(0);
+      for (const id of Object.keys(p.state)) {
+        expect(soundIds.has(id), `${p.id} references "${id}"`).toBe(true);
+      }
+    }
+  });
+
+  it('have layer and master volumes in [0,1]', () => {
+    for (const p of BUILTIN_PRESETS) {
+      if (p.masterVolume !== undefined) {
+        expect(p.masterVolume, `${p.id} master`).toBeGreaterThanOrEqual(0);
+        expect(p.masterVolume).toBeLessThanOrEqual(1);
+      }
+      for (const [id, st] of Object.entries(p.state)) {
+        expect(st.volume, `${p.id}/${id} volume`).toBeGreaterThanOrEqual(0);
+        expect(st.volume).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});
+
+describe('scenes', () => {
+  it('each scene has art, a mood line, and a non-empty preset', () => {
+    expect(SCENES.length).toBeGreaterThan(0);
+    for (const scene of SCENES) {
+      expect(scene.art.trim().length, `${scene.preset.id} art`).toBeGreaterThan(0);
+      expect(scene.mood.trim().length, `${scene.preset.id} mood`).toBeGreaterThan(0);
+      expect(presetSoundIds(scene.preset).length, `${scene.preset.id} layers`).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('sound editor models', () => {
+  it('every editable id is a real sound', () => {
+    for (const id of EDITABLE_SOUND_IDS) {
+      expect(soundIds.has(id), `editable "${id}"`).toBe(true);
+    }
+  });
+
+  it('every param has a sane range with the default inside it', () => {
+    for (const [id, model] of Object.entries(SOUND_EDITOR_MODELS)) {
+      const keys = new Set<string>();
+      for (const group of model.groups) {
+        for (const p of group.params) {
+          expect(p.min, `${id}/${p.key} min<max`).toBeLessThan(p.max);
+          expect(p.step, `${id}/${p.key} step`).toBeGreaterThan(0);
+          expect(p.def, `${id}/${p.key} def>=min`).toBeGreaterThanOrEqual(p.min);
+          expect(p.def, `${id}/${p.key} def<=max`).toBeLessThanOrEqual(p.max);
+          expect(keys.has(p.key), `${id}/${p.key} duplicate`).toBe(false);
+          keys.add(p.key);
+        }
+      }
+    }
+  });
+});
