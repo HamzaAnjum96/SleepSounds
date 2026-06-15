@@ -4,6 +4,7 @@
 
 import {
   SR, N, gen, lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance, whiteNoise, brownNoise, pinkNoise,
+  random, seedRandom, hashSeed,
 } from './dsp';
 
 function genForest(params?: Record<string, number>): string {
@@ -26,7 +27,7 @@ function genForest(params?: Record<string, number>): string {
     const len = Math.floor(SR * rand(0.004, 0.018));
     for (let i = 0; i < len && twigPos + i < N; i++) {
       const env = Math.exp(-7.5 * (i / len));
-      twigsBuf[twigPos + i] += (Math.random() * 2 - 1) * env * rand(0.04, 0.14) * twigAmpScale;
+      twigsBuf[twigPos + i] += (random() * 2 - 1) * env * rand(0.04, 0.14) * twigAmpScale;
     }
     twigPos += Math.floor(SR * rand(0.11 * twigGapScale, 0.55 * twigGapScale));
   }
@@ -71,7 +72,7 @@ function genBrown(params?: Record<string, number>): string {
   const buf = new Float32Array(N);
   let last = 0;
   for (let i = 0; i < N; i++) {
-    last = alpha * last + (1 - alpha) * (Math.random() * 2 - 1);
+    last = alpha * last + (1 - alpha) * (random() * 2 - 1);
     buf[i] = last;
   }
   // Second LP pass for rumble emphasis
@@ -172,7 +173,7 @@ function genRain(params?: Record<string, number>): string {
       for (let i = 0; i < len && pos + i < N; i++) {
         const riseGain = Math.min(1, i / riseN);
         const env = Math.exp(-8 * (i / Math.max(1, len))) * riseGain;
-        impacts[pos + i] += (Math.random() * 2 - 1) * amp * env;
+        impacts[pos + i] += (random() * 2 - 1) * amp * env;
       }
       if (chance(pingChance)) {
         const pingF  = rand(700, 1800);
@@ -355,7 +356,7 @@ function genFire(): string {
       const amp = burstIntensity * rand(0.3, 1.0);
       for (let i = 0; i < len && cPos + i < N; i++) {
         const env = Math.exp(-12 * (i / Math.max(1, len)));
-        crackles[cPos + i] += (Math.random() * 2 - 1) * amp * env;
+        crackles[cPos + i] += (random() * 2 - 1) * amp * env;
       }
       // Resin ping: ~30% of crackles get a brief tonal ring (wood-fiber snap).
       // 180–520 Hz matches the resonant range of burning wood and dry bark.
@@ -386,7 +387,7 @@ function genFire(): string {
     const len = Math.floor(SR * rand(0.0008, 0.004));
     const amp = rand(0.04, 0.18);
     for (let i = 0; i < len && spitPos + i < N; i++) {
-      spits[spitPos + i] += (Math.random() * 2 - 1)
+      spits[spitPos + i] += (random() * 2 - 1)
         * amp * Math.exp(-15 * (i / Math.max(1, len)));
     }
     spitPos += Math.floor(SR * rand(0.08, 0.6));
@@ -405,7 +406,7 @@ function genFire(): string {
     for (let i = 0; i < len && popPos + i < N; i++) {
       const env = Math.exp(-6 * (i / Math.max(1, len)));
       ph += (2 * Math.PI * f0) / SR;
-      pops[popPos + i] += (Math.sin(ph) * 0.6 + (Math.random() * 2 - 1) * 0.4)
+      pops[popPos + i] += (Math.sin(ph) * 0.6 + (random() * 2 - 1) * 0.4)
                           * env * amp;
     }
     popPos += Math.floor(SR * rand(1.5, 6.0));
@@ -430,7 +431,7 @@ function genFire(): string {
       const env = Math.pow(p < 0.1 ? p / 0.1 : (1 - p) / 0.9, 0.6);
       ph += (2 * Math.PI * f0) / SR;
       logShifts[shiftPos + i] +=
-        (Math.sin(ph) * 0.5 + (Math.random() * 2 - 1) * 0.5) * env * amp;
+        (Math.sin(ph) * 0.5 + (random() * 2 - 1) * 0.5) * env * amp;
     }
   }
   hp1(logShifts, 25);
@@ -668,7 +669,7 @@ function genTrain(params?: Record<string, number>): string {
         const len = Math.floor(SR * rand(0.003, 0.009));
         const amp = strength * rand(0.6, 1.0) * (axle === 0 ? 1 : rand(0.55, 0.85));
         for (let i = 0; i < len && aPos + i < N; i++) {
-          clacks[aPos + i] += (Math.random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
+          clacks[aPos + i] += (random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
         }
         // The heavier hits put a soft thump into the floor as well.
         if (chance(0.4)) {
@@ -717,6 +718,7 @@ const generatorMap: Record<string, (params?: Record<string, number>) => string> 
   wind: genWind,
   thunder: genThunder,
   forest: genForest,
+  fire: genFire,
   'white-noise': genWhite,
   'pink-noise': genPink,
   'brown-noise': genBrown,
@@ -726,13 +728,17 @@ const generatorMap: Record<string, (params?: Record<string, number>) => string> 
   underwater: genUnderwater,
   shower: genShower,
   airplane: genAirplane,
+  birdsong: genBirdsong,
   heartbeat: genHeartbeat,
 };
 
-/** Regenerate a sound's WAV blob URL with the given tuning parameters. */
+/** Regenerate a sound's WAV blob URL with the given tuning parameters. The PRNG
+ *  is seeded from the sound id + params, so the same inputs always render the
+ *  exact same loop (deterministic across reloads and in tests). */
 export function regenerateSound(soundId: string, params: Record<string, number>): string | null {
   const generator = generatorMap[soundId];
   if (!generator) return null;
+  seedRandom(hashSeed(`${soundId}:${JSON.stringify(params)}`));
   return generator(params);
 }
 
@@ -928,7 +934,7 @@ function genHeartbeat(params?: Record<string, number>): string {
     for (let i = 0; i < lubLen && beatPos + i < N; i++) {
       const p = i / lubLen;
       const env = Math.sin(Math.PI * p);
-      const noise = (Math.random() * 2 - 1) * 0.3;
+      const noise = (random() * 2 - 1) * 0.3;
       beats[beatPos + i] += (Math.sin(2 * Math.PI * lubFreq * (i / SR)) * 0.7 + noise) * env * 0.25;
     }
     // Dub (offset ~200ms)
@@ -938,7 +944,7 @@ function genHeartbeat(params?: Record<string, number>): string {
     for (let i = 0; i < dubLen && dubPos + i < N; i++) {
       const p = i / dubLen;
       const env = Math.sin(Math.PI * p);
-      const noise = (Math.random() * 2 - 1) * 0.3;
+      const noise = (random() * 2 - 1) * 0.3;
       beats[dubPos + i] += (Math.sin(2 * Math.PI * dubFreq * (i / SR)) * 0.7 + noise) * env * 0.25 * 0.6;
     }
     // Add brown noise burst for realism at beat position
@@ -946,7 +952,7 @@ function genHeartbeat(params?: Record<string, number>): string {
     for (let i = 0; i < burstLen && beatPos + i < N; i++) {
       const p = i / burstLen;
       const env = Math.exp(-5 * p);
-      beats[beatPos + i] += (Math.random() * 2 - 1) * 0.04 * env;
+      beats[beatPos + i] += (random() * 2 - 1) * 0.04 * env;
     }
     // Slight timing jitter
     const jitter = Math.floor(rand(-0.01, 0.01) * beatInterval);

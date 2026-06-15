@@ -32,14 +32,31 @@ function samples(url: string): Float32Array {
   return out;
 }
 
-// Every library sound with a procedural WAV generator (the worklet sounds —
-// fire, birdsong — return null and are exercised by the browser smoke tests).
+/** Order-sensitive checksum over the samples, to catch any non-determinism. */
+function checksum(url: string): number {
+  const s = samples(url);
+  let acc = 0;
+  for (let i = 0; i < s.length; i++) acc += s[i] * ((i % 101) + 1);
+  return acc;
+}
+
+// Every library sound has a procedural WAV generator (the worklet sounds use
+// theirs as the fallback loop), so all of them render through regenerateSound.
 const wavSounds = SOUND_LIBRARY.filter((s) => regenerateSound(s.id, {}) !== null);
 
 describe('WAV generators', () => {
-  it('cover every non-worklet sound', () => {
-    expect(wavSounds.length).toBeGreaterThanOrEqual(14);
+  it('cover every sound in the library', () => {
+    expect(wavSounds.length).toBe(SOUND_LIBRARY.length);
   });
+
+  // Determinism is a property of the seeded PRNG, so a representative sample
+  // (event-driven + noise-bed + worklet-fallback sounds) is enough.
+  it.each(['rain', 'fire', 'ocean', 'night', 'white-noise'])(
+    '%s renders identical audio for the same inputs',
+    (id) => {
+      expect(checksum(regenerateSound(id, {})!)).toBe(checksum(regenerateSound(id, {})!));
+    },
+  );
 
   for (const sound of wavSounds) {
     it(`${sound.id} produces valid, audible, non-clipping audio`, () => {

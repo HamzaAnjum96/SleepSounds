@@ -10,6 +10,30 @@ const N = SR * SECS;
 const EDGE_FADE_S = 0.02;
 const LOOP_BLEND_S = 1.2;
 
+// Seeded PRNG (mulberry32) so each generator render is deterministic: seed once
+// before a render and it reproduces exactly (consistent across reloads, and
+// snapshot-testable). All randomness in the generators routes through random().
+let rngState = 0x9e3779b9;
+function seedRandom(seed: number): void {
+  rngState = (seed >>> 0) || 0x9e3779b9;
+}
+function random(): number {
+  rngState = (rngState + 0x6d2b79f5) | 0;
+  let t = Math.imul(rngState ^ (rngState >>> 15), 1 | rngState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+/** Stable string → uint32 seed (FNV-1a), so a sound id (+params) maps to a
+ *  fixed seed. */
+function hashSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 function makeWav(i16: Int16Array, sr: number): string {
   const dataLen = i16.byteLength;
   const buf = new ArrayBuffer(44 + dataLen);
@@ -32,7 +56,7 @@ function gen(f32: Float32Array, gain = 0.7): string {
   const scale = max > 0 ? (gain * 32767) / max : 32767;
   const i16 = new Int16Array(f32.length);
   for (let i = 0; i < f32.length; i++) {
-    const dither = (Math.random() - 0.5) + (Math.random() - 0.5);
+    const dither = (random() - 0.5) + (random() - 0.5);
     i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * scale + dither)));
   }
   return makeWav(i16, SR);
@@ -128,16 +152,16 @@ function softClip(buf: Float32Array, drive: number): void {
 
 function smoothRandomLfo(min: number, max: number, minHoldS: number, maxHoldS: number): Float32Array {
   const out = new Float32Array(N);
-  const first = min + Math.random() * (max - min);
+  const first = min + random() * (max - min);
   let idx = 0;
   let prev = first;
   while (idx < N) {
-    const hold = Math.floor((minHoldS + Math.random() * (maxHoldS - minHoldS)) * SR);
+    const hold = Math.floor((minHoldS + random() * (maxHoldS - minHoldS)) * SR);
     const seg = Math.max(1, Math.min(hold, N - idx));
     // Loop-closed: the final segment eases back to the starting value, so the
     // modulation is continuous across the loop seam instead of drifting to a
     // random level and snapping back when the buffer repeats.
-    const next = idx + seg >= N ? first : min + Math.random() * (max - min);
+    const next = idx + seg >= N ? first : min + random() * (max - min);
     for (let i = 0; i < seg; i++) {
       const t = i / seg;
       const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
@@ -150,7 +174,7 @@ function smoothRandomLfo(min: number, max: number, minHoldS: number, maxHoldS: n
 }
 
 function rand(min: number, max: number): number {
-  return min + Math.random() * (max - min);
+  return min + random() * (max - min);
 }
 
 /** Snap a frequency to a whole number of cycles per loop, so sinusoidal
@@ -160,12 +184,12 @@ function lockFreq(f: number): number {
 }
 
 function chance(p: number): boolean {
-  return Math.random() < p;
+  return random() < p;
 }
 
 function whiteNoise(): Float32Array {
   const buf = new Float32Array(N);
-  for (let i = 0; i < N; i++) buf[i] = Math.random() * 2 - 1;
+  for (let i = 0; i < N; i++) buf[i] = random() * 2 - 1;
   return buf;
 }
 
@@ -173,7 +197,7 @@ function brownNoise(): Float32Array {
   const buf = new Float32Array(N);
   let last = 0;
   for (let i = 0; i < N; i++) {
-    last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+    last = (last + 0.02 * (random() * 2 - 1)) / 1.02;
     buf[i] = last;
   }
   return buf;
@@ -183,7 +207,7 @@ function pinkNoise(): Float32Array {
   const buf = new Float32Array(N);
   let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
   for (let i = 0; i < N; i++) {
-    const w = Math.random() * 2 - 1;
+    const w = random() * 2 - 1;
     b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
     b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
     b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
@@ -195,4 +219,5 @@ function pinkNoise(): Float32Array {
 
 export {
   SR, SECS, N, gen, lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance, whiteNoise, brownNoise, pinkNoise,
+  random, seedRandom, hashSeed,
 };
