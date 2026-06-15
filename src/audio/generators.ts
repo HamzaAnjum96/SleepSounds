@@ -96,59 +96,70 @@ function genFan(params?: Record<string, number>): string {
   const bpf2 = lockFreq(bpfBase * 2);
   const bpf3 = lockFreq(bpfBase * 3);
 
-  // Motor hum: AC mains (60 Hz) + second harmonic
   const motorF  = lockFreq(60);
   const motorF2 = lockFreq(120);
 
-  // Airflow: home fans are warm and muffled; size brightens the band
-  const airflowBuf = pinkNoise();
-  hp1(airflowBuf, 100 + speed * 80);
-  lp1(airflowBuf, 2000 + size * 1800 + speed * 500);
+  // Dual airflow model (per research): warm body layer + surface turbulence layer,
+  // each with its own LFO so they breathe independently — closer to real fan acoustics
+  // than a single pink-noise band.
+  const bodyBuf = pinkNoise();               // 180–1800 Hz: the main "whoosh"
+  hp1(bodyBuf, 180 + speed * 60);
+  lp1(bodyBuf, 1500 + speed * 300 + size * 200);
 
-  // Casing / housing resonance: warm mid-frequency coloring from plastic grill.
-  // Even small desk fans have a broad resonant hump around 400–700 Hz.
-  const casingBuf = whiteNoise();
-  bp2(casingBuf, 400 + size * 280, 3.0 + size * 2.0);
+  const surfaceBuf = pinkNoise();            // 500–3200 Hz: vortex / turbulent eddies
+  hp1(surfaceBuf, 480 + speed * 180 + size * 80);
+  lp1(surfaceBuf, 2600 + speed * 400 + size * 500);
 
-  // Motor-mount sub-warmth: low bearing rumble that grounds the sound
+  // Two narrow casing resonance peaks (higher Q than before for more defined character)
+  const casing1 = whiteNoise();
+  bp2(casing1, 420 + size * 180, 5.0 + size * 2.0);  // ~420–600 Hz
+  const casing2 = whiteNoise();
+  bp2(casing2, 700 + size * 220, 5.5 + size * 2.5);  // ~700–920 Hz
+
+  // Motor-mount sub-warmth
   const bearingBuf = brownNoise();
-  lp1(bearingBuf, 75 + size * 45);
+  lp1(bearingBuf, 70 + size * 40);
 
-  // Grill/edge hiss: barely audible on a home fan, grows with size
+  // Grill/edge hiss: barely audible on home fans
   const hissBuf = whiteNoise();
-  hp1(hissBuf, 2800 + size * 1000);
-  lp1(hissBuf, 6500);
+  hp1(hissBuf, 3000 + size * 800);
+  lp1(hissBuf, 6000);
 
-  const breathLfo   = smoothRandomLfo(0.92, 1.0, 2.5, 7.0);
-  const phaseJitter = smoothRandomLfo(-0.025, 0.025, 0.5, 2.0);
+  const bodyLfo    = smoothRandomLfo(0.90, 1.0, 2.5, 7.0);
+  const surfaceLfo = smoothRandomLfo(0.84, 1.0, 3.5, 9.0);   // slower, deeper variation
+  // Blade amplitude drift: simulates subtle motor speed variation (tones swell/recede)
+  const bladeAmp   = smoothRandomLfo(0.72, 1.0, 1.8, 5.5);
+  const phaseJitter = smoothRandomLfo(-0.022, 0.022, 0.5, 2.0);
 
-  // Harmonic richness: home fans have soft, rolled-off partials
-  const h2amp = 0.12 + size * 0.30;
-  const h3amp = 0.03 + size * 0.15;
+  const h2amp = 0.10 + size * 0.28;
+  const h3amp = 0.02 + size * 0.13;
 
-  const airW     = 0.55 + airflowParam * 0.35;
-  const casingW  = 0.020 + humParam * 0.018;
-  const bearingW = 0.025 + humParam * 0.028;
-  const hissW    = (0.004 + size * 0.030) * (0.5 + speed * 0.5);
-  const bladeW   = humParam * (0.014 + size * 0.048);
-  const motorW   = humParam * (0.010 + size * 0.008);
+  const bodyW    = 0.40 + airflowParam * 0.28;
+  const surfaceW = (0.16 + airflowParam * 0.12) * (0.5 + speed * 0.5);
+  const casing1W = 0.016 + humParam * 0.014;
+  const casing2W = 0.010 + humParam * 0.010;
+  const bearingW = 0.022 + humParam * 0.024;
+  const hissW    = (0.003 + size * 0.022) * (0.4 + speed * 0.6);
+  const bladeW   = humParam * (0.012 + size * 0.042);
+  const motorW   = humParam * (0.009 + size * 0.007);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const t      = (2 * Math.PI * i) / SR;
     const jitter = phaseJitter[i];
 
-    // Asymmetric half-wave blade pulse: positive stroke (blade push) is dominant,
-    // negative (blade pull) is soft — matches the one-sided pressure of a real fan.
+    // Asymmetric half-wave blade pulse, now with amplitude drift for motor variation
     const bladeRaw = Math.sin(bpf * t + jitter);
-    const blade = (bladeRaw > 0 ? bladeRaw * 0.85 : bladeRaw * 0.15)
+    const blade = ((bladeRaw > 0 ? bladeRaw * 0.85 : bladeRaw * 0.15)
                 + Math.sin(bpf2 * t + jitter * 1.5) * h2amp
-                + Math.sin(bpf3 * t + jitter * 2.2) * h3amp;
+                + Math.sin(bpf3 * t + jitter * 2.2) * h3amp) * bladeAmp[i];
 
     const motor = Math.sin(motorF * t) * 0.65 + Math.sin(motorF2 * t + 1.1) * 0.28;
 
-    mix[i] = airflowBuf[i] * airW * breathLfo[i]
-           + casingBuf[i]  * casingW
+    mix[i] = bodyBuf[i]    * bodyW    * bodyLfo[i]
+           + surfaceBuf[i] * surfaceW * surfaceLfo[i]
+           + casing1[i]    * casing1W
+           + casing2[i]    * casing2W
            + bearingBuf[i] * bearingW
            + hissBuf[i]    * hissW
            + blade * bladeW
