@@ -1,4 +1,4 @@
-import type { Preset, Sound, SoundSource, SoundState } from './types';
+import type { Preset, Sound, SoundQuality, SoundSource, SoundState } from './types';
 import { regenerateSound } from './audio/generators';
 import { SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 
@@ -23,14 +23,21 @@ function lazyWav(id: string): () => string {
   return () => (url ??= regenerateSound(id, {}) as string);
 }
 
-function wavSound(id: string, name: string, category: string): Sound {
-  return { id, name, category, source: { mode: 'wav', make: lazyWav(id) } };
+interface SoundMeta { tags?: string[]; quality?: SoundQuality }
+
+function wavSound(id: string, name: string, category: string, meta: SoundMeta = {}): Sound {
+  return {
+    id, name, category,
+    source: { mode: 'wav', make: lazyWav(id) },
+    tags: meta.tags ?? [],
+    quality: meta.quality ?? 'good',
+  };
 }
 
 /** A live AudioWorklet sound, with its procedural WAV loop as the fallback. */
-function workletSound(id: string, name: string, category: string, module: string, processor: string): Sound {
+function workletSound(id: string, name: string, category: string, module: string, processor: string, meta: SoundMeta = {}): Sound {
   const source: SoundSource = { mode: 'worklet', module, processor, params: editorDefaults(id), fallback: lazyWav(id) };
-  return { id, name, category, source };
+  return { id, name, category, source, tags: meta.tags ?? [], quality: meta.quality ?? 'good' };
 }
 
 export const SOUND_LIBRARY: Sound[] = [
@@ -61,6 +68,12 @@ export const SOUND_LIBRARY: Sound[] = [
   // Cozy
   wavSound('heartbeat',    'Heartbeat',     'Cozy'),
 ];
+
+/** The library minus unfinished sounds: experimental ones appear only when the
+ *  experimentalSounds feature flag is on. */
+export function releasableSounds(includeExperimental: boolean): Sound[] {
+  return includeExperimental ? SOUND_LIBRARY : SOUND_LIBRARY.filter((s) => s.quality !== 'experimental');
+}
 
 export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
 export type Category = typeof CATEGORIES[number];

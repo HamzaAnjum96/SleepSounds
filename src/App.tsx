@@ -9,7 +9,8 @@ import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
 import NowPlayingSheet from './components/NowPlayingSheet';
 import SoundCard from './components/SoundCard';
-import { CATEGORIES, SOUND_LIBRARY } from './data';
+import { CATEGORIES, SOUND_LIBRARY, releasableSounds } from './data';
+import { features } from './config/features';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
 import { platform } from './platform';
 import type { Category } from './data';
@@ -402,9 +403,11 @@ export default function App() {
     announce('sleep timer off');
   };
 
+  // Experimental sounds are hidden unless the feature flag opts them in.
+  const library = releasableSounds(features.experimentalSounds);
   const visibleSounds = category === 'All'
-    ? SOUND_LIBRARY
-    : SOUND_LIBRARY.filter((s) => s.category === category);
+    ? library
+    : library.filter((s) => s.category === category);
 
   const openEditorIndex = openEditorSoundId
     ? visibleSounds.findIndex((sound) => sound.id === openEditorSoundId)

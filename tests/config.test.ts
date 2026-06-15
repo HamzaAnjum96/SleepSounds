@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SOUND_LIBRARY, CATEGORIES, BUILTIN_PRESETS, defaultVolumeFor } from '../src/data';
+import { SOUND_LIBRARY, CATEGORIES, BUILTIN_PRESETS, defaultVolumeFor, releasableSounds } from '../src/data';
 import { SCENES, presetSoundIds } from '../src/lib/scenes';
 import { SOUND_EDITOR_MODELS, EDITABLE_SOUND_IDS } from '../src/components/soundEditorDefs';
 import { CATEGORY_ICONS, CATEGORY_COLORS } from '../src/lib/categoryIcons';
@@ -27,6 +27,22 @@ describe('sound library', () => {
       expect(v, `${s.id} default volume`).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('every sound has a valid quality and a tags array', () => {
+    const ok = new Set(['good', 'experimental', 'needs-work']);
+    for (const s of SOUND_LIBRARY) {
+      expect(ok.has(s.quality), `${s.id} quality "${s.quality}"`).toBe(true);
+      expect(Array.isArray(s.tags), `${s.id} tags`).toBe(true);
+    }
+  });
+
+  it('releasableSounds hides experimental sounds unless opted in', () => {
+    const all = releasableSounds(true);
+    const released = releasableSounds(false);
+    expect(all.length).toBe(SOUND_LIBRARY.length);
+    expect(released.every((s) => s.quality !== 'experimental')).toBe(true);
+    expect(released.length).toBe(SOUND_LIBRARY.filter((s) => s.quality !== 'experimental').length);
   });
 
   it('every sound declares a well-formed source (worklet or wav)', () => {

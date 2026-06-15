@@ -6,11 +6,18 @@ export type SoundSource =
   | { mode: 'worklet'; module: string; processor: string; params: Record<string, number>; fallback: () => string }
   | { mode: 'wav'; make: () => string };
 
+/** Release readiness, for hiding unfinished work. 'experimental' sounds are
+ *  shown only when the experimentalSounds feature flag is on. */
+export type SoundQuality = 'good' | 'experimental' | 'needs-work';
+
 export interface Sound {
   id: string;
   name: string;
   category: string;
   source: SoundSource;
+  /** Free-text tags for future search/grouping. */
+  tags: string[];
+  quality: SoundQuality;
 }
 
 export interface SoundState {
