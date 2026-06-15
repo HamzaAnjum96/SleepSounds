@@ -86,35 +86,57 @@ function genBrown(params?: Record<string, number>): string {
 
 function genFan(params?: Record<string, number>): string {
   const { speed = 0.1, hum: humParam = 0.4, airflow: airflowParam = 0.6 } = params ?? {};
-  // Blade-pass flutter rides the airflow with a slowly wandering phase (a
-  // real fan is never a perfect metronome), over a motor bed that carries a
-  // faint loop-locked hum at the rotation orders — the tonal identity the
-  // old pure-noise version lacked.
-  const flutterF = lockFreq(11 + speed * 13);
-  const phaseWobble = smoothRandomLfo(-0.6, 0.6, 1.0, 3.0);
 
+  // Blade-pass frequency: household fan 1200–3000 RPM × 3–5 blades / 60
+  // speed=0 → ~60 Hz (slow table fan); speed=1 → ~240 Hz (fast desk fan)
+  const bpfBase = 60 + speed * 180;
+  const bpf  = lockFreq(bpfBase);
+  const bpf2 = lockFreq(bpfBase * 2);
+  const bpf3 = lockFreq(bpfBase * 3);
+
+  // Motor hum: AC mains (60 Hz) + second harmonic — the electrical drone
+  // real motors emit. lockFreq keeps both loop-seam continuous.
+  const motorF  = lockFreq(60);
+  const motorF2 = lockFreq(120);
+
+  // Airflow: broad turbulence noise, the dominant perceptual layer.
+  // HP removes sub-rumble; LP brightens with speed (faster → more turbulent).
   const airflowBuf = pinkNoise();
-  hp1(airflowBuf, 140 + speed * 160);
-  lp1(airflowBuf, 2200 + speed * 700);
+  hp1(airflowBuf, 180 + speed * 120);
+  lp1(airflowBuf, 3200 + speed * 1200);
 
-  const humBuf = brownNoise();
-  const humLpCut = 80 + humParam * 80;
-  lp1(humBuf, humLpCut); lp1(humBuf, humLpCut);
+  // Grill/blade-edge hiss: fine high-frequency turbulence
+  const hissBuf = whiteNoise();
+  hp1(hissBuf, 2000 + speed * 1000);
+  lp1(hissBuf, 8000);
 
-  const humF = lockFreq(52 + speed * 38);
-  const humSwell = smoothRandomLfo(0.75, 1.0, 1.5, 4.5);
+  // Slow breathing LFO: fans have minor amplitude drift from motor torque variation
+  const breathLfo   = smoothRandomLfo(0.90, 1.0, 2.0, 6.0);
+  // Subtle phase jitter on blade tones — real fans are never perfect metronomes
+  const phaseJitter = smoothRandomLfo(-0.05, 0.05, 0.4, 1.8);
 
-  const airflowMix = 0.5 + airflowParam * 0.5;
-  const humMix = 0.13 + humParam * 0.18;
-  const toneMix = 0.02 + humParam * 0.05;
+  const airW   = 0.55 + airflowParam * 0.35;
+  const hissW  = 0.030 + speed * 0.035;
+  const bladeW = humParam * 0.070;
+  const motorW = humParam * 0.022;
+
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const flutter = 0.88 + 0.12 * Math.sin((2 * Math.PI * flutterF * i) / SR + phaseWobble[i]);
-    const ph = (2 * Math.PI * humF * i) / SR;
-    const tone = Math.sin(ph) * 0.7 + Math.sin(2 * ph + 1.3) * 0.35;
-    mix[i] = airflowBuf[i] * airflowMix * flutter
-           + humBuf[i] * humMix
-           + tone * toneMix * humSwell[i];
+    const t      = (2 * Math.PI * i) / SR;
+    const jitter = phaseJitter[i];
+
+    // Blade-pass harmonic stack: fundamental + 2nd + 3rd with natural rolloff
+    const blade = Math.sin(bpf  * t + jitter)       * 1.00
+                + Math.sin(bpf2 * t + jitter * 1.7) * 0.45
+                + Math.sin(bpf3 * t + jitter * 2.4) * 0.22;
+
+    // Motor hum: 60 Hz + 120 Hz overtone
+    const motor = Math.sin(motorF * t) * 0.70 + Math.sin(motorF2 * t + 1.1) * 0.30;
+
+    mix[i] = airflowBuf[i] * airW * breathLfo[i]
+           + hissBuf[i]    * hissW
+           + blade * bladeW
+           + motor * motorW;
   }
   return gen(mix, 0.65);
 }
