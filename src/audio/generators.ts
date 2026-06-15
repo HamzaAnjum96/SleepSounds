@@ -88,11 +88,10 @@ function genFan(params?: Record<string, number>): string {
   const { speed = 0.1, hum: humParam = 0.4, airflow: airflowParam = 0.6, size = 0.2 } = params ?? {};
 
   // size=0: small bedroom fan (soft, warm, muffled)
-  // size=1: large industrial fan (harsh, bright, buzzy)
+  // size=1: large industrial fan (bright, buzzy, prominent tones)
 
-  // Blade-pass frequency: home fans 800–2400 RPM × 3–5 blades → 40–200 Hz;
-  // size pushes further into industrial territory.
-  const bpfBase = 50 + speed * 70 + size * 110;  // 50–230 Hz
+  // Blade-pass frequency
+  const bpfBase = 50 + speed * 70 + size * 110;
   const bpf  = lockFreq(bpfBase);
   const bpf2 = lockFreq(bpfBase * 2);
   const bpf3 = lockFreq(bpfBase * 3);
@@ -102,48 +101,62 @@ function genFan(params?: Record<string, number>): string {
   const motorF2 = lockFreq(120);
 
   // Airflow: home fans are warm and muffled; size brightens the band
-  const airLp = 2200 + size * 1800 + speed * 500;  // 2200–4500 Hz
   const airflowBuf = pinkNoise();
   hp1(airflowBuf, 100 + speed * 80);
-  lp1(airflowBuf, airLp);
+  lp1(airflowBuf, 2000 + size * 1800 + speed * 500);
+
+  // Casing / housing resonance: warm mid-frequency coloring from plastic grill.
+  // Even small desk fans have a broad resonant hump around 400–700 Hz.
+  const casingBuf = whiteNoise();
+  bp2(casingBuf, 400 + size * 280, 3.0 + size * 2.0);
+
+  // Motor-mount sub-warmth: low bearing rumble that grounds the sound
+  const bearingBuf = brownNoise();
+  lp1(bearingBuf, 75 + size * 45);
 
   // Grill/edge hiss: barely audible on a home fan, grows with size
   const hissBuf = whiteNoise();
-  hp1(hissBuf, 2400 + size * 1200);
-  lp1(hissBuf, 7000);
+  hp1(hissBuf, 2800 + size * 1000);
+  lp1(hissBuf, 6500);
 
-  // Slow breathing LFO + subtle phase jitter on blade tones
-  const breathLfo   = smoothRandomLfo(0.90, 1.0, 2.0, 6.0);
-  const phaseJitter = smoothRandomLfo(-0.04, 0.04, 0.4, 1.8);
+  const breathLfo   = smoothRandomLfo(0.92, 1.0, 2.5, 7.0);
+  const phaseJitter = smoothRandomLfo(-0.025, 0.025, 0.5, 2.0);
 
-  // Harmonic richness scales with size: home fans have soft, rolled-off partials
-  const h2amp = 0.15 + size * 0.32;
-  const h3amp = 0.05 + size * 0.18;
+  // Harmonic richness: home fans have soft, rolled-off partials
+  const h2amp = 0.12 + size * 0.30;
+  const h3amp = 0.03 + size * 0.15;
 
-  const airW   = 0.55 + airflowParam * 0.35;
-  const hissW  = (0.005 + size * 0.042) * (0.6 + speed * 0.4);
-  const bladeW = humParam * (0.018 + size * 0.056);
-  const motorW = humParam * (0.012 + size * 0.010);
+  const airW     = 0.55 + airflowParam * 0.35;
+  const casingW  = 0.020 + humParam * 0.018;
+  const bearingW = 0.025 + humParam * 0.028;
+  const hissW    = (0.004 + size * 0.030) * (0.5 + speed * 0.5);
+  const bladeW   = humParam * (0.014 + size * 0.048);
+  const motorW   = humParam * (0.010 + size * 0.008);
 
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const t      = (2 * Math.PI * i) / SR;
     const jitter = phaseJitter[i];
 
-    const blade = Math.sin(bpf  * t + jitter)       * 1.00
-                + Math.sin(bpf2 * t + jitter * 1.7) * h2amp
-                + Math.sin(bpf3 * t + jitter * 2.4) * h3amp;
+    // Asymmetric half-wave blade pulse: positive stroke (blade push) is dominant,
+    // negative (blade pull) is soft — matches the one-sided pressure of a real fan.
+    const bladeRaw = Math.sin(bpf * t + jitter);
+    const blade = (bladeRaw > 0 ? bladeRaw * 0.85 : bladeRaw * 0.15)
+                + Math.sin(bpf2 * t + jitter * 1.5) * h2amp
+                + Math.sin(bpf3 * t + jitter * 2.2) * h3amp;
 
-    const motor = Math.sin(motorF * t) * 0.70 + Math.sin(motorF2 * t + 1.1) * 0.30;
+    const motor = Math.sin(motorF * t) * 0.65 + Math.sin(motorF2 * t + 1.1) * 0.28;
 
     mix[i] = airflowBuf[i] * airW * breathLfo[i]
+           + casingBuf[i]  * casingW
+           + bearingBuf[i] * bearingW
            + hissBuf[i]    * hissW
            + blade * bladeW
            + motor * motorW;
   }
 
-  // Soft final rolloff for home-fan character: large fans are naturally brighter
-  lp1(mix, 2600 + size * 5000);
+  // Final roll-off: removes top-end harshness, softer for small fans
+  lp1(mix, 2800 + size * 4000);
 
   return gen(mix, 0.65);
 }
