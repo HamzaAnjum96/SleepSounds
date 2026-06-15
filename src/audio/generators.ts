@@ -909,39 +909,42 @@ function genAirplane(params?: Record<string, number>): string {
 }
 
 function genSpace(params?: Record<string, number>): string {
-  // Night Insects: a thin nocturnal shimmer that drifts in and out. The deep
-  // void/brown-noise bed is gone by default (void 0) — that low bed belongs to
-  // the noise sounds, not here; it's still wired for any caller that asks.
+  // Night Insects: discrete tonal cricket/cicada bands that drift in and out.
+  // High Q (15-28) keeps each band narrow and tonal — no broadband noise floor.
   const { void: voidParam = 0, cosmic = 0.4, pulse = 0.3 } = params ?? {};
 
-  // Lower-Q bands than before: a smooth airy shimmer rather than high-Q
-  // resonances that whistle and read as "busy".
-  const shimmer1 = whiteNoise();
-  bp2(shimmer1, 2000 + cosmic * 2800, 3.5 + cosmic * 3);
+  // Three insect-frequency bands: each independently gated so they feel like
+  // distinct species rather than a single wash.
+  const bandDefs = [
+    { fc: 2600 + cosmic * 800,  q: 22 + cosmic * 8 },   // low cricket tone
+    { fc: 4000 + cosmic * 1200, q: 18 + cosmic * 10 },  // mid chirp band
+    { fc: 5800 + cosmic * 800,  q: 15 + cosmic * 8 },   // upper shimmer
+  ];
 
-  const shimmer2 = whiteNoise();
-  bp2(shimmer2, 3800 + cosmic * 2000, 3 + cosmic * 2.5);
+  const depth = 0.12 + pulse * 0.20;
+  // Each band gets its own slow gate so they fade independently
+  const gate0 = smoothRandomLfo(0.0, 1.0, 1.6, 4.0);
+  const gate1 = smoothRandomLfo(0.0, 1.0, 2.2, 5.5);
+  const gate2 = smoothRandomLfo(0.0, 1.0, 1.8, 4.8);
+  const gates = [gate0, gate1, gate2];
 
-  // Stationary modulation: shallow depth and short holds, so the texture stays
-  // steady and never swells over the 32s loop. (The old slow/deep LFOs could
-  // ramp the loop upward; with the loop crossfade hiding the reset, that ramp
-  // read as the sound "getting busier the longer it goes on".) The drift slider
-  // sets only how much gentle movement there is, never a slow arc.
-  const depth = 0.1 + pulse * 0.16;
-  const pulseLfo = smoothRandomLfo(1 - depth, 1.0, 1.4, 3.6);
-  const driftLfo = smoothRandomLfo(0.86, 1.0, 1.8, 4.5);
+  const pulseLfo = smoothRandomLfo(1 - depth, 1.0, 1.2, 3.0);
 
   const mix = new Float32Array(N);
-  const shimmer = (i: number) =>
-    (shimmer1[i] * 0.1 * (0.5 + cosmic) + shimmer2[i] * 0.06 * (0.5 + cosmic)) * driftLfo[i] * pulseLfo[i];
+  for (let b = 0; b < bandDefs.length; b++) {
+    const { fc, q } = bandDefs[b];
+    const buf = whiteNoise();
+    bp2(buf, fc, q);
+    const g = gates[b];
+    const gain = 0.10 * (0.5 + cosmic);
+    for (let i = 0; i < N; i++) mix[i] += buf[i] * gain * g[i] * pulseLfo[i];
+  }
 
   if (voidParam > 0) {
     const voidBuf = brownNoise();
     lp1(voidBuf, 60 + voidParam * 40);
     lp1(voidBuf, 60 + voidParam * 40);
-    for (let i = 0; i < N; i++) mix[i] = voidBuf[i] * voidParam * 0.6 + shimmer(i);
-  } else {
-    for (let i = 0; i < N; i++) mix[i] = shimmer(i);
+    for (let i = 0; i < N; i++) mix[i] += voidBuf[i] * voidParam * 0.6;
   }
   return gen(mix, 0.55);
 }
