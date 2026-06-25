@@ -195,15 +195,16 @@ class RainProcessor extends AudioWorkletProcessor {
     for (let i = 0; i < 8; i++) this.emitters.push({ active: false, lane: 1, remaining: 0, gap: 0, gMin: 0, gMax: 0 });
 
     // ── short early reflections on the event bus (placement, not reverb) ──
-    this.rbLen = Math.ceil(0.07 * SR) + 4;
+    this.rbLen = Math.ceil(0.14 * SR) + 4;
     this.rbL = new Float32Array(this.rbLen);
     this.rbR = new Float32Array(this.rbLen);
     this.rbPos = 0;
     this.dL = 0; this.dR = 0; // damping one-pole state
     const mk = (s, g) => ({ d: Math.max(1, Math.round(s * SR)), g });
-    // slightly different delays L vs R so the reflections decorrelate (width)
-    this.tapsL = [mk(0.0110, 0.50), mk(0.0190, 0.34), mk(0.0310, 0.22), mk(0.0470, 0.13)];
-    this.tapsR = [mk(0.0131, 0.50), mk(0.0173, 0.34), mk(0.0291, 0.22), mk(0.0512, 0.13)];
+    // a small spray of taps out to ~90 ms gives an audible sense of enclosure
+    // when `space` is up; slightly different delays L vs R decorrelate them.
+    this.tapsL = [mk(0.0110, 0.55), mk(0.0190, 0.42), mk(0.0310, 0.32), mk(0.0470, 0.24), mk(0.0660, 0.17), mk(0.0890, 0.11)];
+    this.tapsR = [mk(0.0131, 0.55), mk(0.0173, 0.42), mk(0.0291, 0.32), mk(0.0512, 0.24), mk(0.0631, 0.17), mk(0.0930, 0.11)];
 
     // movement modulators
     this.lfoSlow = Math.random() * TWO_PI;
@@ -336,12 +337,15 @@ class RainProcessor extends AudioWorkletProcessor {
 
     // background lane rates (events/sec), scaled by the swelled intensity. The
     // far lane carries the fine, quiet curtain; clusters add the near clumps.
-    const k = 0.2 + effIntensity * 1.2;
+    // Floor is low so intensity≈0 reads as a light drizzle, not a wall of bed.
+    const k = 0.08 + effIntensity * 1.4;
     const nearRate = 1.6 * k, midRate = 8 * k, farRate = 42 * k;
     // patter steers how often clumps land and (in startCluster) how big they are
-    const clusterRate = (0.12 + effIntensity * 0.7) * (0.4 + patter * 1.6);
-    // drops pushes the surface hits forward against the bed; default leans hot
-    const dropGain = 0.45 + drops * 1.25;
+    const clusterRate = (0.18 + effIntensity * 0.8) * (0.3 + patter * 1.7);
+    // drops pushes the surface hits forward against the bed. The bed is the
+    // quiet curtain; the hits are the *subject*, so this scales them well past
+    // bed level (default already lands hits roughly even with the bed).
+    const dropGain = 0.8 + drops * 3.0;
 
     // per-band bed gains for this block: heaviness darkens (more body, less
     // air); intensity opens the top a little. Folds in each band's base level.
@@ -349,7 +353,9 @@ class RainProcessor extends AudioWorkletProcessor {
     this.mult[1] = 1.00 * BED_BANDS[1].base;
     this.mult[2] = (1.15 - heaviness * 0.55) * (0.70 + intensity * 0.50) * BED_BANDS[2].base;
     this.mult[3] = (0.95 - heaviness * 0.65) * (0.45 + intensity * 0.70) * BED_BANDS[3].base;
-    const bedMaster = (0.45 + effIntensity * 0.40) * 0.25;
+    // Bed scales hard with intensity so it nearly clears out at intensity 0,
+    // letting the discrete drops carry the low end of the range.
+    const bedMaster = (0.12 + effIntensity * 0.55) * 0.25;
 
     // advance each band's drifting gain target one bounded random-walk step
     for (let ch = 0; ch < 2; ch++) {
@@ -363,7 +369,7 @@ class RainProcessor extends AudioWorkletProcessor {
 
     // space sets the early-reflection amount; surface tilts it (a sheltered /
     // foliage scene reflects a little more than open ground).
-    const reflectGain = space * (0.35 + surface * 0.4);
+    const reflectGain = space * (0.95 + surface * 0.5);
     // width as a mid/side blend on the final stereo image
     const widthAmt = width;
 
@@ -433,9 +439,10 @@ class RainProcessor extends AudioWorkletProcessor {
         const tr = this.tapsR[t]; let ir = this.rbPos - tr.d; if (ir < 0) ir += this.rbLen;
         rR += this.rbR[ir] * tr.g;
       }
-      // gentle high-frequency damping on the reflections
-      this.dL = rL + (this.dL - rL) * 0.45;
-      this.dR = rR + (this.dR - rR) * 0.45;
+      // gentle high-frequency damping on the reflections (low coef = more
+      // transient passes through, so the tail stays present rather than smeared)
+      this.dL = rL + (this.dL - rL) * 0.3;
+      this.dR = rR + (this.dR - rR) * 0.3;
       evL += this.dL * reflectGain;
       evR += this.dR * reflectGain;
       this.rbPos++; if (this.rbPos >= this.rbLen) this.rbPos = 0;
