@@ -559,15 +559,13 @@ export default function App() {
     document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · drift away` : base;
   }, [isPlaying, mixTitle]);
 
-  // Teach the horizontal scroll once: a gentle wink of the scenes shelf so it
-  // reads as "there's more this way," then it never nags again.
+  // Teach the horizontal scroll: a gentle wink of the scenes shelf on every
+  // load so it reads as "there's more this way."
   useEffect(() => {
     const row = sceneRowRef.current;
     if (!row) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (row.scrollWidth <= row.clientWidth + 8) return;
-    try { if (localStorage.getItem('drift-shelf-hinted')) return; } catch { return; }
-    try { localStorage.setItem('drift-shelf-hinted', '1'); } catch { /* private mode */ }
     // Suspend scroll-snap during the wink, or proximity-snap yanks the peek
     // straight back before it's seen; restore it after.
     row.style.scrollSnapType = 'none';
