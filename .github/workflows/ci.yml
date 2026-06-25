@@ -32,5 +32,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # The hosted runner ships extra apt repos (packages.microsoft.com) that
+      # intermittently 403 and break `apt-get update`, which fails the
+      # `--with-deps` browser install below. Drop any such repo first so the
+      # install depends only on the Ubuntu archives it actually needs.
+      - name: Remove flaky third-party apt repos
+        run: sudo grep -rl packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | sudo xargs -r rm -f || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
