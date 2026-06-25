@@ -144,6 +144,15 @@ class RainProcessor extends AudioWorkletProcessor {
       // swell: depth of a very slow rise-and-fall in intensity (the shower
       // picking up, then easing). 0 = steady; mild by default.
       { name: 'swell',     defaultValue: 0.15, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // drops: prominence of the droplet *hits* against the bed. Higher pushes
+      // the surface impacts forward; default leans prominent.
+      { name: 'drops',     defaultValue: 0.70, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // patter: how clumpy the rain is — more clusters, bigger bursts.
+      { name: 'patter',    defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // space: amount of short early reflections on the hits (placement).
+      { name: 'space',     defaultValue: 0.30, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // width: stereo spread of the whole shower (0 = mono, 1 = wide).
+      { name: 'width',     defaultValue: 0.80, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',   defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -221,14 +230,14 @@ class RainProcessor extends AudioWorkletProcessor {
   // Begin a cluster: claim a free emitter slot and load it with a short burst
   // of drops for the given lane. Within-cluster gaps are short and right-skewed
   // so the clump sounds organic rather than evenly metered.
-  startCluster(intensity, heaviness) {
+  startCluster(intensity, heaviness, patter) {
     let e = null;
     for (let i = 0; i < this.emitters.length; i++) if (!this.emitters[i].active) { e = this.emitters[i]; break; }
     if (!e) return;
     // clumps land mostly in the near/mid field where the ear notices them
     const r = this.rnd();
     e.lane = r < 0.35 ? 0 : r < 0.85 ? 1 : 2;
-    e.remaining = 2 + Math.floor(this.rnd() * (3 + intensity * 7 + heaviness * 2)); // 2..~14
+    e.remaining = 2 + Math.floor(this.rnd() * (2 + intensity * 6 + heaviness * 2 + patter * 6)); // 2..~16
     e.gMin = Math.floor(0.006 * SR);
     e.gMax = Math.floor(0.040 * SR);
     e.gap = Math.floor(0.002 * SR);
@@ -267,7 +276,7 @@ class RainProcessor extends AudioWorkletProcessor {
       this.takeAndTrigger(v, {
         freq: f, q: 1.1 + this.rnd() * 1.3,
         attackS: 0.0012, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
-        peak: 0.06 * laneGain, pan: lanePan,
+        peak: 0.12 * laneGain, pan: lanePan,
         // a faint, very short click only occasionally; never a sustained ping
         ringFreq: this.rnd() < 0.1 ? (900 + this.rnd() * 1400) / heavy : 0,
         ringAmt: 0.003 * laneGain, ringDecayS: 0.01 + this.rnd() * 0.015,
@@ -277,7 +286,7 @@ class RainProcessor extends AudioWorkletProcessor {
       this.takeAndTrigger(v, {
         freq: f, q: 0.8 + this.rnd() * 1.2,
         attackS: 0.002, decayS: (0.012 + this.rnd() * 0.03) * heavy * tail,
-        peak: 0.04 * laneGain, pan: lanePan,
+        peak: 0.078 * laneGain, pan: lanePan,
       });
     } else {
       // water plip: a low, soft noisy burst with a faint short resonance —
@@ -287,7 +296,7 @@ class RainProcessor extends AudioWorkletProcessor {
       this.takeAndTrigger(v, {
         freq: f, q: 1.4 + this.rnd() * 1.2,
         attackS: 0.002, decayS: (0.018 + this.rnd() * 0.035) * heavy * tail,
-        peak: (0.034 + surface * 0.012) * laneGain, pan: lanePan,
+        peak: (0.06 + surface * 0.02) * laneGain, pan: lanePan,
         ringFreq: f * (1 + this.rnd() * 0.25),
         ringAmt: (0.004 + surface * 0.003) * laneGain, ringDecayS: 0.015 + this.rnd() * 0.018,
       });
@@ -305,6 +314,10 @@ class RainProcessor extends AudioWorkletProcessor {
     const heaviness = params.heaviness[0];
     const surface = params.surface[0];
     const swell = params.swell[0];
+    const drops = params.drops[0];
+    const patter = params.patter[0];
+    const space = params.space[0];
+    const width = params.width[0];
     const running = params.running[0];
 
     // Silent + faded out: emit zeros cheaply.
@@ -325,7 +338,10 @@ class RainProcessor extends AudioWorkletProcessor {
     // far lane carries the fine, quiet curtain; clusters add the near clumps.
     const k = 0.2 + effIntensity * 1.2;
     const nearRate = 1.6 * k, midRate = 8 * k, farRate = 42 * k;
-    const clusterRate = 0.2 + effIntensity * 1.1;
+    // patter steers how often clumps land and (in startCluster) how big they are
+    const clusterRate = (0.12 + effIntensity * 0.7) * (0.4 + patter * 1.6);
+    // drops pushes the surface hits forward against the bed; default leans hot
+    const dropGain = 0.45 + drops * 1.25;
 
     // per-band bed gains for this block: heaviness darkens (more body, less
     // air); intensity opens the top a little. Folds in each band's base level.
@@ -333,7 +349,7 @@ class RainProcessor extends AudioWorkletProcessor {
     this.mult[1] = 1.00 * BED_BANDS[1].base;
     this.mult[2] = (1.15 - heaviness * 0.55) * (0.70 + intensity * 0.50) * BED_BANDS[2].base;
     this.mult[3] = (0.95 - heaviness * 0.65) * (0.45 + intensity * 0.70) * BED_BANDS[3].base;
-    const bedMaster = (0.45 + effIntensity * 0.40) * 0.30;
+    const bedMaster = (0.45 + effIntensity * 0.40) * 0.25;
 
     // advance each band's drifting gain target one bounded random-walk step
     for (let ch = 0; ch < 2; ch++) {
@@ -345,9 +361,11 @@ class RainProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // surface steers reflectivity: open ground reflects little, a sheltered /
-    // foliage scene gives the drops a touch more early energy.
-    const reflectGain = 0.10 + surface * 0.12;
+    // space sets the early-reflection amount; surface tilts it (a sheltered /
+    // foliage scene reflects a little more than open ground).
+    const reflectGain = space * (0.35 + surface * 0.4);
+    // width as a mid/side blend on the final stereo image
+    const widthAmt = width;
 
     const lfoSlowInc = TWO_PI * 0.06 / SR;
     const lfoFastInc = TWO_PI * 0.5 / SR;
@@ -361,7 +379,7 @@ class RainProcessor extends AudioWorkletProcessor {
       if (--this.nextMid <= 0) { this.spawn(1, intensity, heaviness, surface); this.nextMid = this.nextGap(midRate); }
       if (--this.nextFar <= 0) { this.spawn(2, intensity, heaviness, surface); this.nextFar = this.nextGap(farRate); }
       // cluster onsets, then emit each active cluster's queued drops
-      if (--this.nextCluster <= 0) { this.startCluster(intensity, heaviness); this.nextCluster = this.nextGap(clusterRate); }
+      if (--this.nextCluster <= 0) { this.startCluster(intensity, heaviness, patter); this.nextCluster = this.nextGap(clusterRate); }
       for (let e = 0; e < this.emitters.length; e++) {
         const em = this.emitters[e];
         if (!em.active) continue;
@@ -403,6 +421,8 @@ class RainProcessor extends AudioWorkletProcessor {
         const s = v.sample(noise);
         evL += s * v.panL; evR += s * v.panR;
       }
+      // push the surface hits forward (and into the reflections below) by drops
+      evL *= dropGain; evR *= dropGain;
 
       // ── early reflections (event bus only → drops feel placed) ───
       this.rbL[this.rbPos] = evL; this.rbR[this.rbPos] = evR;
@@ -420,8 +440,11 @@ class RainProcessor extends AudioWorkletProcessor {
       evR += this.dR * reflectGain;
       this.rbPos++; if (this.rbPos >= this.rbLen) this.rbPos = 0;
 
-      let outL = this.masterHP_L.process(bedL + evL);
-      let outR = this.masterHP_R.process(bedR + evR);
+      // stereo width as a mid/side blend on the summed shower
+      let sumL = bedL + evL, sumR = bedR + evR;
+      const mid = (sumL + sumR) * 0.5, side = (sumL - sumR) * 0.5 * widthAmt;
+      let outL = this.masterHP_L.process(mid + side);
+      let outR = this.masterHP_R.process(mid - side);
 
       // running fade
       this.level = levelTarget + (this.level - levelTarget) * levelCoef;

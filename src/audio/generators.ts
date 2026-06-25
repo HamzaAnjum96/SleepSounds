@@ -200,7 +200,7 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.7 } = params ?? {};
   const gapScale = 0.3 + (1 - intensity) * 1.4;
   const bedHp = 120 + (1 - heaviness) * 120;
   const bedLp = 2800 + (1 - heaviness) * 5600;
@@ -262,9 +262,13 @@ function genRain(params?: Record<string, number>): string {
   // One full swell cycle per loop, so the shower rises and eases without a
   // seam (sin is 0 at both ends). Mild by default, deeper as swell climbs.
   const swellDepth = swell * 0.6;
+  // drops pushes the surface hits (and their bubble tails) forward against the
+  // bed, matching the live worklet's drop-prominence control.
+  const impGain = 0.10 + drops * 0.20;
+  const bubGain = 0.05 + drops * 0.08;
   for (let i = 0; i < N; i++) {
     const s = 1 + swellDepth * Math.sin((2 * Math.PI * i) / N);
-    mix[i] = (bed[i] * 0.80 + impacts[i] * 0.12 + bubbles[i] * 0.08) * s;
+    mix[i] = (bed[i] * 0.78 + impacts[i] * impGain + bubbles[i] * bubGain) * s;
   }
   return gen(mix, 0.7);
 }

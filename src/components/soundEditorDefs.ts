@@ -119,12 +119,26 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     processor: 'birdsong-synth',
     groups: BIRDSONG_PARAM_GROUPS,
   },
-  rain: { label: 'Rain', mode: 'simple', groups: shapeGroup(
-    { key: 'intensity', label: 'intensity', def: 0.65 },
-    { key: 'heaviness', label: 'heaviness', def: 0.50 },
-    { key: 'surface', label: 'surface', def: 0.50 },
-    { key: 'swell', label: 'swell', def: 0.15 },
-  )},
+  rain: { label: 'Rain', mode: 'simple', groups: [
+    {
+      label: 'shape',
+      params: [
+        { key: 'intensity', label: 'intensity', min: 0, max: 1, step: 0.01, def: 0.65 },
+        { key: 'heaviness', label: 'heaviness', min: 0, max: 1, step: 0.01, def: 0.50 },
+        { key: 'surface',   label: 'surface',   min: 0, max: 1, step: 0.01, def: 0.50 },
+        { key: 'swell',     label: 'swell',     min: 0, max: 1, step: 0.01, def: 0.15 },
+      ],
+    },
+    {
+      label: 'character',
+      params: [
+        { key: 'drops',  label: 'drop hits',    min: 0, max: 1, step: 0.01, def: 0.70 },
+        { key: 'patter', label: 'patter',       min: 0, max: 1, step: 0.01, def: 0.50 },
+        { key: 'space',  label: 'space',        min: 0, max: 1, step: 0.01, def: 0.30 },
+        { key: 'width',  label: 'stereo width', min: 0, max: 1, step: 0.01, def: 0.80 },
+      ],
+    },
+  ]},
   ocean: { label: 'Ocean', mode: 'simple', groups: simpleGroup(
     { key: 'waveSize', label: 'wave size', def: 0.55 },
     { key: 'foam', label: 'foam', def: 0.50 },
