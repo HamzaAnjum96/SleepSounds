@@ -200,7 +200,7 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.7 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.35 } = params ?? {};
   const gapScale = 0.3 + (1 - intensity) * 1.4;
   const bedHp = 120 + (1 - heaviness) * 120;
   const bedLp = 2800 + (1 - heaviness) * 5600;

@@ -132,7 +132,7 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     {
       label: 'character',
       params: [
-        { key: 'drops',  label: 'drop hits',    min: 0, max: 1, step: 0.01, def: 0.70 },
+        { key: 'drops',  label: 'drop hits',    min: 0, max: 1, step: 0.01, def: 0.35 },
         { key: 'patter', label: 'patter',       min: 0, max: 1, step: 0.01, def: 0.50 },
         { key: 'space',  label: 'space',        min: 0, max: 1, step: 0.01, def: 0.30 },
         { key: 'width',  label: 'stereo width', min: 0, max: 1, step: 0.01, def: 0.80 },

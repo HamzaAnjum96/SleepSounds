@@ -145,8 +145,8 @@ class RainProcessor extends AudioWorkletProcessor {
       // picking up, then easing). 0 = steady; mild by default.
       { name: 'swell',     defaultValue: 0.15, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // drops: prominence of the droplet *hits* against the bed. Higher pushes
-      // the surface impacts forward; default leans prominent.
-      { name: 'drops',     defaultValue: 0.70, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // the surface impacts forward; default stays subtle (hits sit under the bed).
+      { name: 'drops',     defaultValue: 0.35, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // patter: how clumpy the rain is — more clusters, bigger bursts.
       { name: 'patter',    defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // space: amount of short early reflections on the hits (placement).
