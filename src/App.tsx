@@ -154,6 +154,7 @@ export default function App() {
   });
   const soundsGridRef = useRef<HTMLDivElement | null>(null);
   const sceneRowRef = useRef<HTMLDivElement | null>(null);
+  const miniPlayerRef = useRef<HTMLDivElement | null>(null);
   const [soundsGridColumns, setSoundsGridColumns] = useState(2);
   const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
     Object.fromEntries(
@@ -580,6 +581,20 @@ export default function App() {
     };
   }, []);
 
+  // Keep the footer clear of the floating mini player. Its height varies with
+  // safe-area insets, font scaling, and how the subtitle wraps, so measure the
+  // live element rather than guess a fixed gap — the footer padding tracks it.
+  useEffect(() => {
+    const root = document.documentElement;
+    const el = miniPlayerRef.current;
+    if (!el) { root.style.removeProperty('--mini-player-h'); return; }
+    const update = () => root.style.setProperty('--mini-player-h', `${el.offsetHeight}px`);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { ro.disconnect(); root.style.removeProperty('--mini-player-h'); };
+  }, [hasPlayer, driftOpen]);
+
   return (
     <>
       <div className="bg-layer" />
@@ -798,6 +813,7 @@ export default function App() {
 
       {hasPlayer && !driftOpen && (
         <MiniPlayer
+          ref={miniPlayerRef}
           title={mixTitle}
           subtitle={mixSubtitle}
           isPlaying={isPlaying}

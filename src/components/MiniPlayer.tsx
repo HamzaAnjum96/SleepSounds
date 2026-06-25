@@ -4,6 +4,8 @@
  * countdown at a glance, and the way into the now-playing sheet.
  */
 
+import { forwardRef } from 'react';
+
 const RING_R = 21;
 const RING_C = 2 * Math.PI * RING_R;
 
@@ -17,16 +19,16 @@ interface MiniPlayerProps {
   onOpen: () => void;
 }
 
-export default function MiniPlayer({
+const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlayer({
   title,
   subtitle,
   isPlaying,
   timerFrac,
   onTogglePlay,
   onOpen,
-}: MiniPlayerProps) {
+}, ref) {
   return (
-    <div className="mini-player">
+    <div className="mini-player" ref={ref}>
       <div className="mp-play-wrap">
         <button
           type="button"
@@ -74,4 +76,6 @@ export default function MiniPlayer({
       </button>
     </div>
   );
-}
+});
+
+export default MiniPlayer;

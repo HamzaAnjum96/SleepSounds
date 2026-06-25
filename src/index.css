@@ -1039,9 +1039,14 @@ header::after {
   gap: var(--sp-6);
 }
 
-/* Clear the mini player when a mix is active. */
+/* Clear the floating mini player when a mix is active. The player sits at
+   (safe-area + --sp-12) off the bottom and is --mini-player-h tall (measured
+   live in App); add a --sp-16 breathing gap so the version line always shows
+   above it, whatever the player's height. Falls back to a sane gap pre-measure. */
 .app.has-player .app-footer {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  padding-bottom: calc(
+    env(safe-area-inset-bottom, 0px) + var(--sp-12) + var(--mini-player-h, 60px) + var(--sp-16)
+  );
 }
 
 .footer-rest {
