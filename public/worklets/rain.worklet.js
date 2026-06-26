@@ -149,8 +149,8 @@ class RainProcessor extends AudioWorkletProcessor {
       // picking up, then easing). 0 = steady; mild by default.
       { name: 'swell',     defaultValue: 0.15, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // drops: prominence of the droplet *hits* against the bed. Higher pushes
-      // the surface impacts forward; default stays subtle (hits sit under the bed).
-      { name: 'drops',     defaultValue: 0.35, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // the surface impacts forward; default stays gentle (hits sit under the bed).
+      { name: 'drops',     defaultValue: 0.25, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // patter: how clumpy the rain is — more clusters, bigger bursts.
       { name: 'patter',    defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // space: amount of short early reflections on the hits (placement).
@@ -284,19 +284,22 @@ class RainProcessor extends AudioWorkletProcessor {
     // Low Q throughout: a raindrop is a broadband *tick*, not a tuned beep.
     // High Q on a short noise burst rings tonally — the "laser" artefact.
     if (kind === 'solid') {
-      const f = (1900 + this.rnd() * 2600) / heavy * bright;
+      // Darker, broader ticks than before: a bright high-Q burst on a hard
+      // surface reads as rain on a tin roof, so the centre is lower, the Q is
+      // gentler, and the tonal ring is rarer/fainter — a *tap*, not a *ping*.
+      const f = (1500 + this.rnd() * 1900) / heavy * bright;
       this.takeAndTrigger(v, {
-        freq: f, q: 1.1 + this.rnd() * 1.3,
-        attackS: 0.0012, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
+        freq: f, q: 0.7 + this.rnd() * 0.8,
+        attackS: 0.0014, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
         peak: 0.12 * laneGain, pan: lanePan,
-        // a faint, very short click only occasionally; never a sustained ping
-        ringFreq: this.rnd() < 0.1 ? (900 + this.rnd() * 1400) / heavy : 0,
-        ringAmt: 0.003 * laneGain, ringDecayS: 0.01 + this.rnd() * 0.015,
+        // a faint, very short click only rarely; never a sustained ping
+        ringFreq: this.rnd() < 0.04 ? (800 + this.rnd() * 1100) / heavy : 0,
+        ringAmt: 0.0022 * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012,
       });
     } else if (kind === 'leaf') {
-      const f = (1200 + this.rnd() * 2200) / heavy * bright;
+      const f = (1100 + this.rnd() * 1900) / heavy * bright;
       this.takeAndTrigger(v, {
-        freq: f, q: 0.8 + this.rnd() * 1.2,
+        freq: f, q: 0.7 + this.rnd() * 0.8,
         attackS: 0.002, decayS: (0.012 + this.rnd() * 0.03) * heavy * tail,
         peak: 0.078 * laneGain, pan: lanePan,
       });

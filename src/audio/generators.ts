@@ -200,13 +200,14 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.35, bed: bedLevel = 1, tone = 0.42 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.25, bed: bedLevel = 1, tone = 0.42 } = params ?? {};
   const gapScale = 0.3 + (1 - intensity) * 1.4;
   const bedHp = 120 + (1 - heaviness) * 120;
   // tone opens or closes the bed's top end (darker = less metallic).
   const bedLp = 1800 + tone * 6000 + (1 - heaviness) * 1800;
   const bubbleChance = 0.22 + surface * 0.4;
-  const pingChance = 0.35 + surface * 0.4;
+  // Rarer, fainter tonal pings — too many read as rain on a tin roof.
+  const pingChance = 0.12 + surface * 0.28;
   // Rain: diffuse bed + clustered impacts + tonal bubble-like micro-events
   const bed = pinkNoise();
   hp1(bed, bedHp);
@@ -230,9 +231,9 @@ function genRain(params?: Record<string, number>): string {
         impacts[pos + i] += (random() * 2 - 1) * amp * env;
       }
       if (chance(pingChance)) {
-        const pingF  = rand(700, 1800);
+        const pingF  = rand(600, 1400);
         const pingLen = Math.floor(SR * rand(0.003, 0.008));
-        const pingAmp = amp * rand(0.25, 0.45);
+        const pingAmp = amp * rand(0.14, 0.28);
         for (let i = 0; i < pingLen && pos + i < N; i++) {
           const riseGain = Math.min(1, i / 2);
           impacts[pos + i] += Math.sin(2 * Math.PI * pingF * (i / SR))

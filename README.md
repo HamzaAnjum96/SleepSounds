@@ -111,6 +111,12 @@ npm run preview
 
 ## Changelog
 
+### 3.8.1
+- Rain follow-ups: softened the drop impacts so they read as taps rather than a
+  tin-roof ping (lower centre frequency, gentler filter Q, rarer/fainter tonal
+  ring; the WAV fallback's ping was thinned to match) and lowered the default
+  drop level. Fan & Rain's bed is back, just a bit fainter than normal (0.7).
+
 ### 3.8.0
 - **Per-scene sound tuning.** Built-in scenes (and the resume-your-night session)
   can now carry editor slider overrides per layer, not just a level — so a scene

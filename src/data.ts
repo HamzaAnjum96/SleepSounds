@@ -124,9 +124,9 @@ function builtinState(active: ActiveLayer[]): Record<string, SoundState> {
 export const BUILTIN_PRESETS: Preset[] = [
   // Mixed, not toggled-on: the focal layer leads, broad beds (rain, wind,
   // noise, ocean) sit underneath, and accents stay quiet and occasional.
-  // The fan already supplies a broadband hush, so the rain here drops most of
-  // its own noise bed and leans on the drops — no two competing curtains.
-  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.25], ['rain', 0.50, { bed: 0.18, drops: 0.5 }]]) },
+  // The fan already supplies a broadband hush, so the rain here keeps its bed a
+  // bit fainter than normal — present, but not a second competing curtain.
+  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.25], ['rain', 0.50, { bed: 0.7 }]]) },
   { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.41], ['night', 0.05]]) },
   { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
   { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.62]]) },
