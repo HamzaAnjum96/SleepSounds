@@ -128,11 +128,15 @@ class Drop {
 // that drift independently is what moves the bed away from "one flat hiss" —
 // the sound-texture literature points at exactly this subband-envelope
 // movement as the cue that reads as natural rain.
+// Low Q across the board: narrow band-passed noise rings metallically (a
+// "tin roof" tone). These are gentle tilts on a broadly pink curtain, not
+// resonators — the `tone` control then trims the top so the bed can sit dark
+// and soft or open and airy.
 const BED_BANDS = [
-  { f: 430,  q: 0.5, base: 1.00, depth: 0.22 }, // low body — weight, not rumble
-  { f: 1500, q: 0.7, base: 0.95, depth: 0.34 }, // mid texture — the curtain
-  { f: 4800, q: 0.9, base: 0.70, depth: 0.45 }, // high detail — pitter-patter
-  { f: 9000, q: 1.0, base: 0.30, depth: 0.50 }, // air/spray — used sparingly
+  { f: 430,  q: 0.45, base: 1.00, depth: 0.22 }, // low body — weight, not rumble
+  { f: 1400, q: 0.50, base: 0.95, depth: 0.34 }, // mid texture — the curtain
+  { f: 4200, q: 0.55, base: 0.55, depth: 0.42 }, // high detail — pitter-patter
+  { f: 8200, q: 0.60, base: 0.20, depth: 0.45 }, // air/spray — used sparingly
 ];
 
 class RainProcessor extends AudioWorkletProcessor {
@@ -153,6 +157,13 @@ class RainProcessor extends AudioWorkletProcessor {
       { name: 'space',     defaultValue: 0.30, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // width: stereo spread of the whole shower (0 = mono, 1 = wide).
       { name: 'width',     defaultValue: 0.80, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // bed: level of the continuous noise curtain under the drops. Full by
+      // default; lower it to let the drops sit over near-silence (or to keep
+      // the bed from clashing with another broadband layer, e.g. a fan).
+      { name: 'bed',       defaultValue: 1.00, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // tone: bed colour from dark/soft (0) to open/airy (1). Lower it to take
+      // the metallic "tin" edge off the curtain.
+      { name: 'tone',      defaultValue: 0.42, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',   defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -319,6 +330,8 @@ class RainProcessor extends AudioWorkletProcessor {
     const patter = params.patter[0];
     const space = params.space[0];
     const width = params.width[0];
+    const bed = params.bed[0];
+    const tone = params.tone[0];
     const running = params.running[0];
 
     // Silent + faded out: emit zeros cheaply.
@@ -349,13 +362,18 @@ class RainProcessor extends AudioWorkletProcessor {
 
     // per-band bed gains for this block: heaviness darkens (more body, less
     // air); intensity opens the top a little. Folds in each band's base level.
-    this.mult[0] = (0.80 + heaviness * 0.70) * BED_BANDS[0].base;
+    // tone tilts the curtain: darker settings lift the body a touch and pull
+    // the top down (away from the metallic edge); brighter settings open it up.
+    const toneHi = 0.20 + tone * 1.25;       // high/air-band scale
+    const toneLo = 1.12 - tone * 0.22;        // gentle low lift when dark
+    this.mult[0] = (0.80 + heaviness * 0.70) * BED_BANDS[0].base * toneLo;
     this.mult[1] = 1.00 * BED_BANDS[1].base;
-    this.mult[2] = (1.15 - heaviness * 0.55) * (0.70 + intensity * 0.50) * BED_BANDS[2].base;
-    this.mult[3] = (0.95 - heaviness * 0.65) * (0.45 + intensity * 0.70) * BED_BANDS[3].base;
+    this.mult[2] = (1.10 - heaviness * 0.55) * (0.70 + intensity * 0.45) * BED_BANDS[2].base * toneHi;
+    this.mult[3] = (0.90 - heaviness * 0.65) * (0.45 + intensity * 0.65) * BED_BANDS[3].base * toneHi;
     // Bed scales hard with intensity so it nearly clears out at intensity 0,
-    // letting the discrete drops carry the low end of the range.
-    const bedMaster = (0.12 + effIntensity * 0.55) * 0.25;
+    // letting the discrete drops carry the low end of the range. The `bed`
+    // control trims the whole curtain on top of that (1 = full, 0 = drops only).
+    const bedMaster = (0.12 + effIntensity * 0.55) * 0.25 * bed;
 
     // advance each band's drifting gain target one bounded random-walk step
     for (let ch = 0; ch < 2; ch++) {

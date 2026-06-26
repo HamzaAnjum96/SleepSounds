@@ -25,6 +25,10 @@ export interface Sound {
 export interface SoundState {
   enabled: boolean;
   volume: number;
+  /** Per-sound editor slider values saved with a mix/scene, so a preset can
+   *  carry its own character (e.g. a gentle-trickle rain) and not just its
+   *  level. Omitted = the sound's editor defaults. */
+  tuning?: Record<string, number>;
 }
 
 export interface Preset {

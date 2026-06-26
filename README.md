@@ -111,6 +111,22 @@ npm run preview
 
 ## Changelog
 
+### 3.8.0
+- **Per-scene sound tuning.** Built-in scenes (and the resume-your-night session)
+  can now carry editor slider overrides per layer, not just a level — so a scene
+  can shape a sound's character. Applied on load and reset when a sound plays on
+  its own, so the standalone sound keeps its normal settings.
+- **Fan & Rain fix.** The rain layer there brought its own broadband bed, which
+  doubled up with the fan's hush. The scene now drops the rain bed right down
+  (new `bed level` control at 0.18) so the fan carries the wash and the rain just
+  adds drops over it. Standalone rain is unchanged.
+- **Rain bed controls.** Two new sliders in the rain editor: **bed level** (how
+  much of the continuous curtain sits under the drops) and **bed tone** (dark and
+  soft → open and airy). The bed bands were also broadened (lower filter Q) and
+  the top trimmed, taking the metallic "tin-roof" edge off the curtain.
+- Lengthened each scene's mood line by a couple of words, and clamped the line to
+  two so a longer description tapers cleanly on the fixed-height card.
+
 ### 3.7.4
 - **Polish pass — lighter first paint.** Code-split the heavy, post-startup
   pieces out of the initial bundle: the procedural WAV-generator DSP

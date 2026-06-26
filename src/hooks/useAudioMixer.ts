@@ -29,6 +29,10 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const tuningTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const lastTuningRef = useRef<Record<string, Record<string, number>>>({});
+  // The slider values a sound should play with right now (its global editor
+  // config, or a preset's override). Worklet params persist on the node across
+  // plays, so startSource re-asserts these every time the sound starts.
+  const tuningRef = useRef<Record<string, Record<string, number>>>({});
 
   useEffect(() => {
     const map: Record<string, MixerSource> = {};
@@ -109,6 +113,10 @@ export const useAudioMixer = (sounds: Sound[]) => {
       const source = audioMapRef.current[soundId];
       if (!source) return false;
       clearFade(soundId);
+      // Re-assert the sound's intended worklet params (they linger on the node
+      // from a previous mix/preset otherwise).
+      const tuning = tuningRef.current[soundId];
+      if (tuning && source.setParams) source.setParams(tuning);
       setLoadingState((prev) => ({ ...prev, [soundId]: true }));
       source.volume = 0;
       try {
@@ -165,6 +173,8 @@ export const useAudioMixer = (sounds: Sound[]) => {
   );
 
   const setSoundTuning = useCallback((soundId: string, values: Record<string, number>) => {
+    // Remember the intended params so a later (re)start re-asserts them.
+    tuningRef.current[soundId] = values;
     // Worklet-backed sounds (fire, birdsong, rain, thunder, forest) take
     // their params live; everything else regenerates its WAV loop.
     const source = audioMapRef.current[soundId];
@@ -244,11 +254,27 @@ export const useAudioMixer = (sounds: Sound[]) => {
       stopAll();
       setSoundState(nextState);
       if (nextMasterVolume != null) setMasterVolume(nextMasterVolume);
+      // Record each enabled sound's intended tuning up front, so it applies on
+      // play now and on any later resume.
+      Object.entries(nextState).forEach(([soundId, state]) => {
+        if (state.enabled && state.tuning) tuningRef.current[soundId] = state.tuning;
+      });
       if (shouldPlay) {
         await Promise.all(
           Object.entries(nextState)
             .filter(([, s]) => s.enabled)
-            .map(([soundId, state]) => {
+            .map(async ([soundId, state]) => {
+              const source = audioMapRef.current[soundId];
+              // WAV loops bake their params into the buffer, so regenerate
+              // before play; worklet params are applied live in startSource.
+              if (state.tuning && source && !source.setParams) {
+                try {
+                  const url = await generateSoundWav(soundId, state.tuning);
+                  if (url) source.swapUrl?.(url);
+                } catch (err) {
+                  logger.error('preset tuning failed:', err);
+                }
+              }
               const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster * masterFade));
               return startSource(soundId, targetVol); // autoplay constraints are ignored
             }),

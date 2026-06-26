@@ -1573,6 +1573,13 @@ header::after {
   letter-spacing: 0.05em;
   color: rgba(235,238,248,0.72);
   line-height: 1.35;
+  /* Two lines, then ellipsis — the card is a fixed height, so a longer mood
+     should taper cleanly rather than clip its top against the bottom edge. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ── Your mixes ──────────────────────────────────────────────────── */

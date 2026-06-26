@@ -200,10 +200,11 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.35 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.35, bed: bedLevel = 1, tone = 0.42 } = params ?? {};
   const gapScale = 0.3 + (1 - intensity) * 1.4;
   const bedHp = 120 + (1 - heaviness) * 120;
-  const bedLp = 2800 + (1 - heaviness) * 5600;
+  // tone opens or closes the bed's top end (darker = less metallic).
+  const bedLp = 1800 + tone * 6000 + (1 - heaviness) * 1800;
   const bubbleChance = 0.22 + surface * 0.4;
   const pingChance = 0.35 + surface * 0.4;
   // Rain: diffuse bed + clustered impacts + tonal bubble-like micro-events
@@ -266,9 +267,11 @@ function genRain(params?: Record<string, number>): string {
   // bed, matching the live worklet's drop-prominence control.
   const impGain = 0.10 + drops * 0.20;
   const bubGain = 0.05 + drops * 0.08;
+  // bed trims the continuous curtain (matches the live worklet's bed control).
+  const bedGain = 0.78 * bedLevel;
   for (let i = 0; i < N; i++) {
     const s = 1 + swellDepth * Math.sin((2 * Math.PI * i) / N);
-    mix[i] = (bed[i] * 0.78 + impacts[i] * impGain + bubbles[i] * bubGain) * s;
+    mix[i] = (bed[i] * bedGain + impacts[i] * impGain + bubbles[i] * bubGain) * s;
   }
   return gen(mix, 0.7);
 }

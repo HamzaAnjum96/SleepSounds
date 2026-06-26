@@ -11,6 +11,17 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/** Keep only finite-number slider values; param ranges vary per sound, so
+ *  these aren't clamped to 0..1. Returns undefined when nothing survives. */
+function sanitizeTuning(raw: unknown): Record<string, number> | undefined {
+  if (!isObject(raw)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** Build a full sound-state map, taking only known ids and clamped volumes from
  *  `raw`; everything else defaults to disabled. */
 function migrateState(raw: unknown, validIds: Set<string>): { state: Record<string, SoundState>; enabledCount: number } {
@@ -21,7 +32,10 @@ function migrateState(raw: unknown, validIds: Set<string>): { state: Record<stri
     for (const [id, item] of Object.entries(raw)) {
       if (!validIds.has(id) || !isObject(item)) continue; // drop unknown sounds
       const enabled = Boolean(item.enabled);
-      state[id] = { enabled, volume: clamp01(item.volume) };
+      const tuning = sanitizeTuning(item.tuning);
+      state[id] = tuning
+        ? { enabled, volume: clamp01(item.volume), tuning }
+        : { enabled, volume: clamp01(item.volume) };
       if (enabled) enabledCount++;
     }
   }

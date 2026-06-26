@@ -7,13 +7,13 @@ import InstallPrompt from './components/InstallPrompt';
 import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
-import { CATEGORIES, SOUND_LIBRARY, releasableSounds } from './data';
+import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds } from './data';
 import { features } from './config/features';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
 import { platform } from './platform';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
-import type { Preset } from './types';
+import type { Preset, SoundState } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
 import { SOUND_ICONS } from './lib/soundIcons';
@@ -245,6 +245,20 @@ export default function App() {
     }
   }, [isPlaying, activeSounds.length, pauseAll, playAllActive]);
 
+  // Bake each enabled worklet layer's effective slider values into a preset's
+  // state — the sound's global editor config overlaid with the preset's own
+  // override. So loading a scene both applies its character (e.g. a quieter rain
+  // bed under the fan) and resets layers it doesn't override back to normal.
+  const enrichPresetState = useCallback((state: Record<string, SoundState>): Record<string, SoundState> => {
+    const out: Record<string, SoundState> = {};
+    for (const [id, s] of Object.entries(state)) {
+      out[id] = s.enabled && (WORKLET_SOUND_IDS.has(id) || s.tuning)
+        ? { ...s, tuning: { ...editorValuesBySound[id], ...(s.tuning ?? {}) } }
+        : s;
+    }
+    return out;
+  }, [editorValuesBySound]);
+
   const handlePlayPreset = useCallback((preset: Preset) => {
     dismissHint();
     haptic(10);
@@ -254,10 +268,10 @@ export default function App() {
       void handleMasterToggle();
       return;
     }
-    restoreMixerState(preset.state, preset.masterVolume, true);
+    restoreMixerState(enrichPresetState(preset.state), preset.masterVolume, true);
     setActiveMixId(preset.id);
     setIsPaused(false);
-  }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState]);
+  }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState, enrichPresetState]);
 
   useEffect(() => {
     if (activeSounds.length === 0) {
@@ -293,10 +307,10 @@ export default function App() {
     // blocked without a gesture anyway, and a sudden sound would be jarring).
     const last = loadLastSession();
     if (last) {
-      restoreMixerState(last.state, last.masterVolume, false);
+      restoreMixerState(enrichPresetState(last.state), last.masterVolume, false);
       setIsPaused(true);
     }
-  }, [handlePlayPreset, restoreMixerState]);
+  }, [handlePlayPreset, restoreMixerState, enrichPresetState]);
 
   // Persist the live mix so it survives a reload or a closed tab. Debounced so
   // a volume drag doesn't hammer storage; clears itself when the mix is empty.
@@ -344,9 +358,14 @@ export default function App() {
     // A hand-edited mix is its own thing; the scene badge comes off.
     setActiveMixId(null);
     const wasEnabled = soundState[soundId]?.enabled;
-    if (!wasEnabled && isPaused) setIsPaused(false);
+    if (!wasEnabled) {
+      // Starting a sound on its own: restore its global editor config, clearing
+      // any lingering preset override (e.g. the reduced rain bed from Fan & Rain).
+      if (WORKLET_SOUND_IDS.has(soundId)) setSoundTuning(soundId, editorValuesBySound[soundId]);
+      if (isPaused) setIsPaused(false);
+    }
     await toggleSound(soundId);
-  }, [soundState, isPaused, toggleSound, dismissHint]);
+  }, [soundState, isPaused, toggleSound, dismissHint, setSoundTuning, editorValuesBySound]);
 
   // Space plays/pauses when no control has focus.
   useEffect(() => {

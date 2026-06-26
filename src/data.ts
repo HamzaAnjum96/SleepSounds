@@ -17,9 +17,9 @@ export async function generateSoundWav(
 
 // ── Sound library ──────────────────────────────────────────────────────────
 
-/** A worklet's initial params come from its editor defaults, so what plays
- *  always matches what the editor shows. */
-function editorDefaults(soundId: string): Record<string, number> {
+/** A sound's editor defaults — the slider values it plays with when a preset
+ *  doesn't override them, so what plays always matches what the editor shows. */
+export function editorDefaults(soundId: string): Record<string, number> {
   return Object.fromEntries(
     (SOUND_EDITOR_MODELS[soundId]?.groups ?? [])
       .flatMap((group) => group.params)
@@ -82,6 +82,12 @@ export const SOUND_LIBRARY: Sound[] = [
   wavSound('heartbeat',     'Heartbeat',     'Cozy'),
 ];
 
+/** Ids whose audio is a live worklet (params apply instantly, and persist on the
+ *  node across plays — so they must be re-asserted when context changes). */
+export const WORKLET_SOUND_IDS = new Set(
+  SOUND_LIBRARY.filter((s) => s.source.mode === 'worklet').map((s) => s.id),
+);
+
 /** The library minus unfinished sounds: experimental ones appear only when the
  *  experimentalSounds feature flag is on. */
 export function releasableSounds(includeExperimental: boolean): Sound[] {
@@ -99,17 +105,28 @@ export const defaultVolumeFor = (id: string): number => DEFAULT_VOLUME[id] ?? 0.
 
 // ── Built-in presets ───────────────────────────────────────────────────────
 
-function builtinState(active: Array<[string, number]>): Record<string, SoundState> {
+/** An active layer in a built-in preset: id, volume, and optional editor
+ *  tuning (slider overrides) so a scene can shape a sound, not just set its
+ *  level — e.g. dropping the rain bed under the fan in "Fan & Rain". */
+type ActiveLayer = [string, number] | [string, number, Record<string, number>];
+
+function builtinState(active: ActiveLayer[]): Record<string, SoundState> {
   const result: Record<string, SoundState> = {};
   for (const s of SOUND_LIBRARY) result[s.id] = { enabled: false, volume: 0.5 };
-  for (const [id, vol] of active) result[id] = { enabled: true, volume: vol };
+  for (const [id, vol, tuning] of active) {
+    result[id] = tuning
+      ? { enabled: true, volume: vol, tuning }
+      : { enabled: true, volume: vol };
+  }
   return result;
 }
 
 export const BUILTIN_PRESETS: Preset[] = [
   // Mixed, not toggled-on: the focal layer leads, broad beds (rain, wind,
   // noise, ocean) sit underneath, and accents stay quiet and occasional.
-  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.25], ['rain', 0.50]]) },
+  // The fan already supplies a broadband hush, so the rain here drops most of
+  // its own noise bed and leans on the drops — no two competing curtains.
+  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.25], ['rain', 0.50, { bed: 0.18, drops: 0.5 }]]) },
   { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.41], ['night', 0.05]]) },
   { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
   { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.62]]) },
