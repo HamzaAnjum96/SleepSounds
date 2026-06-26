@@ -200,7 +200,11 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, swell = 0.15, drops = 0.25, bed: bedLevel = 1, tone = 0.42 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, drops = 0.25, bed: bedLevel = 1, movement = 0.4 } = params ?? {};
+  // Folded controls (mirror the worklet): movement drives the swell, surface
+  // colours the bed.
+  const swell = movement * 0.4;
+  const tone = Math.max(0, 0.75 - surface * 0.6);
   const gapScale = 0.3 + (1 - intensity) * 1.4;
   const bedHp = 120 + (1 - heaviness) * 120;
   // tone opens or closes the bed's top end (darker = less metallic).

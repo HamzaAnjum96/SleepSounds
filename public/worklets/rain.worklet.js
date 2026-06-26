@@ -142,28 +142,24 @@ const BED_BANDS = [
 class RainProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
+      // A few macro controls; some fold several inner behaviours together (see
+      // the derived values in process()), to keep the editor uncluttered.
       { name: 'intensity', defaultValue: 0.65, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'heaviness', defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // surface: hard/bright (0) → soft/muffled (1). Steers the drop character
+      // and the bed's colour together (a soft surface dulls both).
       { name: 'surface',   defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // swell: depth of a very slow rise-and-fall in intensity (the shower
-      // picking up, then easing). 0 = steady; mild by default.
-      { name: 'swell',     defaultValue: 0.15, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // drops: prominence of the droplet *hits* against the bed. Higher pushes
-      // the surface impacts forward; default stays gentle (hits sit under the bed).
-      { name: 'drops',     defaultValue: 0.25, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // patter: how clumpy the rain is — more clusters, bigger bursts.
-      { name: 'patter',    defaultValue: 0.50, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // space: amount of short early reflections on the hits (placement).
-      { name: 'space',     defaultValue: 0.30, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // width: stereo spread of the whole shower (0 = mono, 1 = wide).
-      { name: 'width',     defaultValue: 0.80, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // bed: level of the continuous noise curtain under the drops. Full by
       // default; lower it to let the drops sit over near-silence (or to keep
       // the bed from clashing with another broadband layer, e.g. a fan).
       { name: 'bed',       defaultValue: 1.00, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // tone: bed colour from dark/soft (0) to open/airy (1). Lower it to take
-      // the metallic "tin" edge off the curtain.
-      { name: 'tone',      defaultValue: 0.42, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // drops: prominence of the droplet *hits* against the bed.
+      { name: 'drops',     defaultValue: 0.25, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // movement: how alive vs steady the shower is — folds the slow swell and
+      // the drop clustering into one control.
+      { name: 'movement',  defaultValue: 0.40, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // space: sense of room — early reflections plus stereo width together.
+      { name: 'space',     defaultValue: 0.30, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',   defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -328,14 +324,20 @@ class RainProcessor extends AudioWorkletProcessor {
     const intensity = params.intensity[0];
     const heaviness = params.heaviness[0];
     const surface = params.surface[0];
-    const swell = params.swell[0];
-    const drops = params.drops[0];
-    const patter = params.patter[0];
-    const space = params.space[0];
-    const width = params.width[0];
     const bed = params.bed[0];
-    const tone = params.tone[0];
+    const drops = params.drops[0];
+    const movement = params.movement[0];
+    const space = params.space[0];
     const running = params.running[0];
+
+    // Derived (folded) controls — one macro slider drives each pair:
+    //  movement → slow swell + drop clustering
+    //  surface  → bed colour (soft surface dulls the curtain too)
+    //  space    → stereo width (alongside the early reflections below)
+    const swell = movement * 0.4;
+    const patter = 0.25 + movement * 0.6;
+    const tone = Math.max(0, 0.75 - surface * 0.6);
+    const width = 0.62 + space * 0.5;
 
     // Silent + faded out: emit zeros cheaply.
     if (running < 0.5 && this.level < 0.0008) {

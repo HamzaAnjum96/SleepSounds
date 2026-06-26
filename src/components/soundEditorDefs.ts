@@ -121,23 +121,20 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   },
   rain: { label: 'Rain', mode: 'simple', groups: [
     {
-      label: 'shape',
+      label: 'rainfall',
       params: [
-        { key: 'intensity', label: 'intensity', min: 0, max: 1, step: 0.01, def: 0.65 },
-        { key: 'heaviness', label: 'heaviness', min: 0, max: 1, step: 0.01, def: 0.50 },
-        { key: 'surface',   label: 'surface',   min: 0, max: 1, step: 0.01, def: 0.50 },
-        { key: 'swell',     label: 'swell',     min: 0, max: 1, step: 0.01, def: 0.15 },
+        { key: 'intensity', label: 'intensity',  min: 0, max: 1, step: 0.01, def: 0.65 },
+        { key: 'heaviness', label: 'heaviness',  min: 0, max: 1, step: 0.01, def: 0.50 },
+        { key: 'surface',   label: 'surface',    min: 0, max: 1, step: 0.01, def: 0.50 },
+        { key: 'bed',       label: 'background',  min: 0, max: 1, step: 0.01, def: 1.00 },
       ],
     },
     {
       label: 'character',
       params: [
-        { key: 'bed',    label: 'bed level',    min: 0, max: 1, step: 0.01, def: 1.00 },
-        { key: 'tone',   label: 'bed tone',     min: 0, max: 1, step: 0.01, def: 0.42 },
-        { key: 'drops',  label: 'drop hits',    min: 0, max: 1, step: 0.01, def: 0.25 },
-        { key: 'patter', label: 'patter',       min: 0, max: 1, step: 0.01, def: 0.50 },
-        { key: 'space',  label: 'space',        min: 0, max: 1, step: 0.01, def: 0.30 },
-        { key: 'width',  label: 'stereo width', min: 0, max: 1, step: 0.01, def: 0.80 },
+        { key: 'drops',    label: 'drops',     min: 0, max: 1, step: 0.01, def: 0.25 },
+        { key: 'movement', label: 'movement',  min: 0, max: 1, step: 0.01, def: 0.40 },
+        { key: 'space',    label: 'space',     min: 0, max: 1, step: 0.01, def: 0.30 },
       ],
     },
   ]},

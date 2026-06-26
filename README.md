@@ -111,6 +111,16 @@ npm run preview
 
 ## Changelog
 
+### 3.8.2
+- **Decluttered the rain editor** (10 sliders → 7). Folded overlapping controls
+  that shape one thing into single macro sliders: the bed's tone now follows
+  `surface` (a soft surface dulls the whole shower), stereo width rolls into
+  `space` (room + width together), and the slow swell plus the drop clustering
+  combine into `movement` (steady → alive). Renamed the rest for plainness
+  (bed level → **background**, drop hits → **drops**). The default sound is
+  unchanged and the Fan & Rain bed control is untouched. Reviewed the other
+  sounds' slider names too; they were already concrete, so they're left as-is.
+
 ### 3.8.1
 - Rain follow-ups: softened the drop impacts so they read as taps rather than a
   tin-roof ping (lower centre frequency, gentler filter Q, rarer/fainter tonal
