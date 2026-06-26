@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
-import { regenerateSound, defaultVolumeFor } from '../data';
+import { generateSoundWav, defaultVolumeFor } from '../data';
 import { logger } from '../utils/logger';
 import { makeSource, type MixerSource } from '../audio/sources';
 
@@ -100,6 +100,30 @@ export const useAudioMixer = (sounds: Sound[]) => {
     [clearFade],
   );
 
+  /** Start one source from silence and fade it in, flipping its loading flag
+   *  around the (async) play. Returns whether playback actually started, so
+   *  callers can roll back optimistic UI on failure. Shared by the toggle,
+   *  resume-all, and restore-mix paths. */
+  const startSource = useCallback(
+    async (soundId: string, targetVol: number): Promise<boolean> => {
+      const source = audioMapRef.current[soundId];
+      if (!source) return false;
+      clearFade(soundId);
+      setLoadingState((prev) => ({ ...prev, [soundId]: true }));
+      source.volume = 0;
+      try {
+        await source.play();
+        doFadeIn(soundId, targetVol);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setLoadingState((prev) => ({ ...prev, [soundId]: false }));
+      }
+    },
+    [clearFade, doFadeIn],
+  );
+
   const toggleSound = useCallback(
     async (soundId: string) => {
       const nextEnabled = !soundState[soundId]?.enabled;
@@ -112,20 +136,13 @@ export const useAudioMixer = (sounds: Sound[]) => {
       if (!source) return;
 
       if (nextEnabled) {
-        clearFade(soundId);
         const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume * masterFade));
-        try {
-          setLoadingState((prev) => ({ ...prev, [soundId]: true }));
-          source.volume = 0;
-          await source.play();
-          doFadeIn(soundId, targetVol);
-        } catch {
+        const ok = await startSource(soundId, targetVol);
+        if (!ok) {
           setSoundState((prev) => ({
             ...prev,
             [soundId]: { ...prev[soundId], enabled: false },
           }));
-        } finally {
-          setLoadingState((prev) => ({ ...prev, [soundId]: false }));
         }
       } else {
         clearFade(soundId);
@@ -133,7 +150,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         doFadeOut(soundId, () => source.stop());
       }
     },
-    [clearFade, doFadeIn, doFadeOut, masterVolume, masterFade, soundState],
+    [clearFade, doFadeOut, startSource, masterVolume, masterFade, soundState],
   );
 
   const setSoundVolume = useCallback(
@@ -167,15 +184,18 @@ export const useAudioMixer = (sounds: Sound[]) => {
       delete tuningTimerRef.current[soundId];
       const params = lastTuningRef.current[soundId];
       if (!params) return;
-      // Synthesis + element swap is best-effort: a failure here must never take
-      // the app down, it just leaves the current loop playing.
-      try {
-        const newUrl = regenerateSound(soundId, params);
-        if (!newUrl) return;
-        audioMapRef.current[soundId]?.swapUrl?.(newUrl);
-      } catch (err) {
-        logger.error('sound retune failed:', err);
-      }
+      // Synthesis (loads the code-split generator) + element swap is best-effort:
+      // a failure here must never take the app down, it just leaves the current
+      // loop playing.
+      void (async () => {
+        try {
+          const newUrl = await generateSoundWav(soundId, params);
+          if (!newUrl) return;
+          audioMapRef.current[soundId]?.swapUrl?.(newUrl);
+        } catch (err) {
+          logger.error('sound retune failed:', err);
+        }
+      })();
     }, 300);
   }, []);
 
@@ -192,22 +212,10 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const playAllActive = useCallback(async () => {
     for (const [soundId, state] of Object.entries(soundState)) {
       if (!state.enabled) continue;
-      const source = audioMapRef.current[soundId];
-      if (!source) continue;
-      clearFade(soundId);
-      setLoadingState((prev) => ({ ...prev, [soundId]: true }));
       const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume * masterFade));
-      source.volume = 0;
-      try {
-        await source.play();
-        doFadeIn(soundId, targetVol);
-      } catch {
-        // ignore transient autoplay failures
-      } finally {
-        setLoadingState((prev) => ({ ...prev, [soundId]: false }));
-      }
+      await startSource(soundId, targetVol); // transient autoplay failures are ignored
     }
-  }, [clearFade, doFadeIn, masterVolume, masterFade, soundState]);
+  }, [startSource, masterVolume, masterFade, soundState]);
 
   const stopAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
@@ -240,26 +248,14 @@ export const useAudioMixer = (sounds: Sound[]) => {
         await Promise.all(
           Object.entries(nextState)
             .filter(([, s]) => s.enabled)
-            .map(async ([soundId, state]) => {
-              const source = audioMapRef.current[soundId];
-              if (!source) return;
-              setLoadingState((prev) => ({ ...prev, [soundId]: true }));
+            .map(([soundId, state]) => {
               const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster * masterFade));
-              source.volume = 0;
-              try {
-                await source.play();
-                if (fadeTimersRef.current[soundId] != null) return;
-                doFadeIn(soundId, targetVol);
-              } catch {
-                // ignore autoplay constraints
-              } finally {
-                setLoadingState((prev) => ({ ...prev, [soundId]: false }));
-              }
+              return startSource(soundId, targetVol); // autoplay constraints are ignored
             }),
         );
       }
     },
-    [doFadeIn, masterVolume, masterFade, stopAll],
+    [startSource, masterVolume, masterFade, stopAll],
   );
 
   const activeSounds = useMemo(() => sounds.filter((sound) => soundState[sound.id]?.enabled), [soundState, sounds]);

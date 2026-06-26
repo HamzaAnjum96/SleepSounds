@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { SOUND_LIBRARY, regenerateSound } from '../src/data';
+import { SOUND_LIBRARY } from '../src/data';
+import { regenerateSound } from '../src/audio/generators';
 
 // The WAV generators call Blob + URL.createObjectURL; stub them for Node so we
 // can read the bytes back and check each sound actually produces valid audio.

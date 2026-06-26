@@ -202,6 +202,13 @@ export default function NightSky({ playing, intensity, dim }: NightSkyProps) {
       if (reduceMotion.matches) renderStatic();
       else start();
     };
+    // Resizing clears the canvas. While the animation loop is running it
+    // repaints next frame, but under reduced motion there is no loop — so
+    // redraw the still frame, or the sky vanishes after a rotate/resize.
+    const onResize = () => {
+      resize();
+      if (reduceMotion.matches && !document.hidden) renderStatic();
+    };
 
     redrawStaticRef.current = () => {
       if (reduceMotion.matches && !document.hidden) renderStatic();
@@ -211,12 +218,12 @@ export default function NightSky({ playing, intensity, dim }: NightSkyProps) {
     if (reduceMotion.matches) renderStatic();
     else start();
 
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', onVisibility);
     reduceMotion.addEventListener('change', onMotionPref);
     return () => {
       stop();
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVisibility);
       reduceMotion.removeEventListener('change', onMotionPref);
       redrawStaticRef.current = null;

@@ -240,7 +240,9 @@ not fluid, except the wordmark.
 
 All sound is generated in the browser; nothing is streamed. Synthesis is
 lazy: no WAV is rendered at page load — each sound pays its ~50ms generation
-cost inside the tap that first plays it, under the card spinner. Two synthesis
+cost inside the tap that first plays it, under the card spinner. The generator
+module itself is code-split too, so the DSP isn't in the initial bundle; it's
+fetched on the first play (and idle-prefetched after first paint). Two synthesis
 paths: most sounds are procedural WAV loops crossfaded by `useAudioMixer`,
 while the event-driven ones run as live **AudioWorklet** generators off the
 main thread — Fire and Birdsong, and (v2.1) Rain, Thunder, and Windy Forest.

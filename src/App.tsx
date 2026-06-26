@@ -2,12 +2,10 @@ import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useS
 import { flushSync } from 'react-dom';
 import { version } from '../package.json';
 import CookieNotice from './components/CookieNotice';
-import DriftMode from './components/DriftMode';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPrompt from './components/InstallPrompt';
 import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
-import NowPlayingSheet from './components/NowPlayingSheet';
 import SoundCard from './components/SoundCard';
 import { CATEGORIES, SOUND_LIBRARY, releasableSounds } from './data';
 import { features } from './config/features';
@@ -24,7 +22,12 @@ import { primeBackgroundAudio, setKeepAlive } from './lib/backgroundAudio';
 import { SCENES, presetSoundIds } from './lib/scenes';
 import { formatCountdown } from './lib/time';
 
+// Post-interaction surfaces are split out of the initial bundle: the sound
+// editor, the now-playing sheet, and drift mode are only reached after a tap,
+// so their code is fetched on demand (and idle-prefetched after first paint).
 const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
+const LazyNowPlayingSheet = lazy(() => import('./components/NowPlayingSheet'));
+const LazyDriftMode = lazy(() => import('./components/DriftMode'));
 
 /** Seconds before timer end over which the mix gently fades out. */
 const FADE_WINDOW_S = 90;
@@ -144,6 +147,11 @@ export default function App() {
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
   const [driftOpen, setDriftOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Lazy surfaces mount on first open, then stay mounted so their open/close
+  // lifecycle (focus restore, exit animation) is unchanged — only the initial
+  // load is deferred.
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [driftMounted, setDriftMounted] = useState(false);
   /** Id of the last loaded scene or saved mix; cleared once the user edits
    *  the mix by hand, so the "playing" badge never lies. */
   const [activeMixId, setActiveMixId] = useState<string | null>(null);
@@ -164,6 +172,29 @@ export default function App() {
       ])),
     )
   ));
+
+  useEffect(() => { if (sheetOpen) setSheetMounted(true); }, [sheetOpen]);
+  useEffect(() => { if (driftOpen) setDriftMounted(true); }, [driftOpen]);
+
+  // Warm the split surfaces once the page is idle, so the first open is instant
+  // even before the service worker has them cached.
+  useEffect(() => {
+    const prefetch = () => {
+      void import('./components/NowPlayingSheet');
+      void import('./components/DriftMode');
+      void import('./components/SoundEditor');
+    };
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }).requestIdleCallback;
+    if (ric) {
+      const id = ric(prefetch);
+      return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(prefetch, 2500);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const dismissHint = useCallback(() => {
     setShowHint((shown) => {
@@ -405,10 +436,13 @@ export default function App() {
   };
 
   // Experimental sounds are hidden unless the feature flag opts them in.
-  const library = releasableSounds(features.experimentalSounds);
-  const visibleSounds = category === 'All'
-    ? library
-    : library.filter((s) => s.category === category);
+  // Memoized so the array identity is stable: a fresh array each render would
+  // re-run every effect that depends on the visible list.
+  const library = useMemo(() => releasableSounds(features.experimentalSounds), []);
+  const visibleSounds = useMemo(
+    () => (category === 'All' ? library : library.filter((s) => s.category === category)),
+    [library, category],
+  );
 
   const openEditorIndex = openEditorSoundId
     ? visibleSounds.findIndex((sound) => sound.id === openEditorSoundId)
@@ -823,37 +857,45 @@ export default function App() {
         />
       )}
 
-      <NowPlayingSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        title={mixTitle || 'your mix'}
-        activeSounds={activeSounds}
-        soundState={soundState}
-        isPlaying={isPlaying}
-        onTogglePlay={handleMasterToggle}
-        onSoundVolume={setSoundVolume}
-        onRemoveSound={(id) => { void handleSoundToggle(id); }}
-        masterVolume={masterVolume}
-        onMasterVolume={setMasterVolume}
-        secondsLeft={secondsLeft}
-        timerTotal={timerTotal}
-        onTimerSelect={handleTimerSelect}
-        onTimerExtend={handleTimerExtend}
-        onTimerClear={handleTimerClear}
-        onClearMix={() => { stopAll(); setIsPaused(false); }}
-        onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
-        onSave={handleSaveMix}
-      />
+      {sheetMounted && (
+        <Suspense fallback={null}>
+          <LazyNowPlayingSheet
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            title={mixTitle || 'your mix'}
+            activeSounds={activeSounds}
+            soundState={soundState}
+            isPlaying={isPlaying}
+            onTogglePlay={handleMasterToggle}
+            onSoundVolume={setSoundVolume}
+            onRemoveSound={(id) => { void handleSoundToggle(id); }}
+            masterVolume={masterVolume}
+            onMasterVolume={setMasterVolume}
+            secondsLeft={secondsLeft}
+            timerTotal={timerTotal}
+            onTimerSelect={handleTimerSelect}
+            onTimerExtend={handleTimerExtend}
+            onTimerClear={handleTimerClear}
+            onClearMix={() => { stopAll(); setIsPaused(false); }}
+            onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
+            onSave={handleSaveMix}
+          />
+        </Suspense>
+      )}
 
-      <DriftMode
-        open={driftOpen}
-        onClose={() => setDriftOpen(false)}
-        isPlaying={isPlaying}
-        onTogglePlay={handleMasterToggle}
-        onStop={() => { haptic(10); stopAll(); setIsPaused(false); }}
-        mixNames={activeSounds.map((s) => s.name)}
-        secondsLeft={secondsLeft}
-      />
+      {driftMounted && (
+        <Suspense fallback={null}>
+          <LazyDriftMode
+            open={driftOpen}
+            onClose={() => setDriftOpen(false)}
+            isPlaying={isPlaying}
+            onTogglePlay={handleMasterToggle}
+            onStop={() => { haptic(10); stopAll(); setIsPaused(false); }}
+            mixNames={activeSounds.map((s) => s.name)}
+            secondsLeft={secondsLeft}
+          />
+        </Suspense>
+      )}
 
       <CookieNotice />
 

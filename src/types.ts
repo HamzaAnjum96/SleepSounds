@@ -1,10 +1,12 @@
 /** How a sound is produced. Worklet sounds run a live AudioWorklet generator
  *  with a WAV loop as fallback; wav sounds are a procedural WAV loop. Both keep
- *  generation lazy (the closures run on first play). The mixer plays either via
- *  one factory, so the UI never needs to know which is which. */
+ *  generation lazy (the closures run on first play) and async, because the WAV
+ *  generator module is code-split — it's fetched on first use, never at load.
+ *  The mixer plays either via one factory, so the UI never needs to know which
+ *  is which. */
 export type SoundSource =
-  | { mode: 'worklet'; module: string; processor: string; params: Record<string, number>; fallback: () => string }
-  | { mode: 'wav'; make: () => string };
+  | { mode: 'worklet'; module: string; processor: string; params: Record<string, number>; fallback: () => Promise<string> }
+  | { mode: 'wav'; make: () => Promise<string> };
 
 /** Release readiness, for hiding unfinished work. 'experimental' sounds are
  *  shown only when the experimentalSounds feature flag is on. */

@@ -22,9 +22,9 @@ interface MixerSource {
 }
 
 class CrossfadeAudio implements MixerSource {
-  /** Lazily resolved: the WAV is synthesized and elements built on first
-   *  play, never at page load. */
-  private _getUrl: () => string;
+  /** Lazily resolved: the WAV is synthesized (its generator module fetched on
+   *  demand) and elements built on first play, never at page load. */
+  private _getUrl: () => Promise<string>;
   private _url: string | null = null;
   /** Set by swapUrl() before the elements exist (tuning an unplayed sound). */
   private _urlOverride: string | null = null;
@@ -40,16 +40,22 @@ class CrossfadeAudio implements MixerSource {
   private _playbackRate = 1;
   private _gainMultiplier = 1;
 
-  constructor(getUrl: () => string) {
+  constructor(getUrl: () => Promise<string>) {
     this._getUrl = getUrl;
     this._timeupdateA = () => this._check(0);
     this._timeupdateB = () => this._check(1);
   }
 
+  /** Resolve the WAV url once (awaiting the code-split generator on first use).
+   *  Always called before any element is built. */
+  private async _resolveUrl(): Promise<void> {
+    if (this._url) return;
+    this._url = this._urlOverride ?? await this._getUrl();
+    this._urlOverride = null;
+  }
+
   private _ensureEls(): [HTMLAudioElement, HTMLAudioElement] {
     if (this._els) return this._els;
-    this._url = this._urlOverride ?? this._getUrl();
-    this._urlOverride = null;
     this._els = [this._make(), this._make()];
     this._els[0].addEventListener('timeupdate', this._timeupdateA);
     this._els[1].addEventListener('timeupdate', this._timeupdateB);
@@ -155,6 +161,7 @@ class CrossfadeAudio implements MixerSource {
   }
 
   async play() {
+    await this._resolveUrl();
     this._ensureEls();
     this._active = true;
     this._startMonitor();
@@ -411,7 +418,7 @@ class WorkletWithFallback implements MixerSource {
   private _volume = 0;
   private failedOver = false;
 
-  constructor(cfg: WorkletConfig, getFallbackUrl: () => string) {
+  constructor(cfg: WorkletConfig, getFallbackUrl: () => Promise<string>) {
     this.primary = new WorkletSource(cfg);
     this.fallback = new CrossfadeAudio(getFallbackUrl);
     this.active = this.primary;

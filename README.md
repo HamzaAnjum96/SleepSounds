@@ -3,7 +3,7 @@
 > **For anyone making changes (human or AI):**
 > - Bump the version in `package.json` with every change.
 > - Add an entry to the `## Changelog` section at the bottom of this file describing what changed and why.
-> - If sound generation changes significantly, bump `PRESET_STORAGE_KEY` in `src/data.ts` (e.g. `v2` → `v3`).
+> - If sound generation changes significantly, bump the saved-mixes key in `src/storage/keys.ts` (`STORAGE_KEYS.savedMixes`, e.g. `-v2` → `-v3`) so stale loops aren't restored.
 
 **drift away** (repo name Sleep Mixer) is a mobile-first ambient sound app for
 relaxation and sleep. All 18 sounds are generated in the browser; nothing is
@@ -12,15 +12,15 @@ synthesised live via AudioWorklet (event-based); the rest are procedural WAV loo
 
 ## Features
 
-- **Scenes**: seven curated mixes as gradient-art cards; tap to play instantly.
+- **Scenes**: eight curated mixes as gradient-art cards; tap to play instantly.
 - **The library**: 18 procedurally generated sounds, layered
   freely with per-sound volume and (for select sounds) deep parameter editors.
 - **Mini player + now-playing sheet**: persistent player bar; the sheet holds
   per-layer sliders, master volume, sleep timer, save-mix, and drift mode.
 - **Drift mode**: fullscreen night surface with clock, breathing play orb, and
   screen wake lock for the nightstand.
-- **Sleep timer** (15m/30m/1h/90m) with a progress ring and a gentle 90-second
-  wind-down fade; the night sky dims with it.
+- **Sleep timer** (15m/30m/1h/2h/4h/8h) with a progress ring and a gentle
+  90-second wind-down fade; the night sky dims with it.
 - **Your mixes**: save/load/delete via `localStorage`; lock-screen media
   controls (Media Session API); installable PWA with custom install prompt.
 
@@ -30,6 +30,9 @@ synthesised live via AudioWorklet (event-based); the rest are procedural WAV loo
 - Hand-rolled CSS design system (`src/index.css`, documented in `DESIGN.md`);
   Tailwind present only for its base reset
 - HTMLAudioElement + Web Audio worklets for playback and mixing
+- Code-split for a light first paint: the WAV-generator DSP, the now-playing
+  sheet, drift mode, and the sound editor are fetched on demand (and idle-
+  prefetched after first paint), so the initial bundle carries only the shell.
 
 ## Project Structure
 
@@ -45,23 +48,33 @@ sleep-mixer/
 ├── vite.config.ts
 └── src/
     ├── App.tsx              # shell: scenes, mixes, library, player state
-    ├── data.ts              # procedural sound synthesis + presets
+    ├── data.ts              # sound library + built-in presets (lazy WAV loader)
     ├── index.css            # the design system (see DESIGN.md)
     ├── main.tsx
     ├── types.ts
+    ├── audio/
+    │   ├── dsp.ts               # noise sources, filters, WAV encoding
+    │   ├── generators.ts        # per-sound procedural WAV synthesis (code-split)
+    │   └── sources.ts           # mixer sources: crossfade WAV + worklet w/ fallback
     ├── components/
-    │   ├── DriftMode.tsx        # fullscreen night surface
+    │   ├── DriftMode.tsx        # fullscreen night surface (lazy)
     │   ├── InstallPrompt.tsx    # PWA install affordance
     │   ├── MiniPlayer.tsx       # persistent bottom player
     │   ├── NightSky.tsx         # living canvas starfield
-    │   ├── NowPlayingSheet.tsx  # mix control room
+    │   ├── NowPlayingSheet.tsx  # mix control room (lazy)
     │   ├── SoundCard.tsx        # library tile
-    │   ├── SoundEditor.tsx      # per-sound parameter editor
+    │   ├── SoundEditor.tsx      # per-sound parameter editor (lazy)
     │   └── soundEditorDefs.ts
     ├── hooks/
     │   └── useAudioMixer.ts     # playback engine wrapper
+    ├── storage/                 # localStorage keys + load/save + migrations
+    ├── platform/                # platform seam (web bridge today)
+    ├── config/                  # feature flags
+    ├── utils/                   # logger
     └── lib/
-        ├── categoryIcons.ts · haptics.ts · scenes.ts · sliderFill.ts · time.ts
+        ├── backgroundAudio.ts · categoryIcons.ts · haptics.ts · scenes.ts
+        ├── sliderFill.ts · soundIcons.ts · time.ts
+└── public/worklets/             # live AudioWorklet generators (rain, fire, …)
 ```
 
 ## Setup
@@ -92,11 +105,54 @@ npm run preview
 
 ## Notes
 
-- All audio loops are procedurally synthesized in `src/data.ts` and encoded to WAV blobs at runtime (mono 16-bit PCM).
+- All audio loops are procedurally synthesized in `src/audio/` (`generators.ts` over the `dsp.ts` helpers) and encoded to WAV blobs at runtime (mono 16-bit PCM). The generator module is code-split, so it loads on a sound's first play rather than at startup.
 - No backend is required.
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 3.7.4
+- **Polish pass — lighter first paint.** Code-split the heavy, post-startup
+  pieces out of the initial bundle: the procedural WAV-generator DSP
+  (`src/audio/generators.ts`, ~6.8 kB gz) now loads on a sound's first play, and
+  the now-playing sheet, drift mode, and sound editor load on first open (all
+  idle-prefetched after first paint so opening stays instant). The WAV source
+  path (`data.ts` → `audio/sources.ts`) is now async to support this. Initial
+  app JS dropped ~72 → ~63 kB gz. The service worker auto-precaches the new
+  chunks, so offline is unaffected (verified by the e2e suite).
+- **Fixed:** under `prefers-reduced-motion`, rotating/resizing the window cleared
+  the `NightSky` canvas and left it blank (no animation loop to repaint) — it now
+  redraws the still frame on resize.
+- **Refactors:** extracted the shared "start a source with fade-in" logic in
+  `useAudioMixer` (deduped across toggle / resume-all / restore-mix); memoized the
+  library/visible-sound lists in `App` so they don't churn effects each render;
+  corrected the `storage/keys.ts` doc comment.
+
+### 3.7.3
+- **Rain: softer by default.** Lowered the default *drop hits* (0.70 → 0.35) so
+  the surface impacts sit under the bed (gentle, not harsh); the slider still
+  reaches fully forward.
+
+### 3.7.2
+- **Fixed: the mini player covered the footer (privacy/version) intermittently.**
+  The clearance was a hardcoded gap; the player's real height varies with
+  safe-area insets, font scaling, and subtitle wrap. It now measures the live
+  player (`ResizeObserver` → `--mini-player-h`) so the footer always clears it.
+
+### 3.7.1
+- The scenes shelf "there's more this way" wink now plays on every load, not just
+  the first (the one-time `localStorage` guard was removed).
+
+### 3.7.0
+- **Rain rework.** Moved the rain worklet from a single filtered-noise bed +
+  uniform-Poisson ticks toward a richer texture, keeping the same browser stack:
+  a multi-band, decorrelated bed whose sub-bands drift on slow random walks (so
+  it breathes instead of hissing); a two-level scheduler (steady background
+  drizzle + occasional clustered bursts) so the rain clumps and lulls; surface-
+  aware drop atoms (hard → bright/snappy, foliage/wet → darker/softer); and a
+  short multi-tap early-reflection bus for placement. Added four character
+  controls to the editor — **drop hits**, **patter**, **space**, **stereo
+  width** — alongside the existing intensity / heaviness / surface / swell.
 
 ### 2.11.3
 - Renamed the "tonight" section heading to "the scenes" (meta line now "curated mixes"), matching the "the library" naming pattern.

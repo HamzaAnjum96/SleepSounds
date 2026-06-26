@@ -1,8 +1,19 @@
 import type { Preset, Sound, SoundQuality, SoundSource, SoundState } from './types';
-import { regenerateSound } from './audio/generators';
 import { SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 
-export { regenerateSound } from './audio/generators';
+// The procedural WAV generators are a sizeable DSP module that's only needed
+// when a sound is first played (or retuned), never at page load — so it's
+// code-split and imported on demand. The promise memoizes the one fetch.
+let generatorsPromise: Promise<typeof import('./audio/generators')> | null = null;
+const loadGenerators = () => (generatorsPromise ??= import('./audio/generators'));
+
+/** Render a sound's WAV loop, loading the generator module on first use. */
+export async function generateSoundWav(
+  id: string,
+  params: Record<string, number>,
+): Promise<string | null> {
+  return (await loadGenerators()).regenerateSound(id, params);
+}
 
 // ── Sound library ──────────────────────────────────────────────────────────
 
@@ -17,10 +28,20 @@ function editorDefaults(soundId: string): Record<string, number> {
 }
 
 /** Lazily render (and memoize) a sound's default WAV loop — synthesized on
- *  first use, never at page load, and seeded so it's identical every time. */
-function lazyWav(id: string): () => string {
-  let url: string | null = null;
-  return () => (url ??= regenerateSound(id, {}) as string);
+ *  first use, never at page load, and seeded so it's identical every time. The
+ *  promise is cached on success; a failure clears it so a later play can retry. */
+function lazyWav(id: string): () => Promise<string> {
+  let pending: Promise<string> | null = null;
+  return () => {
+    if (!pending) {
+      pending = generateSoundWav(id, {}).then((url) => {
+        if (url == null) throw new Error(`no WAV generator for sound "${id}"`);
+        return url;
+      });
+      pending.catch(() => { pending = null; });
+    }
+    return pending;
+  };
 }
 
 interface SoundMeta { tags?: string[]; quality?: SoundQuality }
