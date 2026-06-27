@@ -124,21 +124,35 @@ function panMonoInto(src: Float32Array, dstL: Float32Array, dstR: Float32Array, 
 
 /** Widen a mono buffer into a decorrelated stereo pair WITHOUT colouring it.
  *
- *  Each channel is the *same* buffer shifted in opposite directions (left back,
- *  right forward) — a pure time shift, so each channel keeps a flat spectrum
- *  (no within-channel comb, which is what makes a "dry + delayed copy" blend
- *  sound like a flanged jet engine). The two channels are decorrelated by 2×the
- *  delay, which for broadband material reads as a wide, diffuse image. The image
- *  stays centred (symmetric shift), and wrap-around keeps the loop seam intact.
- *  Use this only on broadband/noisy beds; tonal sounds should be panned instead. */
-function decorrelateMono(buf: Float32Array, delayMs = 14): StereoBuf {
-  const left = new Float32Array(buf.length);
-  const right = new Float32Array(buf.length);
-  const d = Math.max(1, Math.floor((delayMs / 1000) * SR));
+ *  The low/mid band is kept *shared* between the channels (a common mono centre),
+ *  and only the high band is spread by shifting it in opposite directions (left
+ *  back, right forward). This matters: a full-band opposite shift drives the
+ *  interaural correlation to ~0 on steady noise, which the ear hears as *two
+ *  separate uncorrelated sources* on either side rather than one wide source.
+ *  Real diffuse fields stay correlated at low frequencies (long wavelengths) and
+ *  decorrelate only up high, and that low-frequency correlation is exactly the
+ *  cue the binaural system uses to fuse a single image. So: bass-mono / treble-
+ *  wide — spacious but coherent.
+ *
+ *  Each channel is (shared lows) + (its own flat-shifted highs). Lows and highs
+ *  are complementary bands, so there's no within-channel comb (the "dry + delayed
+ *  copy" flange that sounds like a jet engine). The image stays centred
+ *  (symmetric shift) and wrap-around keeps the loop seam intact. Use this only on
+ *  broadband/noisy beds; tonal sounds should be panned instead. */
+function decorrelateMono(buf: Float32Array, delayMs = 14, splitHz = 800): StereoBuf {
   const len = buf.length;
+  // Shared low/mid band (the fused centre).
+  const low = new Float32Array(buf);
+  lp1(low, splitHz);
+  // Complementary high band, spread across the channels.
+  const high = new Float32Array(len);
+  for (let i = 0; i < len; i++) high[i] = buf[i] - low[i];
+  const d = Math.max(1, Math.floor((delayMs / 1000) * SR));
+  const left = new Float32Array(len);
+  const right = new Float32Array(len);
   for (let i = 0; i < len; i++) {
-    left[i] = buf[(i - d + len) % len];
-    right[i] = buf[(i + d) % len];
+    left[i] = low[i] + high[(i - d + len) % len];
+    right[i] = low[i] + high[(i + d) % len];
   }
   return { left, right };
 }

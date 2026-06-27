@@ -111,6 +111,17 @@ npm run preview
 
 ## Changelog
 
+### 4.5.1
+- **Fix: decorrelated beds sounded like two separate sources.** Pink/white noise
+  and the other broadband beds were widened by shifting the *whole* band in
+  opposite directions per channel, which drives the interaural correlation toward
+  zero on steady noise — the ear hears that as two uncorrelated sources on either
+  side rather than one wide source. `decorrelateMono` now keeps the low/mid band
+  shared (a fused mono centre, where the binaural system takes its localisation
+  cue) and only spreads the highs (bass-mono / treble-wide). Spacious but
+  coherent, still no comb filtering. (Fan, brown noise, heartbeat and the
+  underwater body remain intentionally centred.)
+
 ### 4.5.0
 - **Stereo overhaul — sprint 6: hardening & docs.** Locked the stereo and
   masking work behind regression tests: generators are asserted to render

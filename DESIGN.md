@@ -255,10 +255,15 @@ fallback, and its editor sliders drive k-rate worklet params live.
 
 WAV loops render in **two channels**. Width is baked in at generation, not added
 by a panner: broad beds (ocean, stream, wind, shower, the noise colours, train,
-airplane, night) are **decorrelated** by pure opposite time-shifts per channel —
-left reads slightly behind, right slightly ahead — so each channel keeps a flat
-spectrum and there's no within-channel comb filtering (the "jet engine" flange
-that a dry+delayed blend would create). Discrete events (surf, wind whistles,
+airplane, night) are **decorrelated bass-mono / treble-wide** — the low/mid band
+stays shared (a fused mono centre, where the binaural system takes its
+localisation cue) and only the high band is shifted in opposite directions per
+channel (left slightly behind, right slightly ahead). Spreading the *whole* band
+instead would drive the interaural correlation toward zero on steady noise, which
+the ear hears as two separate sources on either side rather than one wide one;
+keeping the lows shared fuses the image. Lows and highs are complementary bands,
+so there's no within-channel comb filtering (the "jet engine" flange a dry+delayed
+blend would create). Discrete events (surf, wind whistles,
 bubbles, insect bands) are placed with **equal-power panning**
 (`L=cos((p+1)·π/4)`, `R=sin((p+1)·π/4)`). Compact or non-directional sources —
 brown noise, fan, the underwater body, heartbeat — stay deliberately centred,
