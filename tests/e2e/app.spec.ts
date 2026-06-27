@@ -127,6 +127,20 @@ test('the privacy page is reachable', async ({ page }) => {
   await expect(link).toHaveAttribute('href', /privacy\.html$/);
 });
 
+test.describe('desktop split layout', () => {
+  test.use({ viewport: { width: 1280, height: 860 }, isMobile: false, hasTouch: false });
+
+  test('a side panel controls the mix in place, with no mini player', async ({ page }) => {
+    await expect(page.locator('.side-panel')).toBeVisible();
+    await expect(page.locator('.mini-player')).toHaveCount(0);
+    // Playing fills the panel with the mix controls (no slide-up sheet).
+    await page.locator('.scene-card').first().click();
+    await expect(page.locator('.side-panel .layer-row').first()).toBeVisible();
+    await expect(page.locator('.side-panel .sheet-master')).toBeVisible();
+    await expect(page.locator('.sheet-root')).toHaveCount(0);
+  });
+});
+
 test('the shell loads offline after the first visit', async ({ page, context }) => {
   // Let the service worker take control, then cut the network and reload.
   await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 10_000 }).catch(() => {});

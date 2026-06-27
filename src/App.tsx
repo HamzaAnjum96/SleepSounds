@@ -7,6 +7,7 @@ import InstallPrompt from './components/InstallPrompt';
 import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
+import SidePanel from './components/SidePanel';
 import Toast from './components/Toast';
 import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds } from './data';
 import { features } from './config/features';
@@ -153,6 +154,11 @@ export default function App() {
   // load is deferred.
   const [sheetMounted, setSheetMounted] = useState(false);
   const [driftMounted, setDriftMounted] = useState(false);
+  // On wide screens the mix controls live in a persistent side panel instead of
+  // the slide-up sheet; the mini player and sheet stand down there.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1000px)').matches,
+  );
   /** Id of the last loaded scene or saved mix; cleared once the user edits
    *  the mix by hand, so the "playing" badge never lies. */
   const [activeMixId, setActiveMixId] = useState<string | null>(null);
@@ -190,6 +196,19 @@ export default function App() {
 
   useEffect(() => { if (sheetOpen) setSheetMounted(true); }, [sheetOpen]);
   useEffect(() => { if (driftOpen) setDriftMounted(true); }, [driftOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1000px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // Moving to the desktop panel closes the mobile overlays (and vice-versa is
+  // moot — the panel is always present), so a resize never strands an open sheet.
+  useEffect(() => {
+    if (isDesktop) setSheetOpen(false);
+  }, [isDesktop]);
 
   // Warm the split surfaces once the page is idle, so the first open is instant
   // even before the service worker has them cached.
@@ -734,6 +753,7 @@ export default function App() {
       />
       <div className="moon-track" aria-hidden="true"><div className="moon" /></div>
 
+      <div className="layout">
       <div
         className={`app${driftOpen ? ' app-quiet' : ''}${hasPlayer ? ' has-player' : ''}`}
         onScroll={handleAppScroll}
@@ -788,7 +808,7 @@ export default function App() {
           </div>
         </section>
 
-        {(presets.length > 0 || hasPlayer) && (
+        {(presets.length > 0 || (hasPlayer && !isDesktop)) && (
           <section className="section" style={{ animationDelay: '0.18s' }}>
             <div className="section-head">
               <h2 className="section-title">your mixes</h2>
@@ -946,7 +966,32 @@ export default function App() {
         </div>
       </div>
 
-      {hasPlayer && !driftOpen && (
+        {isDesktop && (
+          <SidePanel
+            title={mixTitle || 'your mix'}
+            hasPlayer={hasPlayer}
+            isPlaying={isPlaying}
+            quiet={driftOpen}
+            onTogglePlay={handleMasterToggle}
+            activeSounds={activeSounds}
+            soundState={soundState}
+            onSoundVolume={setSoundVolume}
+            onRemoveSound={(id) => { void handleSoundToggle(id); }}
+            masterVolume={masterVolume}
+            onMasterVolume={setMasterVolume}
+            secondsLeft={secondsLeft}
+            timerTotal={timerTotal}
+            onTimerSelect={handleTimerSelect}
+            onTimerExtend={handleTimerExtend}
+            onTimerClear={handleTimerClear}
+            onClearMix={handleStopMix}
+            onDrift={() => setDriftOpen(true)}
+            onSave={handleSaveMix}
+          />
+        )}
+      </div>
+
+      {hasPlayer && !driftOpen && !isDesktop && (
         <MiniPlayer
           ref={miniPlayerRef}
           title={mixTitle}
@@ -959,7 +1004,7 @@ export default function App() {
         />
       )}
 
-      {sheetMounted && (
+      {sheetMounted && !isDesktop && (
         <Suspense fallback={null}>
           <LazyNowPlayingSheet
             open={sheetOpen}

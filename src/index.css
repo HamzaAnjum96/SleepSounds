@@ -278,6 +278,87 @@ button, .material-symbols-rounded {
   pointer-events: none;
 }
 
+/* ── Responsive shell ────────────────────────────────────────────── */
+/* Mobile is a single centred column: the wrapper does nothing (display:contents
+   leaves .app as the scroll container exactly as before). On wide screens it
+   becomes a two-column grid — browse on the left, a persistent mix-control panel
+   on the right — so large viewports shape the mix in place instead of through
+   the slide-up sheet. */
+.layout { display: contents; }
+
+@media (min-width: 1000px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 30vw, 400px);
+    gap: var(--sp-32);
+    width: 100%;
+    max-width: 1180px;
+    height: 100dvh;
+    margin: 0 auto;
+    padding: 0 var(--sp-32);
+  }
+  .app {
+    max-width: none;
+    width: auto;
+    margin: 0;
+    padding: 0;           /* outer gutter comes from .layout */
+    height: 100dvh;
+  }
+  /* Inside a column the shelves no longer bleed to the viewport edge. */
+  .app .scene-row,
+  .app .mix-row {
+    margin-inline: 0;
+    padding-inline: 0;
+    scroll-padding-inline: 0;
+  }
+
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100dvh;
+    padding: calc(env(safe-area-inset-top, 0px) + var(--sp-44)) 0 calc(env(safe-area-inset-bottom, 0px) + var(--sp-24));
+    transition: opacity 0.5s var(--ease);
+  }
+  .side-panel-quiet { opacity: 0; pointer-events: none; }
+  .side-panel-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    padding-bottom: var(--sp-16);
+    margin-bottom: var(--sp-20);
+    border-bottom: 1px solid var(--border);
+  }
+  .side-panel-head-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .side-panel-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-18);
+  }
+  .side-panel-scroll::-webkit-scrollbar { display: none; }
+  .side-panel-idle {
+    margin: var(--sp-24) 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+}
+
 /* ── Header / wordmark lockup ────────────────────────────────────── */
 
 header {

@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 5.2.0
+- **UX redesign — sprint 3: desktop/tablet split layout.** Wide screens
+  (`≥1000px`) are no longer a phone-width column stranded in the middle. The
+  shell becomes a two-column grid: browse on the left, a persistent control
+  panel on the right that shapes the mix in place (layers, master, sleep timer,
+  drift, save) instead of through the slide-up sheet. The now-playing controls
+  were extracted into a shared `MixControls` component, so the mobile sheet and
+  the desktop panel can never fall out of sync. Mobile is untouched.
+
 ### 5.1.0
 - **UX redesign — sprint 2: save discoverability + undo.** Saving a mix no
   longer hides a layer deep in the now-playing sheet: a bookmark sits in the

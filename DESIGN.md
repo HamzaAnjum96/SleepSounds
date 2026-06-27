@@ -236,6 +236,14 @@ horizontal shelves bleed to the viewport edge for the scroll. Safe-area insets
 are honored top and bottom. Responsiveness is structural; type is fixed-rem,
 not fluid, except the wordmark.
 
+At `≥1000px` the shell becomes a **two-column split** (`.layout` grid, which is
+`display:contents` below the breakpoint so mobile is untouched): browse on the
+left, a persistent **side panel** on the right that holds the mix controls in
+place instead of the slide-up sheet. The mini player and now-playing sheet stand
+down on desktop; the panel and the sheet render the **same `MixControls`** body
+(layers, master, sleep timer, drift, save), so the two surfaces never drift
+apart. When nothing is playing the panel shows a calm idle line.
+
 ## Sound engine
 
 All sound is generated in the browser; nothing is streamed. Synthesis is

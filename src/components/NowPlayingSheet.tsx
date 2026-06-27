@@ -1,32 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
-import { CATEGORY_ICONS } from '../lib/categoryIcons';
-import { sliderFill } from '../lib/sliderFill';
 import { haptic } from '../lib/haptics';
-import { formatCountdown } from '../lib/time';
+import MixControls from './MixControls';
 
 /**
- * The now-playing sheet: the mix's control room. Slides up over the shell
- * with every active layer on its own slider, master volume, the sleep timer,
- * and the doorways to drift mode and saving the mix. Closes with a matching
- * slide-down (Esc, backdrop, the close button, or dragging the sheet down).
+ * The now-playing sheet: the mix's control room on mobile. Slides up over the
+ * shell wrapping the shared MixControls (layers, master, timer, drift, save),
+ * and closes with a matching slide-down (Esc, backdrop, the close button, or
+ * dragging the sheet down). On desktop the same controls live in a persistent
+ * side panel instead (see App's .side-panel).
  */
 
-export const TIMER_PRESETS = [
-  { label: '15m', secs: 15 * 60 },
-  { label: '30m', secs: 30 * 60 },
-  { label: '1h',  secs: 60 * 60 },
-  { label: '2h',  secs: 120 * 60 },
-  { label: '4h',  secs: 240 * 60 },
-  { label: '8h',  secs: 480 * 60 },
-];
-
 const CLOSE_MS = 260;
-
-function endsAround(secondsLeft: number) {
-  const d = new Date(Date.now() + secondsLeft * 1000);
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
 
 interface NowPlayingSheetProps {
   open: boolean;
@@ -83,8 +68,6 @@ export default function NowPlayingSheet({
   onSave,
   startSaving = false,
 }: NowPlayingSheetProps) {
-  const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
   const sheetRef = useRef<HTMLDivElement | null>(null);
@@ -105,12 +88,10 @@ export default function NowPlayingSheet({
     if (open) {
       closingRef.current = false;
       setClosing(false);
-      setSaving(startSaving);
       restoreFocusRef.current = document.activeElement as HTMLElement | null;
+      // When opening to save, MixControls auto-focuses its name field instead.
       if (!startSaving) closeRef.current?.focus();
     } else {
-      setSaving(false);
-      setName('');
       restoreFocusRef.current?.focus?.();
       restoreFocusRef.current = null;
     }
@@ -159,14 +140,6 @@ export default function NowPlayingSheet({
       sheet.style.transform = '';
     }
   }, [requestClose]);
-
-  const handleSave = useCallback(() => {
-    if (!name.trim()) return;
-    haptic(12);
-    onSave(name.trim());
-    setName('');
-    setSaving(false);
-  }, [name, onSave]);
 
   /** End the whole mix: let the sheet slide away first, then stop the sound. */
   const handleClearMix = useCallback(() => {
@@ -229,164 +202,24 @@ export default function NowPlayingSheet({
         </div>
 
         <div className="sheet-scroll">
-          <div className="sheet-layers">
-            <div className="sheet-row-head">
-              <span className="sheet-label">the mix</span>
-              {activeSounds.length > 0 && (
-                <button
-                  type="button"
-                  className="sheet-clear"
-                  onClick={handleClearMix}
-                  aria-label="Stop the whole mix"
-                >stop mix</button>
-              )}
-            </div>
-            {activeSounds.map((sound) => {
-              const volume = soundState[sound.id]?.volume ?? 0.5;
-              return (
-                <div key={sound.id} className="layer-row" data-cat={sound.category}>
-                  <span className="material-symbols-rounded layer-icon" aria-hidden="true">
-                    {CATEGORY_ICONS[sound.category] ?? 'music_note'}
-                  </span>
-                  <div className="layer-main">
-                    <div className="layer-head">
-                      <span className="layer-name">{sound.name}</span>
-                      <span className="layer-pct">{Math.round(volume * 100)}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      className="drift-slider"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={volume}
-                      style={sliderFill(volume)}
-                      aria-label={`${sound.name} volume`}
-                      onChange={(e) => onSoundVolume(sound.id, Number(e.target.value))}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="layer-remove"
-                    onClick={() => handleRemove(sound.id)}
-                    aria-label={`Remove ${sound.name}`}
-                  >✕</button>
-                </div>
-              );
-            })}
-            {activeSounds.length === 0 && (
-              <p className="sheet-empty">the mix is empty · add sounds from the library</p>
-            )}
-          </div>
-
-          <div className="sheet-master">
-            <div className="sheet-row-head">
-              <span className="sheet-label">master volume</span>
-              <span className="sheet-value">{Math.round(masterVolume * 100)}%</span>
-            </div>
-            <input
-              type="range"
-              className="drift-slider"
-              min={0}
-              max={1}
-              step={0.01}
-              value={masterVolume}
-              style={sliderFill(masterVolume)}
-              aria-label="Master volume"
-              onChange={(e) => onMasterVolume(Number(e.target.value))}
-            />
-          </div>
-
-          <div className="sheet-timer">
-            <div className="sheet-row-head">
-              <span className="sheet-label">sleep timer</span>
-              {secondsLeft !== null && (
-                <span className="sheet-value warm">
-                  {formatCountdown(secondsLeft)}
-                  {isPlaying ? ` · ends ~${endsAround(secondsLeft)}` : ' · paused'}
-                </span>
-              )}
-            </div>
-            <div className="timer-chips">
-              {TIMER_PRESETS.map((t) => {
-                const active = timerTotal === t.secs && secondsLeft !== null;
-                return (
-                  <button
-                    key={t.label}
-                    type="button"
-                    className={`timer-btn${active ? ' active' : ''}`}
-                    aria-pressed={active}
-                    onClick={() => onTimerSelect(t.secs)}
-                  >{t.label}</button>
-                );
-              })}
-              {secondsLeft !== null && (
-                <>
-                  <button
-                    type="button"
-                    className="timer-btn timer-extend"
-                    onClick={() => onTimerExtend(30 * 60)}
-                    aria-label="Add 30 minutes to the sleep timer"
-                  >+30m</button>
-                  <button
-                    type="button"
-                    className="timer-btn timer-extend"
-                    onClick={() => onTimerExtend(60 * 60)}
-                    aria-label="Add an hour to the sleep timer"
-                  >+1h</button>
-                  <button
-                    type="button"
-                    className="timer-btn timer-off"
-                    onClick={onTimerClear}
-                    aria-label="Turn the sleep timer off"
-                  >off</button>
-                </>
-              )}
-            </div>
-            <p className="sheet-note">the mix fades out gently over the final 90 seconds</p>
-          </div>
-
-          <div className="sheet-actions">
-            <button type="button" className="sheet-action accent" onClick={onDrift}>
-              <span className="material-symbols-rounded">bedtime</span>
-              drift mode
-            </button>
-            {!saving ? (
-              <button
-                type="button"
-                className="sheet-action warm"
-                onClick={() => setSaving(true)}
-                disabled={activeSounds.length === 0}
-              >
-                <span className="material-symbols-rounded">bookmark_add</span>
-                save mix
-              </button>
-            ) : (
-              <div className="preset-save-row">
-                <input
-                  className="preset-input"
-                  placeholder="name this mix…"
-                  value={name}
-                  maxLength={40}
-                  // Focus is user-initiated: the field only appears after the
-                  // user taps "save mix", so auto-focusing it is expected.
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSave();
-                    if (e.key === 'Escape') { e.stopPropagation(); setSaving(false); setName(''); }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="preset-save-btn"
-                  disabled={!name.trim()}
-                  onClick={handleSave}
-                >save</button>
-              </div>
-            )}
-          </div>
+          <MixControls
+            activeSounds={activeSounds}
+            soundState={soundState}
+            isPlaying={isPlaying}
+            onSoundVolume={onSoundVolume}
+            onRemoveSound={handleRemove}
+            masterVolume={masterVolume}
+            onMasterVolume={onMasterVolume}
+            secondsLeft={secondsLeft}
+            timerTotal={timerTotal}
+            onTimerSelect={onTimerSelect}
+            onTimerExtend={onTimerExtend}
+            onTimerClear={onTimerClear}
+            onClearMix={handleClearMix}
+            onDrift={onDrift}
+            onSave={onSave}
+            startSaving={startSaving}
+          />
         </div>
       </div>
     </div>
