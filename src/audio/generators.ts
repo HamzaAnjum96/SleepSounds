@@ -60,7 +60,8 @@ function genWhite(params?: Record<string, number>): string {
     const shimmer = 1 - shimmerDepth + shimmerDepth * Math.sin((2 * Math.PI * 0.065 * i) / SR);
     mix[i] = body[i] * (1 - airMix) * drift[i] + air[i] * airMix * shimmer;
   }
-  return gen(mix, 0.62);
+  const st = decorrelateMono(mix, 11, 0.3);
+  return genStereo(st.left, st.right, 0.62);
 }
 
 function genBrown(params?: Record<string, number>): string {
@@ -81,7 +82,9 @@ function genBrown(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) buf[i] = buf[i] * (1 - rumbleMix) + rumbleBuf[i] * rumbleMix;
   // Smoothness LP
   lp1(buf, smoothLp);
-  return gen(buf, 0.65);
+  // Bass is non-directional, so keep brown nearly centred — just a hint of width.
+  const st = decorrelateMono(buf, 9, 0.12);
+  return genStereo(st.left, st.right, 0.65);
 }
 
 function genFan(params?: Record<string, number>): string {
@@ -196,7 +199,8 @@ function genPink(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) {
     mix[i] = pink[i] * (1 - warmthMix - textureMix) + warmthBuf[i] * warmthMix + texture[i] * textureMix;
   }
-  return gen(mix, 0.64);
+  const st = decorrelateMono(mix, 12, 0.28);
+  return genStereo(st.left, st.right, 0.64);
 }
 
 function genRain(params?: Record<string, number>): string {
@@ -362,22 +366,36 @@ function genWind(params?: Record<string, number>): string {
     const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
+  // Gust bed: wide and decorrelated so the wind fills the image.
+  const bed = decorrelateMono(buf, 13, 0.34);
+  // Edge tones each sit at their own place across the stereo field, so the
+  // whistles read as located resonances rather than a centred chorus.
   const whistleStrips = [
-    { fc: 360,  q: 4.0 },
-    { fc: 620,  q: 4.5 },
-    { fc: 960,  q: 4.2 },
-    { fc: 1380, q: 5.0 },
+    { fc: 360,  q: 4.0, pan: -0.55 },
+    { fc: 620,  q: 4.5, pan:  0.40 },
+    { fc: 960,  q: 4.2, pan: -0.30 },
+    { fc: 1380, q: 5.0, pan:  0.62 },
   ];
-  const whistleBuf = new Float32Array(N);
+  const whistleL = new Float32Array(N);
+  const whistleR = new Float32Array(N);
   for (const s of whistleStrips) {
     const stripNoise = whiteNoise();
     bp2(stripNoise, s.fc, s.q);
     const stripLfo = smoothRandomLfo(0.0, 1.0, 1.4, 5.5);
-    for (let i = 0; i < N; i++) whistleBuf[i] += stripNoise[i] * stripLfo[i] * 0.25;
+    const pl = Math.cos((s.pan + 1) * Math.PI / 4);
+    const pr = Math.sin((s.pan + 1) * Math.PI / 4);
+    for (let i = 0; i < N; i++) {
+      const v = stripNoise[i] * stripLfo[i] * 0.25;
+      whistleL[i] += v * pl; whistleR[i] += v * pr;
+    }
   }
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = buf[i] * (1 - whistleMixLevel) + whistleBuf[i] * whistleMixLevel;
-  return gen(mix, 0.68);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    left[i]  = bed.left[i]  * (1 - whistleMixLevel) + whistleL[i] * whistleMixLevel;
+    right[i] = bed.right[i] * (1 - whistleMixLevel) + whistleR[i] * whistleMixLevel;
+  }
+  return genStereo(left, right, 0.68);
 }
 
 function genFire(): string {
@@ -634,12 +652,24 @@ function genStream(params?: Record<string, number>): string {
   lp1(ripples, 7600);
 
   const flowLfo = smoothRandomLfo(lfoMin, lfoMax, 0.5, 2.4);
-  const mix = new Float32Array(N);
+  // Modulate the bed and ripples in mono, then decorrelate each separately:
+  // the bright ripples spread wider than the body, so the stream glitters
+  // across the image instead of trickling down the centre.
+  const bedMod = new Float32Array(N);
+  const ripMod = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const rippleEnv = Math.pow(Math.max(0, flowLfo[i]), 1.8);
-    mix[i] = bed[i] * (1 - rippleMix) * flowLfo[i] + ripples[i] * rippleMix * rippleEnv;
+    bedMod[i] = bed[i] * flowLfo[i];
+    ripMod[i] = ripples[i] * Math.pow(Math.max(0, flowLfo[i]), 1.8);
   }
-  return gen(mix, 0.66);
+  const bedSt = decorrelateMono(bedMod, 14, 0.34);
+  const ripSt = decorrelateMono(ripMod, 7, 0.46);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    left[i]  = bedSt.left[i]  * (1 - rippleMix) + ripSt.left[i]  * rippleMix;
+    right[i] = bedSt.right[i] * (1 - rippleMix) + ripSt.right[i] * rippleMix;
+  }
+  return genStereo(left, right, 0.66);
 }
 
 function genThunder(params?: Record<string, number>): string {
@@ -879,11 +909,19 @@ function genShower(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) {
     preMix[i] = spray[i] * 0.5 + bodyBuf[i] * 0.35 + steamBuf[i] * (0.05 + steam * 0.1);
   }
-  // Room resonance
+  // Spray spreads wide; the room resonance gets a longer, roomier decorrelation
+  // so the shower surrounds rather than sits in the centre.
   const roomRes = new Float32Array(preMix);
   bp2(roomRes, 400 + room * 400, 1 + room * 2);
-  for (let i = 0; i < N; i++) preMix[i] += roomRes[i] * room * 0.15;
-  return gen(preMix, 0.65);
+  const spraySt = decorrelateMono(preMix, 9, 0.40);
+  const roomSt = decorrelateMono(roomRes, 19, 0.45);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    left[i]  = spraySt.left[i]  + roomSt.left[i]  * room * 0.15;
+    right[i] = spraySt.right[i] + roomSt.right[i] * room * 0.15;
+  }
+  return genStereo(left, right, 0.65);
 }
 
 function genAirplane(params?: Record<string, number>): string {

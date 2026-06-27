@@ -122,17 +122,21 @@ function panMonoInto(src: Float32Array, dstL: Float32Array, dstR: Float32Array, 
   for (let i = 0; i < n; i++) { dstL[i] += src[i] * l; dstR[i] += src[i] * r; }
 }
 
-/** Turn a mono buffer into a gently decorrelated stereo pair: the right channel
- *  blends a small wrap-around delay, widening a bed without phasey artefacts.
- *  Wrap-around keeps the loop seam continuous. */
-function decorrelateMono(buf: Float32Array, delayMs = 11): StereoBuf {
+/** Widen a mono buffer into a centred, decorrelated stereo pair: each channel
+ *  keeps the dry signal and blends a small wrap-around delay in the *opposite*
+ *  direction, so the image stays centred (no Haas pull) while L/R decorrelate.
+ *  `amount` (0..1) sets how wide. Wrap-around keeps the loop seam continuous. */
+function decorrelateMono(buf: Float32Array, delayMs = 11, amount = 0.32): StereoBuf {
   const left = new Float32Array(buf.length);
   const right = new Float32Array(buf.length);
   const delay = Math.max(1, Math.floor((delayMs / 1000) * SR));
   const len = buf.length;
+  const wet = Math.max(0, Math.min(0.5, amount));
+  const dry = 1 - wet;
   for (let i = 0; i < len; i++) {
-    left[i] = buf[i];
-    right[i] = 0.82 * buf[(i - delay + len) % len] + 0.18 * buf[i];
+    const a = buf[i];
+    left[i] = dry * a + wet * buf[(i - delay + len) % len];
+    right[i] = dry * a + wet * buf[(i + delay) % len];
   }
   return { left, right };
 }

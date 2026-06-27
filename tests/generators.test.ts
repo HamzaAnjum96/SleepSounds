@@ -122,8 +122,11 @@ describe('stereo rendering', () => {
     expect(seamJump(right), 'ocean R seam').toBeLessThan(0.06);
   });
 
-  it('ocean is not effectively mono (decorrelated bed + panned waves)', () => {
-    const { left, right } = decodeStereo(regenerateSound('ocean', {})!);
-    expect(Math.abs(corr(left, right)), 'L/R correlation').toBeLessThan(0.985);
-  });
+  it.each(['ocean', 'stream', 'wind', 'shower', 'white-noise', 'pink-noise'])(
+    '%s is not effectively mono',
+    (id) => {
+      const { left, right } = decodeStereo(regenerateSound(id, {})!);
+      expect(Math.abs(corr(left, right)), `${id} L/R correlation`).toBeLessThan(0.985);
+    },
+  );
 });

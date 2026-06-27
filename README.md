@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 4.1.0
+- **Stereo overhaul — sprint 2: water, air, and noise beds.** Converted the broad
+  ambience layers to stereo: **Stream** (body and bright ripples decorrelated
+  separately, so it glitters wide), **Wind** (decorrelated gust bed with each
+  edge-tone whistle placed across the field), **Shower** (wide spray + a roomier
+  reflection spread), and the **White / Pink / Brown noise** beds (gentle width;
+  brown stays near-centre since bass isn't directional). Tests assert each is
+  genuinely not mono.
+
 ### 4.0.0
 - **Stereo audio overhaul — sprint 1: foundation.** First step of moving the
   procedural sounds from a flat mono wash to a wide, moving stereo image. Added
