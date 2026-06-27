@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 4.4.0
+- **Stereo overhaul — sprint 5: worklet spatial polish.** Fire and Birdsong were
+  jittering their pan *every sample*, which reads as a constant stereo "fizz"
+  rather than a located source. Both now hold a pan position and ease between
+  positions: the fire sways gently as one source, and each bird call/trill jolts
+  the placement so calls arrive from new directions across the field. (Measured:
+  fire's abrupt pan jumps dropped from hundreds to ~0 per 1000 samples.)
+
 ### 4.3.0
 - **Stereo overhaul — sprint 4: masking-aware layering.** Added layer roles
   (`src/audio/layerMeta.ts`): every sound is a **bed**, **motion**, or **accent**

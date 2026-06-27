@@ -40,6 +40,13 @@ class BirdsongProcessor extends AudioWorkletProcessor {
     this.prevL = 0;
     this.prevR = 0;
 
+    // ── Stereo placement ──
+    // A held pan that eases toward a target instead of jittering every sample;
+    // each new call/trill jolts the target so birds arrive from new directions.
+    this.panState = 0;
+    this.panTarget = 0;
+    this.panHold = 0;
+
     // ── RNG state ──
     this.randState = 31415;
   }
@@ -51,6 +58,20 @@ class BirdsongProcessor extends AudioWorkletProcessor {
 
   _rand(lo, hi) {
     return lo + this._rnd() * (hi - lo);
+  }
+
+  /** Place a new event somewhere across the field and hold there a while. */
+  _placeEvent() {
+    this.panTarget = (this._rnd() * 2 - 1) * 0.55;
+    this.panHold = Math.floor((0.3 + this._rnd() * 0.9) * sampleRate);
+  }
+
+  /** Pan eased toward the current target; re-targets on idle so it never sits
+   *  dead-centre. Caller applies equal-power coefficients. */
+  _nextPan() {
+    if (--this.panHold <= 0) this._placeEvent();
+    this.panState += 0.01 * (this.panTarget - this.panState);
+    return this.panState;
   }
 
   // ── Trigger a bird call (sequence of chirps) ──
@@ -184,6 +205,7 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       this.callCooldown--;
       if (this.callCooldown <= 0 && this._rnd() < callProb) {
         this.triggerCall(callPitch, callVariety);
+        this._placeEvent();
         this.callCooldown = Math.floor(sampleRate * this._rand(0.8, 4.0));
       }
 
@@ -191,6 +213,7 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       this.trillCooldown--;
       if (this.trillCooldown <= 0 && this._rnd() < trillProb) {
         this.triggerTrill(trillPitch, trillSpeed);
+        this._placeEvent();
         this.trillCooldown = Math.floor(sampleRate * this._rand(2.5, 8.0));
       }
 
@@ -220,10 +243,10 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       mix *= 1.5;
 
       const active = running > 0.01 ? 1 : 0;
-      // Gentle stereo spread — subtle pan jitter for natural feel
-      const panJitter = (this._rnd() * 2 - 1) * 0.08;
-      const l = mix * (1 - panJitter) * active;
-      const r = mix * (1 + panJitter) * active;
+      // Equal-power pan that holds per event and eases between them.
+      const pan = this._nextPan();
+      const l = mix * Math.cos((pan + 1) * Math.PI / 4) * active;
+      const r = mix * Math.sin((pan + 1) * Math.PI / 4) * active;
 
       // Smooth output to avoid clicks
       this.prevL += 0.03 * (l - this.prevL);

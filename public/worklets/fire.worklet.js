@@ -37,7 +37,12 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     this.popEvents = [];
 
     this.prevL = 0;
-    this.prevR = 0;
+
+    // Held + slowly drifting pan, so the fire sways gently as a located source
+    // rather than fizzing in the stereo image at sample rate.
+    this.panState = 0;
+    this.panTarget = 0;
+    this.panHold = 0;
 
     this.randState = 22222;
   }
@@ -45,6 +50,17 @@ class FireSynthProcessor extends AudioWorkletProcessor {
   rnd() {
     this.randState = (1664525 * this.randState + 1013904223) >>> 0;
     return this.randState / 4294967296;
+  }
+
+  /** A pan position that holds for ~60–280 ms then eases to a new nearby target;
+   *  nearness widens the wander. Equal-power coefficients applied by the caller. */
+  nextPan(nearness) {
+    if (--this.panHold <= 0) {
+      this.panTarget = (this.rnd() * 2 - 1) * (0.08 + nearness * 0.18);
+      this.panHold = Math.floor((0.06 + this.rnd() * 0.22) * sampleRate);
+    }
+    this.panState += 0.0012 * (this.panTarget - this.panState);
+    return this.panState;
   }
 
   randn() {
@@ -182,13 +198,11 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       mix *= 1.5;
 
       const active = running > 0.01 ? 1 : 0;
-      const panJitter = (this.rnd() * 2 - 1) * 0.11;
-      const l = mix * (1 - panJitter) * active;
-      const r = mix * (1 + panJitter) * active;
-
-      this.prevR += 0.02 * (r - this.prevR);
-      left[i]  = l;
-      right[i] = this.prevR;
+      const pan = this.nextPan(nearness);
+      const panL = Math.cos((pan + 1) * Math.PI / 4);
+      const panR = Math.sin((pan + 1) * Math.PI / 4);
+      left[i]  = mix * panL * active;
+      right[i] = mix * panR * active;
     }
 
     return true;
