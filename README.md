@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 5.4.0
+- **UX redesign — sprint 5: accessibility + contrast.** All three text tiers now
+  clear WCAG AA for normal text: `--text-dim` was at 3.4:1 (below the 4.5:1 floor
+  for the meta-count labels that use it) and is raised to 4.6:1, with
+  `--text-secondary` lifted to 5.5:1 so the tiers stay visibly ordered. The small
+  card ✕ controls and the toast dismiss gained wider invisible touch halos
+  (toward the 44px guideline) for one-handed use in the dark.
+
 ### 5.3.0
 - **UX redesign — sprint 4: scene clarity + microcopy.** Scene cards now carry a
   quiet layer count (e.g. "2 layers"), so they read as real presets — the icons

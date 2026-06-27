@@ -26,10 +26,14 @@
   --border-strong:   rgba(255,255,255,0.14);
   --border-active:   rgba(160,185,255,0.22);
 
-  /* ── Color · text (contrast on --bg: 15.2 / 4.7 / 3.4 : 1) ────── */
+  /* ── Color · text (contrast on --bg: 15.2 / 5.5 / 4.6 : 1) ────── */
+  /* All three tiers clear WCAG AA for normal text (≥4.5:1): the old --text-dim
+     sat at 3.4:1, below the floor for the informative meta labels that use it
+     (counts, footer). dim is raised to the floor and secondary lifted enough to
+     keep the three tiers visibly ordered. */
   --text-primary:    #dfe3ed;
-  --text-secondary:  #727b9a;
-  --text-dim:        #5e657c;
+  --text-secondary:  #7e87a1;
+  --text-dim:        #727b93;
   --text-bright:     #e8eef8;
 
   /* ── Color · accent + warm + state ────────────────────────────── */
@@ -764,6 +768,10 @@ header::after {
   inset: -8px -3px;
 }
 .card-editor-icon::before { inset: -8px; }
+/* The card ✕ controls are small by design; grow their touch halo toward the
+   44px guideline (22px glyph + 11px each side = 44px tall) for dark, one-handed
+   use, without enlarging the visible mark. */
+.mix-del::before, .layer-remove::before { inset: -11px -8px; }
 
 /* ── Sound Grid ──────────────────────────────────────────────────── */
 
@@ -2184,6 +2192,7 @@ body:has(.mini-player) .toast {
 }
 .toast-action:focus-visible { box-shadow: 0 0 0 2px var(--accent-line); }
 .toast-close {
+  position: relative;
   flex-shrink: 0;
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
@@ -2196,6 +2205,8 @@ body:has(.mini-player) .toast {
   border-radius: var(--r-full);
   transition: color var(--dur-1);
 }
+/* Touch halo toward 44px without enlarging the visible glyph. */
+.toast-close::before { content: ''; position: absolute; inset: -10px; }
 @media (hover: hover) {
   .toast-close:hover { color: var(--text-primary); }
 }

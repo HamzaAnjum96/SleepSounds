@@ -46,8 +46,13 @@ for WCAG AA on `--bg` (contrast noted).
 |---|---|---|---|
 | `--text-primary` | `#dfe3ed` | 15.2:1 | Body, sound names |
 | `--text-bright` | `#e8eef8` | ~16:1 | Active sound name |
-| `--text-secondary` | `#727b9a` | 4.7:1 | Labels, readouts, secondary controls |
-| `--text-dim` | `#5e657c` | 3.4:1 | De-emphasized marks, decorative dots |
+| `--text-secondary` | `#7e87a1` | 5.5:1 | Labels, readouts, secondary controls |
+| `--text-dim` | `#727b93` | 4.6:1 | De-emphasized marks, meta counts |
+
+All three text tiers clear WCAG AA for normal text (≥4.5:1). `--text-dim` was
+raised from 3.4:1 (which failed the floor for the informative meta labels that
+use it) to the 4.6:1 floor, and `--text-secondary` lifted enough to keep the
+tiers visibly ordered.
 
 ### Accent, warm, state
 | Token | Value | Use |
