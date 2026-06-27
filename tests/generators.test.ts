@@ -122,7 +122,12 @@ describe('stereo rendering', () => {
     expect(seamJump(right), 'ocean R seam').toBeLessThan(0.06);
   });
 
-  it.each(['ocean', 'stream', 'wind', 'shower', 'white-noise', 'pink-noise'])(
+  // Broad layers that should fill the image. (Brown noise, fan, underwater body
+  // and heartbeat are intentionally centred, so they're not asserted here.)
+  it.each([
+    'ocean', 'stream', 'wind', 'shower', 'white-noise', 'pink-noise',
+    'train', 'airplane', 'night',
+  ])(
     '%s is not effectively mono',
     (id) => {
       const { left, right } = decodeStereo(regenerateSound(id, {})!);

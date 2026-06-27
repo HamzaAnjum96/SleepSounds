@@ -60,7 +60,7 @@ function genWhite(params?: Record<string, number>): string {
     const shimmer = 1 - shimmerDepth + shimmerDepth * Math.sin((2 * Math.PI * 0.065 * i) / SR);
     mix[i] = body[i] * (1 - airMix) * drift[i] + air[i] * airMix * shimmer;
   }
-  const st = decorrelateMono(mix, 11, 0.3);
+  const st = decorrelateMono(mix, 13);
   return genStereo(st.left, st.right, 0.62);
 }
 
@@ -82,9 +82,9 @@ function genBrown(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) buf[i] = buf[i] * (1 - rumbleMix) + rumbleBuf[i] * rumbleMix;
   // Smoothness LP
   lp1(buf, smoothLp);
-  // Bass is non-directional, so keep brown nearly centred — just a hint of width.
-  const st = decorrelateMono(buf, 9, 0.12);
-  return genStereo(st.left, st.right, 0.65);
+  // Brown noise is almost all low end, which is non-directional — keep it mono
+  // (centred). Stereo width here only invites comb/phase artefacts.
+  return gen(buf, 0.65);
 }
 
 function genFan(params?: Record<string, number>): string {
@@ -172,6 +172,8 @@ function genFan(params?: Record<string, number>): string {
   // Final roll-off: removes top-end harshness, softer for small fans
   lp1(mix, 2800 + size * 4000);
 
+  // A fan is a compact source with strong tonal blade/motor components; widening
+  // those combs them. Keep it mono (centred) — stereo placement is the mixer's job.
   return gen(mix, 0.65);
 }
 
@@ -199,7 +201,7 @@ function genPink(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) {
     mix[i] = pink[i] * (1 - warmthMix - textureMix) + warmthBuf[i] * warmthMix + texture[i] * textureMix;
   }
-  const st = decorrelateMono(mix, 12, 0.28);
+  const st = decorrelateMono(mix, 12);
   return genStereo(st.left, st.right, 0.64);
 }
 
@@ -367,7 +369,7 @@ function genWind(params?: Record<string, number>): string {
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
   // Gust bed: wide and decorrelated so the wind fills the image.
-  const bed = decorrelateMono(buf, 13, 0.34);
+  const bed = decorrelateMono(buf, 13);
   // Edge tones each sit at their own place across the stereo field, so the
   // whistles read as located resonances rather than a centred chorus.
   const whistleStrips = [
@@ -661,8 +663,8 @@ function genStream(params?: Record<string, number>): string {
     bedMod[i] = bed[i] * flowLfo[i];
     ripMod[i] = ripples[i] * Math.pow(Math.max(0, flowLfo[i]), 1.8);
   }
-  const bedSt = decorrelateMono(bedMod, 14, 0.34);
-  const ripSt = decorrelateMono(ripMod, 7, 0.46);
+  const bedSt = decorrelateMono(bedMod, 15);
+  const ripSt = decorrelateMono(ripMod, 9);
   const left = new Float32Array(N);
   const right = new Float32Array(N);
   for (let i = 0; i < N; i++) {
@@ -798,21 +800,31 @@ function genTrain(params?: Record<string, number>): string {
   const tractionW = 0.12 * (1 - speed * 0.75);
   const aeroW = 0.05 * speed * speed;
   const wheelW = (0.015 + speed * 0.05) * (0.5 + clatter * 0.8);
-  const mix = new Float32Array(N);
+  // Build the continuous rolling floor in mono, then widen it; the joint
+  // clatter spreads on its own (wider) so the carriage rolls around you, while
+  // the underfloor thumps stay centred (low end is non-directional).
+  const floor = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const humPh = (2 * Math.PI * humF * i) / SR;
     const hum = Math.sin(humPh) * 0.6 + Math.sin(2 * humPh + 0.8) * 0.3;
-    mix[i] =
+    floor[i] =
       body[i] * (0.30 + rumbleParam * 0.26) * sway[i] +
       rolling[i] * (0.09 + speed * 0.15) * roughness[i] +
       railMid[i] * (0.04 + speed * 0.05) +
       wheelTop[i] * wheelW * wheelDrift[i] +
       (traction[i] * 0.8 + hum * 0.18) * tractionW +
-      aero[i] * aeroW +
-      clacks[i] * 0.30 +
-      thumps[i] * (0.30 + rumbleParam * 0.25);
+      aero[i] * aeroW;
   }
-  return gen(mix, 0.68);
+  const floorSt = decorrelateMono(floor, 13);
+  const clackSt = decorrelateMono(clacks, 9);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const thump = thumps[i] * (0.30 + rumbleParam * 0.25);
+    left[i]  = floorSt.left[i]  + clackSt.left[i]  * 0.30 + thump;
+    right[i] = floorSt.right[i] + clackSt.right[i] * 0.30 + thump;
+  }
+  return genStereo(left, right, 0.68);
 }
 
 // ── Sound regeneration ────────────────────────────────────────────────────
@@ -859,34 +871,43 @@ function genUnderwater(params?: Record<string, number>): string {
   const swellLfo = smoothRandomLfo(0.55, 1.25, 2.5, 7.0);
   const currentDepth = 0.25 + current * 0.5;
 
-  const bubblesBuf = new Float32Array(N);
+  // Bubbles rise at scattered positions across the field; pan each one.
+  const bubblesL = new Float32Array(N);
+  const bubblesR = new Float32Array(N);
   let pos = Math.floor(SR * 0.05);
   while (pos < N) {
     const bFreq = rand(200, 800);
     const bLen = Math.floor(SR * rand(0.008, 0.030));
     const bAmp = rand(0.02, 0.08);
+    const pan = rand(-0.7, 0.7);
+    const pl = Math.cos((pan + 1) * Math.PI / 4);
+    const pr = Math.sin((pan + 1) * Math.PI / 4);
     let ph = 0;
     for (let i = 0; i < bLen && pos + i < N; i++) {
       const p = i / Math.max(1, bLen);
       const env = Math.sin(Math.PI * p);
       const f = bFreq + bFreq * 0.3 * p; // pitch rise
       ph += (2 * Math.PI * f) / SR;
-      bubblesBuf[pos + i] += Math.sin(ph) * env * bAmp;
+      const s = Math.sin(ph) * env * bAmp;
+      bubblesL[pos + i] += s * pl; bubblesR[pos + i] += s * pr;
     }
     pos += Math.floor(SR * rand(0.05, 0.4) / (bubbles + 0.2));
   }
-  hp1(bubblesBuf, 150);
-  lp1(bubblesBuf, 1600);
+  hp1(bubblesL, 150); lp1(bubblesL, 1600);
+  hp1(bubblesR, 150); lp1(bubblesR, 1600);
 
-  // Dark final cutoff so no high-frequency hiss survives.
+  // Deep body stays centred (low end is non-directional); the panned bubbles
+  // carry the width. Dark final cutoff so no high-frequency hiss survives.
   const finalLp = 500 + (1 - depth) * 1400;
-  const mix = new Float32Array(N);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const swell = 1 - currentDepth + currentDepth * swellLfo[i];
-    mix[i] = baseBuf[i] * 0.85 * swell + bubblesBuf[i] * 0.22;
+    const body = baseBuf[i] * 0.85 * (1 - currentDepth + currentDepth * swellLfo[i]);
+    left[i]  = body + bubblesL[i] * 0.22;
+    right[i] = body + bubblesR[i] * 0.22;
   }
-  lp1(mix, finalLp);
-  return gen(mix, 0.6);
+  lp1(left, finalLp); lp1(right, finalLp);
+  return genStereo(left, right, 0.6);
 }
 
 function genShower(params?: Record<string, number>): string {
@@ -913,8 +934,8 @@ function genShower(params?: Record<string, number>): string {
   // so the shower surrounds rather than sits in the centre.
   const roomRes = new Float32Array(preMix);
   bp2(roomRes, 400 + room * 400, 1 + room * 2);
-  const spraySt = decorrelateMono(preMix, 9, 0.40);
-  const roomSt = decorrelateMono(roomRes, 19, 0.45);
+  const spraySt = decorrelateMono(preMix, 11);
+  const roomSt = decorrelateMono(roomRes, 19);
   const left = new Float32Array(N);
   const right = new Float32Array(N);
   for (let i = 0; i < N; i++) {
@@ -978,19 +999,31 @@ function genAirplane(params?: Record<string, number>): string {
 
   const airW = 0.15 + altitude * 0.11;
   const ventW = 0.05 + cabin * 0.11;
-  const mix = new Float32Array(N);
+  // The boundary-layer "airborne blanket" (airflow + vents) surrounds you, so it
+  // widens; the engine body, structural weight, and engine-order tones are felt
+  // in the body and stay centred.
+  const centre = new Float32Array(N);
+  const blanket = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const t = (2 * Math.PI * i) / SR;
     const tone = Math.sin(f1 * t) * 0.7 + Math.sin(f2 * t + 1.1) * 0.45;
     const turb = turbEnv[i];
-    mix[i] =
+    centre[i] =
       engine[i] * 0.30 * engDrift[i] * (1 + 0.7 * turb) +
       tone * 0.035 * toneBeat[i] +
-      airflow[i] * airW * airDrift[i] * (1 + 0.3 * turb) +
-      vents[i] * ventW +
       structure[i] * 0.16 * structureSwell[i] * (1 + 0.9 * turb);
+    blanket[i] =
+      airflow[i] * airW * airDrift[i] * (1 + 0.3 * turb) +
+      vents[i] * ventW;
   }
-  return gen(mix, 0.66);
+  const wide = decorrelateMono(blanket, 12);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    left[i]  = centre[i] + wide.left[i];
+    right[i] = centre[i] + wide.right[i];
+  }
+  return genStereo(left, right, 0.66);
 }
 
 function genSpace(params?: Record<string, number>): string {
@@ -1015,23 +1048,32 @@ function genSpace(params?: Record<string, number>): string {
 
   const pulseLfo = smoothRandomLfo(1 - depth, 1.0, 1.2, 3.0);
 
-  const mix = new Float32Array(N);
+  // Each insect band sits at its own place across the field, so the night
+  // surrounds you rather than chirping from one point.
+  const pans = [-0.55, 0.5, 0.1];
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
   for (let b = 0; b < bandDefs.length; b++) {
     const { fc, q } = bandDefs[b];
     const buf = whiteNoise();
     bp2(buf, fc, q);
     const g = gates[b];
     const gain = 0.10 * (0.5 + cosmic);
-    for (let i = 0; i < N; i++) mix[i] += buf[i] * gain * g[i] * pulseLfo[i];
+    const pl = Math.cos((pans[b] + 1) * Math.PI / 4);
+    const pr = Math.sin((pans[b] + 1) * Math.PI / 4);
+    for (let i = 0; i < N; i++) {
+      const s = buf[i] * gain * g[i] * pulseLfo[i];
+      left[i] += s * pl; right[i] += s * pr;
+    }
   }
 
   if (voidParam > 0) {
     const voidBuf = brownNoise();
     lp1(voidBuf, 60 + voidParam * 40);
     lp1(voidBuf, 60 + voidParam * 40);
-    for (let i = 0; i < N; i++) mix[i] += voidBuf[i] * voidParam * 0.6;
+    for (let i = 0; i < N; i++) { left[i] += voidBuf[i] * voidParam * 0.6; right[i] += voidBuf[i] * voidParam * 0.6; }
   }
-  return gen(mix, 0.55);
+  return genStereo(left, right, 0.55);
 }
 
 function genHeartbeat(params?: Record<string, number>): string {

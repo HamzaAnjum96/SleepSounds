@@ -111,6 +111,20 @@ npm run preview
 
 ## Changelog
 
+### 4.2.0
+- **Fixed the "jet engine" comb artefact** in the stereo beds (4.0–4.1). The
+  widener was blending each channel with a short delayed copy of itself, which
+  comb-filters noise into a flanged whoosh on both sides. It now decorrelates by
+  pure opposite time-shifts, so each channel keeps a flat spectrum — wide and
+  diffuse, no flanging.
+- **Stereo overhaul — sprint 3: urban & deep beds.** **Train** rolls around you
+  (decorrelated floor + spread joint clatter; underfloor thumps stay centred),
+  **Airplane** widens its boundary-layer "blanket" while the engine body stays
+  centred, **Underwater** scatters its bubbles across the field over a centred
+  deep body, and **Night Insects** place their chirp bands around you. **Brown
+  noise, Fan, Heartbeat** and the underwater body stay mono on purpose (compact
+  or non-directional sources). All WAV sounds are now stereo-aware.
+
 ### 4.1.0
 - **Stereo overhaul — sprint 2: water, air, and noise beds.** Converted the broad
   ambience layers to stereo: **Stream** (body and bright ripples decorrelated

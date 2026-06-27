@@ -122,21 +122,23 @@ function panMonoInto(src: Float32Array, dstL: Float32Array, dstR: Float32Array, 
   for (let i = 0; i < n; i++) { dstL[i] += src[i] * l; dstR[i] += src[i] * r; }
 }
 
-/** Widen a mono buffer into a centred, decorrelated stereo pair: each channel
- *  keeps the dry signal and blends a small wrap-around delay in the *opposite*
- *  direction, so the image stays centred (no Haas pull) while L/R decorrelate.
- *  `amount` (0..1) sets how wide. Wrap-around keeps the loop seam continuous. */
-function decorrelateMono(buf: Float32Array, delayMs = 11, amount = 0.32): StereoBuf {
+/** Widen a mono buffer into a decorrelated stereo pair WITHOUT colouring it.
+ *
+ *  Each channel is the *same* buffer shifted in opposite directions (left back,
+ *  right forward) — a pure time shift, so each channel keeps a flat spectrum
+ *  (no within-channel comb, which is what makes a "dry + delayed copy" blend
+ *  sound like a flanged jet engine). The two channels are decorrelated by 2×the
+ *  delay, which for broadband material reads as a wide, diffuse image. The image
+ *  stays centred (symmetric shift), and wrap-around keeps the loop seam intact.
+ *  Use this only on broadband/noisy beds; tonal sounds should be panned instead. */
+function decorrelateMono(buf: Float32Array, delayMs = 14): StereoBuf {
   const left = new Float32Array(buf.length);
   const right = new Float32Array(buf.length);
-  const delay = Math.max(1, Math.floor((delayMs / 1000) * SR));
+  const d = Math.max(1, Math.floor((delayMs / 1000) * SR));
   const len = buf.length;
-  const wet = Math.max(0, Math.min(0.5, amount));
-  const dry = 1 - wet;
   for (let i = 0; i < len; i++) {
-    const a = buf[i];
-    left[i] = dry * a + wet * buf[(i - delay + len) % len];
-    right[i] = dry * a + wet * buf[(i + delay) % len];
+    left[i] = buf[(i - d + len) % len];
+    right[i] = buf[(i + d) % len];
   }
   return { left, right };
 }
