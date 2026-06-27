@@ -90,11 +90,23 @@ test('a sleep timer can be set', async ({ page }) => {
   await expect(page.locator('.sheet-value.warm')).toBeVisible();
 });
 
-test('clear all stops the mix', async ({ page }) => {
+test('stop mix stops the mix, and undo brings it back', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await page.locator('.mp-body').click();
   await page.locator('.sheet-clear').click();
   await expect(page.locator('.mini-player')).toBeHidden();
+  // A forgiving snackbar offers undo, which restores the mix playing.
+  await page.locator('.toast-action', { hasText: 'undo' }).click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+});
+
+test('save from the mini player opens the save field', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-save').click();
+  await expect(page.locator('.preset-input')).toBeVisible();
+  await page.locator('.preset-input').fill('player save');
+  await page.locator('.preset-save-btn').click();
+  await expect(page.locator('.mix-card', { hasText: 'player save' })).toBeVisible();
 });
 
 test('a custom mix saves and survives a reload', async ({ page }) => {

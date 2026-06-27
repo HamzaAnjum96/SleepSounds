@@ -17,6 +17,9 @@ interface MiniPlayerProps {
   timerFrac: number | null;
   onTogglePlay: () => void;
   onOpen: () => void;
+  /** Save the current mix — the discoverable entry point, so saving doesn't
+   *  hide one layer deep in the sheet. */
+  onSave: () => void;
 }
 
 const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlayer({
@@ -26,6 +29,7 @@ const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlay
   timerFrac,
   onTogglePlay,
   onOpen,
+  onSave,
 }, ref) {
   return (
     <div className="mini-player" ref={ref}>
@@ -63,6 +67,15 @@ const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlay
       >
         <span className="mp-title">{title}</span>
         <span className="mp-subtitle">{subtitle}</span>
+      </button>
+
+      <button
+        type="button"
+        className="mp-save"
+        onClick={onSave}
+        aria-label="Save this mix"
+      >
+        <span className="material-symbols-rounded">bookmark_add</span>
       </button>
 
       <button

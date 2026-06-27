@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 5.1.0
+- **UX redesign — sprint 2: save discoverability + undo.** Saving a mix no
+  longer hides a layer deep in the now-playing sheet: a bookmark sits in the
+  mini player and opens straight into the name field, and while a mix is playing
+  with nothing saved yet, the "your mixes" section shows a quiet card that
+  teaches the feature and doubles as the save entry. Destructive actions are now
+  forgiving in the dark: "clear all" becomes "stop mix" and both stopping a mix
+  and deleting a saved one leave a five-second **undo** snackbar.
+
 ### 5.0.0
 - **UX redesign — sprint 1: prompt timing.** First load now stays clear: the
   storage notice and the install row are held back until the first sound has

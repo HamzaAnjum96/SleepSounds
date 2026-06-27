@@ -48,6 +48,9 @@ interface NowPlayingSheetProps {
   onClearMix: () => void;
   onDrift: () => void;
   onSave: (name: string) => void;
+  /** Open straight into the save-name field — used when the user taps save on
+   *  the mini player rather than opening the sheet to browse. */
+  startSaving?: boolean;
 }
 
 interface DragState {
@@ -78,6 +81,7 @@ export default function NowPlayingSheet({
   onClearMix,
   onDrift,
   onSave,
+  startSaving = false,
 }: NowPlayingSheetProps) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -101,15 +105,16 @@ export default function NowPlayingSheet({
     if (open) {
       closingRef.current = false;
       setClosing(false);
+      setSaving(startSaving);
       restoreFocusRef.current = document.activeElement as HTMLElement | null;
-      closeRef.current?.focus();
+      if (!startSaving) closeRef.current?.focus();
     } else {
       setSaving(false);
       setName('');
       restoreFocusRef.current?.focus?.();
       restoreFocusRef.current = null;
     }
-  }, [open]);
+  }, [open, startSaving]);
 
   useEffect(() => {
     if (!open) return;
@@ -232,8 +237,8 @@ export default function NowPlayingSheet({
                   type="button"
                   className="sheet-clear"
                   onClick={handleClearMix}
-                  aria-label="Stop and clear the whole mix"
-                >clear all</button>
+                  aria-label="Stop the whole mix"
+                >stop mix</button>
               )}
             </div>
             {activeSounds.map((sound) => {

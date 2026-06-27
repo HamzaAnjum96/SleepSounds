@@ -7,6 +7,7 @@ import InstallPrompt from './components/InstallPrompt';
 import MiniPlayer from './components/MiniPlayer';
 import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
+import Toast from './components/Toast';
 import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds } from './data';
 import { features } from './config/features';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
@@ -222,15 +223,49 @@ export default function App() {
   // Saved mixes — loaded through the storage migration, so bad/old data can't
   // break startup.
   const [presets, setPresets] = useState<Preset[]>(loadSavedMixes);
+  // Open the sheet straight into its save field (mini-player save tap).
+  const [sheetStartSaving, setSheetStartSaving] = useState(false);
 
   const persistPresets = (next: Preset[]) => {
     setPresets(next);
     saveSavedMixes(next);
   };
 
+  // A single forgiving snackbar. Destructive actions (stopping a mix, deleting
+  // a saved one) leave an "undo" here for a few seconds — forgiving in the dark.
+  const [toast, setToast] = useState<{ id: number; message: string; actionLabel?: string; onAction?: () => void } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const dismissToast = useCallback(() => {
+    window.clearTimeout(toastTimer.current);
+    setToast(null);
+  }, []);
+  const showToast = useCallback((message: string, actionLabel?: string, onAction?: () => void) => {
+    window.clearTimeout(toastTimer.current);
+    const id = Date.now();
+    setToast({ id, message, actionLabel, onAction });
+    toastTimer.current = window.setTimeout(
+      () => setToast((t) => (t?.id === id ? null : t)),
+      5000,
+    );
+  }, []);
+
   const handleDeletePreset = (id: string) => {
+    const index = presets.findIndex((p) => p.id === id);
+    if (index < 0) return;
+    const removed = presets[index];
     persistPresets(presets.filter((p) => p.id !== id));
     if (activeMixId === id) setActiveMixId(null);
+    announce(`deleted mix ${removed.name}`);
+    showToast(`deleted "${removed.name}"`, 'undo', () => {
+      setPresets((cur) => {
+        if (cur.some((p) => p.id === removed.id)) return cur;
+        const next = [...cur];
+        next.splice(Math.min(index, next.length), 0, removed);
+        saveSavedMixes(next);
+        return next;
+      });
+      announce(`restored mix ${removed.name}`);
+    });
   };
 
   const handleSaveMix = (name: string) => {
@@ -244,6 +279,27 @@ export default function App() {
     persistPresets([...presets, preset]);
     setActiveMixId(preset.id);
   };
+
+  // Stop the whole mix, but leave an undo: snapshot the live layers first, so
+  // a mistaken stop in the dark is one tap to bring back, playing.
+  const handleStopMix = useCallback(() => {
+    const snapshot = { state: soundState, master: masterVolume };
+    const restoredId = activeMixId;
+    stopAll();
+    setIsPaused(false);
+    showToast('mix stopped', 'undo', () => {
+      restoreMixerState(snapshot.state, snapshot.master, true);
+      setActiveMixId(restoredId);
+      setIsPaused(false);
+    });
+  }, [soundState, masterVolume, activeMixId, stopAll, restoreMixerState, showToast]);
+
+  // Open the sheet straight into its save field (from the mini-player save tap).
+  const handleSaveIntent = useCallback(() => {
+    haptic(8);
+    setSheetStartSaving(true);
+    setSheetOpen(true);
+  }, []);
 
   const isPlaying = activeSounds.length > 0 && !isPaused;
 
@@ -732,14 +788,20 @@ export default function App() {
           </div>
         </section>
 
-        {presets.length > 0 && (
+        {(presets.length > 0 || hasPlayer) && (
           <section className="section" style={{ animationDelay: '0.18s' }}>
             <div className="section-head">
               <h2 className="section-title">your mixes</h2>
               <span className="section-meta">
-                {presets.length} saved
+                {presets.length > 0 ? `${presets.length} saved` : 'nothing saved yet'}
               </span>
             </div>
+            {presets.length === 0 ? (
+              <button type="button" className="mix-empty" onClick={handleSaveIntent}>
+                <span className="material-symbols-rounded" aria-hidden="true">bookmark_add</span>
+                save this mix to return to it any night
+              </button>
+            ) : (
             <div className="mix-row" role="list">
               {presets.map((preset) => {
                 const current = activeMixId === preset.id && activeSounds.length > 0;
@@ -779,6 +841,7 @@ export default function App() {
                 );
               })}
             </div>
+            )}
           </section>
         )}
 
@@ -892,6 +955,7 @@ export default function App() {
           timerFrac={secondsLeft !== null && timerTotal !== null ? secondsLeft / timerTotal : null}
           onTogglePlay={handleMasterToggle}
           onOpen={() => setSheetOpen(true)}
+          onSave={handleSaveIntent}
         />
       )}
 
@@ -899,7 +963,8 @@ export default function App() {
         <Suspense fallback={null}>
           <LazyNowPlayingSheet
             open={sheetOpen}
-            onClose={() => setSheetOpen(false)}
+            onClose={() => { setSheetOpen(false); setSheetStartSaving(false); }}
+            startSaving={sheetStartSaving}
             title={mixTitle || 'your mix'}
             activeSounds={activeSounds}
             soundState={soundState}
@@ -914,7 +979,7 @@ export default function App() {
             onTimerSelect={handleTimerSelect}
             onTimerExtend={handleTimerExtend}
             onTimerClear={handleTimerClear}
-            onClearMix={() => { stopAll(); setIsPaused(false); }}
+            onClearMix={handleStopMix}
             onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
             onSave={handleSaveMix}
           />
@@ -936,6 +1001,16 @@ export default function App() {
       )}
 
       <CookieNotice show={hasPlayed && !storageAck} onDismiss={ackStorage} />
+
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+          onDismiss={dismissToast}
+        />
+      )}
 
       <div className="sr-only" role="status" aria-live="polite">{status}</div>
     </>
