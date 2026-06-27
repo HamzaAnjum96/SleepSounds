@@ -801,6 +801,7 @@ export default function App() {
                     )}
                     <span className="scene-name">{scene.preset.name}</span>
                     <span className="scene-mood">{scene.mood}</span>
+                    <span className="scene-count">{ids.length} layer{ids.length === 1 ? '' : 's'}</span>
                   </button>
                 </div>
               );

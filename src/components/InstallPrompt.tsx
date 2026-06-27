@@ -115,7 +115,7 @@ export default function InstallPrompt({ ready }: InstallPromptProps) {
           add to your home screen: tap <span className="install-kbd material-symbols-rounded">ios_share</span> then “Add to Home Screen”
         </span>
       ) : (
-        <span className="install-text">install drift for full-screen, offline nights</span>
+        <span className="install-text">install for a faster start and offline nights</span>
       )}
       {installable && (
         <button type="button" className="install-action" onClick={handleInstall}>install</button>

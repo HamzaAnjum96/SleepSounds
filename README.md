@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 5.3.0
+- **UX redesign — sprint 4: scene clarity + microcopy.** Scene cards now carry a
+  quiet layer count (e.g. "2 layers"), so they read as real presets — the icons
+  already show *which* sounds, the count shows *how many* — matching the saved-mix
+  cards. On wide screens the scenes wrap into a grid (every scene visible, no
+  horizontal-scroll trick) while mobile keeps its peeking shelf. The install row
+  copy is clearer: "install for a faster start and offline nights."
+
 ### 5.2.0
 - **UX redesign — sprint 3: desktop/tablet split layout.** Wide screens
   (`≥1000px`) are no longer a phone-width column stranded in the middle. The

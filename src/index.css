@@ -311,6 +311,17 @@ button, .material-symbols-rounded {
     padding-inline: 0;
     scroll-padding-inline: 0;
   }
+  /* Scenes have vertical room in the column, so they wrap into a grid instead of
+     a horizontal shelf — every scene visible at once, no scroll trick needed. */
+  .app .scene-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap: var(--sp-12);
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .app .scene-card { flex: none; width: 100%; }
 
   .side-panel {
     display: flex;
@@ -1626,7 +1637,7 @@ header::after {
 .scene-card {
   position: relative;
   flex: 0 0 168px;
-  height: 128px;
+  height: 140px;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -1739,6 +1750,19 @@ header::after {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+/* Functional grounding: how many layers the scene is, so the cards read as
+   real presets (the icons already show which sounds), not just mood art. */
+.scene-count {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--sp-6);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(220,226,240,0.6);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Your mixes ──────────────────────────────────────────────────── */
