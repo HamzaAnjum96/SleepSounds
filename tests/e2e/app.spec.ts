@@ -42,6 +42,27 @@ test('the now-playing sheet opens and master volume can change', async ({ page }
   await expect(page.locator('.sheet-master .sheet-value')).toBeVisible();
 });
 
+test('the sound editor leads with variant chips, sliders behind fine-tune', async ({ page }) => {
+  // Open rain's editor from its library card.
+  const rain = page.locator('.sound-card[data-cat="Water"]').first();
+  await rain.locator('.card-editor-icon').click();
+  const panel = page.locator('.sb-panel');
+  await expect(panel).toBeVisible();
+
+  // Chips are the primary surface; sliders are hidden until fine-tune.
+  await expect(panel.locator('.sb-variant').first()).toBeVisible();
+  await expect(panel.locator('.drift-slider')).toHaveCount(0);
+
+  // Picking a non-default variant selects it.
+  const downpour = panel.locator('.sb-variant', { hasText: 'Downpour' });
+  await downpour.click();
+  await expect(downpour).toHaveAttribute('aria-pressed', 'true');
+
+  // Fine-tune reveals the sliders.
+  await panel.locator('.sb-finetune').click();
+  await expect(panel.locator('.drift-slider').first()).toBeVisible();
+});
+
 test('a sleep timer can be set', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await page.locator('.mp-body').click();
