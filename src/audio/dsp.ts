@@ -69,6 +69,74 @@ function normalizeForLoop(buf: Float32Array): void {
   softClip(buf, 1.12);
 }
 
+// ── Stereo rendering ────────────────────────────────────────────────────────
+// Broad ambient layers read as far more real when they carry width and movement
+// across the image rather than collapsing to the centre. These helpers let a
+// generator build a decorrelated stereo bed plus panned events and encode a
+// 2-channel WAV, while keeping the same loop-conditioning and seeded determinism.
+
+export interface StereoBuf { left: Float32Array; right: Float32Array; }
+
+function makeWavStereo(left16: Int16Array, right16: Int16Array, sr: number): string {
+  const frames = Math.min(left16.length, right16.length);
+  const dataLen = frames * 4; // 2 channels * 16-bit
+  const buf = new ArrayBuffer(44 + dataLen);
+  const v = new DataView(buf);
+  const s = (o: number, t: string) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  s(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); s(8, 'WAVE');
+  s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true);
+  v.setUint16(32, 4, true); v.setUint16(34, 16, true);
+  s(36, 'data'); v.setUint32(40, dataLen, true);
+  let o = 44;
+  for (let i = 0; i < frames; i++, o += 4) {
+    v.setInt16(o, left16[i], true);
+    v.setInt16(o + 2, right16[i], true);
+  }
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
+/** Loop-condition each channel, then encode a stereo WAV at a shared peak scale
+ *  (so the L/R balance the generator built is preserved). */
+function genStereo(left: Float32Array, right: Float32Array, gain = 0.7): string {
+  normalizeForLoop(left);
+  normalizeForLoop(right);
+  let peak = 0;
+  for (let i = 0; i < left.length; i++) peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
+  const scale = peak > 0 ? (gain * 32767) / peak : 32767;
+  const left16 = new Int16Array(left.length);
+  const right16 = new Int16Array(right.length);
+  for (let i = 0; i < left.length; i++) {
+    const d = (random() - 0.5) + (random() - 0.5);
+    left16[i] = Math.max(-32768, Math.min(32767, Math.round(left[i] * scale + d)));
+    right16[i] = Math.max(-32768, Math.min(32767, Math.round(right[i] * scale + d)));
+  }
+  return makeWavStereo(left16, right16, SR);
+}
+
+/** Add a mono source into stereo buses at an equal-power pan (-1 = L, +1 = R). */
+function panMonoInto(src: Float32Array, dstL: Float32Array, dstR: Float32Array, pan: number, gain = 1): void {
+  const l = Math.cos((pan + 1) * Math.PI / 4) * gain;
+  const r = Math.sin((pan + 1) * Math.PI / 4) * gain;
+  const n = Math.min(src.length, dstL.length, dstR.length);
+  for (let i = 0; i < n; i++) { dstL[i] += src[i] * l; dstR[i] += src[i] * r; }
+}
+
+/** Turn a mono buffer into a gently decorrelated stereo pair: the right channel
+ *  blends a small wrap-around delay, widening a bed without phasey artefacts.
+ *  Wrap-around keeps the loop seam continuous. */
+function decorrelateMono(buf: Float32Array, delayMs = 11): StereoBuf {
+  const left = new Float32Array(buf.length);
+  const right = new Float32Array(buf.length);
+  const delay = Math.max(1, Math.floor((delayMs / 1000) * SR));
+  const len = buf.length;
+  for (let i = 0; i < len; i++) {
+    left[i] = buf[i];
+    right[i] = 0.82 * buf[(i - delay + len) % len] + 0.18 * buf[i];
+  }
+  return { left, right };
+}
+
 function lp1(buf: Float32Array, fc: number): void {
   const a = Math.exp((-2 * Math.PI * fc) / SR);
   let y = 0;
@@ -218,6 +286,7 @@ function pinkNoise(): Float32Array {
 }
 
 export {
-  SR, SECS, N, gen, lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance, whiteNoise, brownNoise, pinkNoise,
+  SR, SECS, N, gen, genStereo, panMonoInto, decorrelateMono,
+  lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance, whiteNoise, brownNoise, pinkNoise,
   random, seedRandom, hashSeed,
 };

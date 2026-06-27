@@ -3,8 +3,8 @@
 // with new tuning params (used by the editor's WAV-backed sounds).
 
 import {
-  SR, N, gen, lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance, whiteNoise, brownNoise, pinkNoise,
-  random, seedRandom, hashSeed,
+  SR, N, gen, genStereo, decorrelateMono, lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance,
+  whiteNoise, brownNoise, pinkNoise, random, seedRandom, hashSeed,
 } from './dsp';
 
 function genForest(params?: Record<string, number>): string {
@@ -289,18 +289,21 @@ function genOcean(params?: Record<string, number>): string {
   const surfMix = 0.2 + foam * 0.36;
   const baseLp = 240 + depth * 240;
   const baseMix = 0.4 + depth * 0.44;
-  // Ocean shoreline: undertow body + cresting surf that blooms on each wave
+  // Ocean shoreline: a wide decorrelated undertow body + cresting surf that
+  // blooms on each wave and pans across the image, so waves roll left↔right
+  // instead of pulsing dead-centre.
   const base = brownNoise();
   lp1(base, baseLp); lp1(base, baseLp * 0.75);
+  const bed = decorrelateMono(base, 16);
 
   const surf = pinkNoise();
   hp1(surf, 220);
   lp1(surf, surfLp);
 
   // Waves are fitted to the loop: pick whole periods, then scale them so the
-  // final wave completes exactly at the buffer edge. The old version truncated
-  // the last wave mid-crest, which made the loop seam lurch (sharp stop/start)
-  // before settling back into the rhythm.
+  // final wave completes exactly at the buffer edge (no mid-crest seam lurch).
+  // Each wave also gets a pan; the envelope dips to ~0 between waves, so the
+  // pan change is masked at the boundary.
   const periods: number[] = [];
   let totalLen = 0;
   while (totalLen < N) {
@@ -310,10 +313,12 @@ function genOcean(params?: Record<string, number>): string {
   }
   const fit = N / totalLen;
   const waveEnvBuf = new Float32Array(N);
+  const panBuf = new Float32Array(N);
   let wPos = 0;
   for (const raw of periods) {
     const period = Math.max(1, Math.round(raw * fit));
-    const wAmp   = rand(0.45, 1.0);
+    const wAmp = rand(0.45, 1.0);
+    const pan = rand(-0.5, 0.5);
     for (let i = 0; i < period && wPos + i < N; i++) {
       const p = i / period;
       let env: number;
@@ -321,18 +326,24 @@ function genOcean(params?: Record<string, number>): string {
       else if (p < 0.52) env = wAmp;
       else env = Math.pow((1 - p) / 0.48, 0.75) * wAmp;
       waveEnvBuf[wPos + i] += env;
+      panBuf[wPos + i] = pan;
     }
     wPos += period;
   }
 
-  const mix = new Float32Array(N);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const wEnv  = Math.min(1, waveEnvBuf[i]);
-    const wBase = 0.24 + 0.76 * wEnv;
-    const wSurf = 0.08 + 0.92 * Math.pow(wEnv, 1.8);
-    mix[i] = base[i] * wBase * baseMix + surf[i] * wSurf * surfMix;
+    const wEnv = Math.min(1, waveEnvBuf[i]);
+    const wBase = (0.24 + 0.76 * wEnv) * baseMix;
+    const surfS = surf[i] * (0.08 + 0.92 * Math.pow(wEnv, 1.8)) * surfMix;
+    const pan = panBuf[i];
+    const pl = Math.cos((pan + 1) * Math.PI / 4);
+    const pr = Math.sin((pan + 1) * Math.PI / 4);
+    left[i] = bed.left[i] * wBase + surfS * pl;
+    right[i] = bed.right[i] * wBase + surfS * pr;
   }
-  return gen(mix, 0.72);
+  return genStereo(left, right, 0.72);
 }
 
 function genWind(params?: Record<string, number>): string {

@@ -146,7 +146,7 @@ export default function SoundEditor({
           onClick={() => setExpanded((e) => !e)}
         >
           <span>fine-tune</span>
-          <span className="material-symbols-rounded" aria-hidden="true">expand_more</span>
+          <span className="material-symbols-rounded" aria-hidden="true">keyboard_arrow_down</span>
         </button>
       )}
 

@@ -111,6 +111,19 @@ npm run preview
 
 ## Changelog
 
+### 4.0.0
+- **Stereo audio overhaul — sprint 1: foundation.** First step of moving the
+  procedural sounds from a flat mono wash to a wide, moving stereo image. Added
+  stereo rendering to `dsp.ts` (a 2-channel WAV writer, `genStereo`, equal-power
+  `panMonoInto`, and `decorrelateMono` for widening beds), and converted **Ocean**
+  to it: a decorrelated undertow bed with surf that crests and pans across the
+  image instead of pulsing dead-centre. Hardened `CrossfadeAudio.destroy()` to
+  revoke blob URLs (no leaks over long retuning sessions). New tests cover stereo
+  seam continuity and L/R decorrelation.
+- **Fixed** the rain editor's "fine-tune" control showing literal "expand_more"
+  text — that glyph isn't in the subsetted icon font; switched to the bundled
+  `keyboard_arrow_down`.
+
 ### 3.9.0
 - **Sound "variants" + progressive disclosure.** Opening a sound now leads with a
   row of named character presets (chips) instead of a wall of sliders — e.g. rain

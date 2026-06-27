@@ -41,6 +41,35 @@ function checksum(url: string): number {
   return acc;
 }
 
+/** Decode a WAV blob into separate channels (mono → both channels equal). */
+function decodeStereo(url: string): { left: Float32Array; right: Float32Array } {
+  const bytes = store.get(url)!;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const channels = view.getUint16(22, true);
+  const frames = Math.floor((bytes.byteLength - 44) / 2 / channels);
+  const left = new Float32Array(frames);
+  const right = new Float32Array(frames);
+  for (let i = 0; i < frames; i++) {
+    left[i] = view.getInt16(44 + i * channels * 2, true) / 32768;
+    right[i] = channels > 1 ? view.getInt16(44 + (i * channels + 1) * 2, true) / 32768 : left[i];
+  }
+  return { left, right };
+}
+
+/** Mean absolute discontinuity between the loop's first and last samples. */
+function seamJump(s: Float32Array, n = 512): number {
+  let acc = 0;
+  for (let i = 0; i < n; i++) acc += Math.abs(s[i] - s[s.length - n + i]);
+  return acc / n;
+}
+
+/** Normalised cross-correlation of two channels (1 = identical/mono). */
+function corr(a: Float32Array, b: Float32Array): number {
+  let num = 0, aa = 0, bb = 0;
+  for (let i = 0; i < a.length; i++) { num += a[i] * b[i]; aa += a[i] * a[i]; bb += b[i] * b[i]; }
+  return aa && bb ? num / Math.sqrt(aa * bb) : 1;
+}
+
 // Every library sound has a procedural WAV generator (the worklet sounds use
 // theirs as the fallback loop), so all of them render through regenerateSound.
 const wavSounds = SOUND_LIBRARY.filter((s) => regenerateSound(s.id, {}) !== null);
@@ -83,4 +112,18 @@ describe('WAV generators', () => {
       expect(rms, 'has real energy').toBeGreaterThan(0.01);
     });
   }
+});
+
+describe('stereo rendering', () => {
+  it('ocean renders a stereo loop with smooth seams on both channels', () => {
+    const { left, right } = decodeStereo(regenerateSound('ocean', {})!);
+    expect(left.length, 'frames').toBeGreaterThan(1000);
+    expect(seamJump(left), 'ocean L seam').toBeLessThan(0.06);
+    expect(seamJump(right), 'ocean R seam').toBeLessThan(0.06);
+  });
+
+  it('ocean is not effectively mono (decorrelated bed + panned waves)', () => {
+    const { left, right } = decodeStereo(regenerateSound('ocean', {})!);
+    expect(Math.abs(corr(left, right)), 'L/R correlation').toBeLessThan(0.985);
+  });
 });

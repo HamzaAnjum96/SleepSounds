@@ -287,13 +287,19 @@ class CrossfadeAudio implements MixerSource {
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
-    if (!this._els) return;
-    this._els[0].removeEventListener('timeupdate', this._timeupdateA);
-    this._els[1].removeEventListener('timeupdate', this._timeupdateB);
-    this._els.forEach((el) => {
-      el.pause();
-      (el as HTMLAudioElement & { src: string }).src = '';
-    });
+    if (this._els) {
+      this._els[0].removeEventListener('timeupdate', this._timeupdateA);
+      this._els[1].removeEventListener('timeupdate', this._timeupdateB);
+      this._els.forEach((el) => {
+        el.pause();
+        (el as HTMLAudioElement & { src: string }).src = '';
+      });
+      this._els = null;
+    }
+    // Revoke any live blob URLs so long retuning sessions don't leak. (An
+    // unplayed-but-tuned source holds only _urlOverride; cover both.)
+    if (this._url) { URL.revokeObjectURL(this._url); this._url = null; }
+    if (this._urlOverride) { URL.revokeObjectURL(this._urlOverride); this._urlOverride = null; }
   }
 }
 
