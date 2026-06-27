@@ -111,6 +111,13 @@ npm run preview
 
 ## Changelog
 
+### 5.5.0
+- **UX redesign — sprint 6: review, refactor, docs.** Closes the 5.x UI/UX pass.
+  Verified the whole flow across mobile and desktop, documented the new layout
+  and components in `DESIGN.md`, and locked behaviour with e2e coverage for the
+  desktop side panel, stop/undo, save-from-player, and delete/undo. No new
+  surface; consolidation of sprints 1–5.
+
 ### 5.4.0
 - **UX redesign — sprint 5: accessibility + contrast.** All three text tiers now
   clear WCAG AA for normal text: `--text-dim` was at 3.4:1 (below the 4.5:1 floor

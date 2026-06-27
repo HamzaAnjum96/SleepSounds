@@ -122,6 +122,22 @@ test('a custom mix saves and survives a reload', async ({ page }) => {
   await expect(page.locator('.mix-card', { hasText: 'e2e mix' })).toBeVisible();
 });
 
+test('deleting a saved mix can be undone', async ({ page }) => {
+  await page.locator('.sound-card[data-cat="Water"]').first().locator('.sound-card-toggle').click();
+  await page.locator('.mp-save').click();
+  await page.locator('.preset-input').fill('undo me');
+  await page.locator('.preset-save-btn').click();
+  // Close the sheet so it no longer overlays the saved-mix card.
+  await page.locator('.sheet-close').click();
+  await expect(page.locator('.sheet')).toBeHidden();
+  const card = page.locator('.mix-card', { hasText: 'undo me' });
+  await expect(card).toBeVisible();
+  await card.locator('.mix-del').click();
+  await expect(card).toHaveCount(0);
+  await page.locator('.toast-action', { hasText: 'undo' }).click();
+  await expect(page.locator('.mix-card', { hasText: 'undo me' })).toBeVisible();
+});
+
 test('the privacy page is reachable', async ({ page }) => {
   const link = page.locator('.footer-privacy');
   await expect(link).toHaveAttribute('href', /privacy\.html$/);

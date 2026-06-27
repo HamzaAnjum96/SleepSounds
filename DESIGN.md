@@ -207,6 +207,15 @@ Shared interactive vocabulary:
   wide enough. Groups divide with hairlines, never nested boxes.
 - **Play control** — 48px circular accent button; pulses while playing. When a
   sleep timer is set, a warm 1.5px progress ring around it empties clockwise.
+- **Mix controls** — the shared control body (`MixControls.tsx`): active layers
+  with per-sound sliders, master volume, the sleep timer (presets, +30m/+1h,
+  fade note), and the drift / save actions. Rendered inside the mobile
+  now-playing **sheet** and the desktop **side panel**, so the two never drift
+  apart. The mini player carries a bookmark **save** entry that opens straight
+  into the name field, so saving isn't buried.
+- **Toast** — a single calm snackbar above the player (`Toast.tsx`, `--z-toast`):
+  a quiet line plus an optional action. Used for forgiveness on destructive
+  acts — stopping a mix or deleting a saved one leaves a five-second **undo**.
 - **Drift mode** — the fullscreen night surface (`DriftMode.tsx`): app chrome
   fades (`.app-quiet`), leaving the sky, a large Cormorant clock, mix names,
   countdown, and a centered control trio: an 84px breathing play orb flanked
