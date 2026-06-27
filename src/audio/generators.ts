@@ -368,8 +368,11 @@ function genWind(params?: Record<string, number>): string {
     const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
     buf[i] *= g1 * g2 * g3 * drift[i];
   }
-  // Gust bed: wide and decorrelated so the wind fills the image.
-  const bed = decorrelateMono(buf, 13);
+  // Gust bed: wind's whoosh is low/mid-band (rolled off ~1–1.4 kHz), so the
+  // default 800 Hz crossover would spread the body itself and the gust reads as
+  // two separate fans left/right. Keep the whole whoosh shared (centred) with a
+  // crossover above its content; width comes from the panned edge tones below.
+  const bed = decorrelateMono(buf, 13, 1600);
   // Edge tones each sit at their own place across the stereo field, so the
   // whistles read as located resonances rather than a centred chorus.
   const whistleStrips = [

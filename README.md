@@ -111,6 +111,13 @@ npm run preview
 
 ## Changelog
 
+### 4.5.2
+- **Fix: wind sounded like two large fans.** Wind's whoosh is a low/mid-band
+  source (rolled off ~1–1.4 kHz), so the default 800 Hz decorrelation crossover
+  was spreading the body itself — the gust split into two sources left and right.
+  Wind now uses a higher crossover (1.6 kHz) so the whole whoosh stays centred;
+  its width comes from the panned edge-tone whistles instead.
+
 ### 4.5.1
 - **Fix: decorrelated beds sounded like two separate sources.** Pink/white noise
   and the other broadband beds were widened by shifting the *whole* band in
