@@ -251,6 +251,27 @@ leaf bursts), which is what makes environmental sound read as real rather than
 as stationary noise. Each worklet source carries the old WAV as an automatic
 fallback, and its editor sliders drive k-rate worklet params live.
 
+### Stereo & masking (v4)
+
+WAV loops render in **two channels**. Width is baked in at generation, not added
+by a panner: broad beds (ocean, stream, wind, shower, the noise colours, train,
+airplane, night) are **decorrelated** by pure opposite time-shifts per channel —
+left reads slightly behind, right slightly ahead — so each channel keeps a flat
+spectrum and there's no within-channel comb filtering (the "jet engine" flange
+that a dry+delayed blend would create). Discrete events (surf, wind whistles,
+bubbles, insect bands) are placed with **equal-power panning**
+(`L=cos((p+1)·π/4)`, `R=sin((p+1)·π/4)`). Compact or non-directional sources —
+brown noise, fan, the underwater body, heartbeat — stay deliberately centred,
+since widening tonal/bass material combs or smears the image. The worklets pan a
+**held position that drifts** between events rather than jittering per sample, so
+a fire or bird reads as a located source that sways, not as fizz.
+
+Layering is **masking-aware**: `layerMeta.ts` tags every sound with a role
+(bed/motion/accent) and a mask group (broad/water/low/detail). When same-group
+layers stack, `layeringTrim` applies small automatic dB cuts so a second bed in
+the same band doesn't double up and muddy the mix; `useAudioMixer` folds the
+trim into each source's gain from the live active set.
+
 ## Atmosphere
 
 Three fixed layers behind the shell: the `bg-layer` gradients, the **aurora**

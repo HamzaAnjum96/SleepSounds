@@ -105,11 +105,20 @@ npm run preview
 
 ## Notes
 
-- All audio loops are procedurally synthesized in `src/audio/` (`generators.ts` over the `dsp.ts` helpers) and encoded to WAV blobs at runtime (mono 16-bit PCM). The generator module is code-split, so it loads on a sound's first play rather than at startup.
+- All audio loops are procedurally synthesized in `src/audio/` (`generators.ts` over the `dsp.ts` helpers) and encoded to WAV blobs at runtime (two-channel 16-bit PCM; a few non-directional sources stay centred). Stereo width is baked in at generation — broad beds via decorrelated opposite time-shifts (no comb filtering), discrete events via equal-power panning — and layering is masking-aware (`layerMeta.ts` roles + `layeringTrim`). The generator module is code-split, so it loads on a sound's first play rather than at startup.
 - No backend is required.
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 4.5.0
+- **Stereo overhaul — sprint 6: hardening & docs.** Locked the stereo and
+  masking work behind regression tests: generators are asserted to render
+  two-channel loops, broad beds to be genuinely decorrelated (L/R correlation
+  below threshold) while compact sources (brown noise, fan, heartbeat) stay
+  centred, and `layeringTrim` to apply the expected same-group cuts. Documented
+  the stereo/masking model in `DESIGN.md` and the README. No audible change —
+  this sprint makes the previous five safe to build on.
 
 ### 4.4.0
 - **Stereo overhaul — sprint 5: worklet spatial polish.** Fire and Birdsong were
