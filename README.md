@@ -111,6 +111,17 @@ npm run preview
 
 ## Changelog
 
+### 4.3.0
+- **Stereo overhaul — sprint 4: masking-aware layering.** Added layer roles
+  (`src/audio/layerMeta.ts`): every sound is a **bed**, **motion**, or **accent**
+  in a spectral mask group (broad / water / low / detail). When layers in the
+  same group stack, the mixer now applies a gentle automatic level trim — beds
+  duck a little for each broadband neighbour, a crowd of same-group motion layers
+  ducks the extras, accents are left alone — so stacking (Fan + White Noise +
+  Rain, say) stays clear instead of fogging into one lump, without hand-tuning
+  every preset. (Graph-backed WAV playback for per-layer panning is deferred to a
+  session where the audio can be checked by ear.)
+
 ### 4.2.0
 - **Fixed the "jet engine" comb artefact** in the stereo beds (4.0–4.1). The
   widener was blending each channel with a short delayed copy of itself, which

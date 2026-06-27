@@ -4,6 +4,7 @@ import { SCENES, presetSoundIds } from '../src/lib/scenes';
 import { SOUND_EDITOR_MODELS, EDITABLE_SOUND_IDS } from '../src/components/soundEditorDefs';
 import { CATEGORY_ICONS, CATEGORY_COLORS } from '../src/lib/categoryIcons';
 import { SOUND_ICONS } from '../src/lib/soundIcons';
+import { LAYER_META, layeringTrim } from '../src/audio/layerMeta';
 
 const soundIds = new Set(SOUND_LIBRARY.map((s) => s.id));
 const validCategory = new Set(CATEGORIES.filter((c) => c !== 'All'));
@@ -166,5 +167,33 @@ describe('sound editor models', () => {
       const defaultsCount = model.variants!.filter((v) => Object.keys(v.values).length === 0).length;
       expect(defaultsCount, `${id} default-variant count`).toBe(1);
     }
+  });
+});
+
+describe('layer masking', () => {
+  it('every library sound has layer metadata', () => {
+    for (const s of SOUND_LIBRARY) {
+      expect(LAYER_META[s.id], `${s.id} layer meta`).toBeTruthy();
+    }
+  });
+
+  it('a lone layer is never trimmed', () => {
+    expect(layeringTrim(['fan'], 'fan')).toBe(1);
+    expect(layeringTrim(['rain'], 'rain')).toBe(1);
+  });
+
+  it('stacked broadband beds duck, but stay sensible', () => {
+    const t = layeringTrim(['fan', 'white-noise', 'pink-noise'], 'fan');
+    expect(t, 'fan trimmed').toBeLessThan(1);
+    expect(t, 'not silenced').toBeGreaterThan(0.4);
+  });
+
+  it('accents are never trimmed', () => {
+    expect(layeringTrim(['fire', 'birdsong', 'night', 'thunder'], 'fire')).toBe(1);
+  });
+
+  it('two same-group motion layers are kept; three duck the extras', () => {
+    expect(layeringTrim(['rain', 'ocean'], 'rain')).toBe(1);
+    expect(layeringTrim(['rain', 'ocean', 'stream'], 'rain')).toBeLessThan(1);
   });
 });

@@ -3,6 +3,7 @@ import type { Sound, SoundState } from '../types';
 import { generateSoundWav, defaultVolumeFor } from '../data';
 import { logger } from '../utils/logger';
 import { makeSource, type MixerSource } from '../audio/sources';
+import { layeringTrim } from '../audio/layerMeta';
 
 const createInitialState = (sounds: Sound[]) =>
   sounds.reduce<Record<string, SoundState>>((acc, sound) => {
@@ -53,9 +54,15 @@ export const useAudioMixer = (sounds: Sound[]) => {
     (soundId: string, volume: number) => {
       const source = audioMapRef.current[soundId];
       if (!source) return;
-      source.volume = Math.min(1, Math.max(0, volume * masterVolume * masterFade));
+      // Masking trim: duck stacked beds / piled-up motion layers so several
+      // broadband sounds at once stay clear instead of fogging together.
+      const activeIds = Object.entries(soundState)
+        .filter(([, s]) => s.enabled)
+        .map(([id]) => id);
+      const trim = layeringTrim(activeIds, soundId);
+      source.volume = Math.min(1, Math.max(0, volume * trim * masterVolume * masterFade));
     },
-    [masterVolume, masterFade],
+    [masterVolume, masterFade, soundState],
   );
 
   useEffect(() => {
