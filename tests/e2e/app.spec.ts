@@ -12,9 +12,29 @@ async function dismissNotice(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // The storage notice now waits for the first playback, then can overlay the
+  // player. Pre-acknowledge it so it never intercepts taps in the functional
+  // smoke tests; its timing has its own dedicated test below.
+  await page.addInitScript(() => localStorage.setItem('drift-cookie-ack', '1'));
   await page.goto('./');
   await dismissNotice(page);
   await expect(page.locator('.sounds-grid .sound-card').first()).toBeVisible();
+});
+
+test('the storage notice waits for the first sound, then shows once', async ({ page }) => {
+  // A fresh visit with no prior acknowledgement: nothing on first load.
+  await page.addInitScript(() => localStorage.removeItem('drift-cookie-ack'));
+  await page.goto('./');
+  await expect(page.locator('.sounds-grid .sound-card').first()).toBeVisible();
+  await expect(page.locator('.cookie-notice')).toBeHidden();
+  // It appears only after the first sound plays.
+  await page.locator('.scene-card').first().click();
+  await expect(page.locator('.cookie-notice')).toBeVisible();
+  // Acknowledged once, it stays gone across reloads.
+  await page.getByRole('button', { name: 'Got it' }).click();
+  await expect(page.locator('.cookie-notice')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('.cookie-notice')).toBeHidden();
 });
 
 test('the library renders its sounds', async ({ page }) => {

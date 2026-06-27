@@ -50,7 +50,13 @@ function isIosSafari() {
   return iOS && webkit;
 }
 
-export default function InstallPrompt() {
+interface InstallPromptProps {
+  /** App holds the row back until after first playback and after the storage
+   *  notice is acknowledged, so prompts never stack and first load stays clear. */
+  ready: boolean;
+}
+
+export default function InstallPrompt({ ready }: InstallPromptProps) {
   const [dismissed, setDismissed] = useState(dismissedRecently);
   const [installable, setInstallable] = useState(() => Boolean((window as Win).__driftInstall));
   const [ios, setIos] = useState(false);
@@ -99,7 +105,7 @@ export default function InstallPrompt() {
   // Hide while recently dismissed, or when there's nothing to offer. A stale
   // legacy flag never suppresses: dismissedRecently() treats it as expired,
   // so the row returns after an uninstall once Chrome fires the event again.
-  if (dismissed || (!installable && !ios)) return null;
+  if (!ready || dismissed || (!installable && !ios)) return null;
 
   return (
     <div className="install-row" role="region" aria-label="Install drift">

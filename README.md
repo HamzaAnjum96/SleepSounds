@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 5.0.0
+- **UX redesign — sprint 1: prompt timing.** First load now stays clear: the
+  storage notice and the install row are held back until the first sound has
+  actually played, and they never appear together. The storage notice shows
+  first (once, then remembered); the install row only surfaces once that's
+  acknowledged or was on a prior visit. Nothing competes with the path to sound.
+  (Start of a UI/UX pass; major bump to open the 5.x line.)
+
 ### 4.5.2
 - **Fix: wind sounded like two large fans.** Wind's whoosh is a low/mid-band
   source (rolled off ~1–1.4 kHz), so the default 800 Hz decorrelation crossover

@@ -1,27 +1,20 @@
-import { useState } from 'react';
-
 /**
  * One-time storage notice. drift away sets no tracking or advertising cookies;
  * it only keeps your mixes and settings in localStorage, and serves everything
  * (fonts and icons included) from its own files. This is an honest transparency
  * note (not a consent gate, since there is nothing non-essential to opt out
- * of), shown once and remembered.
+ * of). It is held back until after the first sound plays — first load stays
+ * clear so the path to sound is uninterrupted — then shown once and remembered.
+ * App owns the show/ack timing so it never stacks with the install prompt.
  */
 
-const KEY = 'drift-cookie-ack';
+interface CookieNoticeProps {
+  show: boolean;
+  onDismiss: () => void;
+}
 
-export default function CookieNotice() {
-  const [ack, setAck] = useState(() => {
-    try { return localStorage.getItem(KEY) !== null; }
-    catch { return true; } // storage unavailable: don't nag
-  });
-
-  if (ack) return null;
-
-  const dismiss = () => {
-    setAck(true);
-    try { localStorage.setItem(KEY, '1'); } catch { /* private mode */ }
-  };
+export default function CookieNotice({ show, onDismiss }: CookieNoticeProps) {
+  if (!show) return null;
 
   return (
     <div className="cookie-notice" role="region" aria-label="Storage notice">
@@ -36,7 +29,7 @@ export default function CookieNotice() {
           target="_blank"
           rel="noopener noreferrer"
         >privacy</a>
-        <button type="button" className="cookie-ok" onClick={dismiss}>Got it</button>
+        <button type="button" className="cookie-ok" onClick={onDismiss}>Got it</button>
       </div>
     </div>
   );

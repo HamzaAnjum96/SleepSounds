@@ -160,6 +160,20 @@ export default function App() {
     try { return localStorage.getItem('drift-onboarded') === null; }
     catch { return false; }
   });
+  // Prompt discipline: the storage notice and the install row are held back
+  // until the first sound has actually played, and never appear together — the
+  // path to sound stays clear on first load. `hasPlayed` latches on the first
+  // playback; the storage notice shows first, the install row only once it's
+  // acknowledged (or was on a prior visit).
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const [storageAck, setStorageAck] = useState(() => {
+    try { return localStorage.getItem('drift-cookie-ack') !== null; }
+    catch { return true; } // storage unavailable: don't nag
+  });
+  const ackStorage = useCallback(() => {
+    setStorageAck(true);
+    try { localStorage.setItem('drift-cookie-ack', '1'); } catch { /* private mode */ }
+  }, []);
   const soundsGridRef = useRef<HTMLDivElement | null>(null);
   const sceneRowRef = useRef<HTMLDivElement | null>(null);
   const miniPlayerRef = useRef<HTMLDivElement | null>(null);
@@ -286,6 +300,11 @@ export default function App() {
   // keeps the session alive and the lock-screen player reflects true state.
   useEffect(() => {
     setKeepAlive(isPlaying);
+  }, [isPlaying]);
+
+  // Latch the first real playback — it releases the held-back prompts.
+  useEffect(() => {
+    if (isPlaying) setHasPlayed(true);
   }, [isPlaying]);
 
   // Scene deep links (?scene=builtin-rainfall) power the app-icon shortcuts.
@@ -668,7 +687,7 @@ export default function App() {
           <div className="greeting">{greeting()}</div>
         </header>
 
-        <InstallPrompt />
+        <InstallPrompt ready={hasPlayed && storageAck} />
 
         {showHint && (
           <p className="first-hint">begin with a scene, or layer your own mix below</p>
@@ -916,7 +935,7 @@ export default function App() {
         </Suspense>
       )}
 
-      <CookieNotice />
+      <CookieNotice show={hasPlayed && !storageAck} onDismiss={ackStorage} />
 
       <div className="sr-only" role="status" aria-live="polite">{status}</div>
     </>
