@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { SOUND_EDITOR_MODELS } from './soundEditorDefs';
+import { SOUND_EDITOR_MODELS, type SoundVariant } from './soundEditorDefs';
 import { SOUND_ICONS } from '../lib/soundIcons';
 import { sliderFill } from '../lib/sliderFill';
 
@@ -41,6 +41,10 @@ export default function SoundEditor({
   const [values, setValues] = useState<Record<string, number>>(initialValues ?? defaults);
   useEffect(() => { setValues(initialValues ?? defaults); }, [defaults, initialValues, soundId]);
 
+  // Sliders (level 3) start hidden; most users stay on the variant chips.
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => { setExpanded(false); }, [soundId]);
+
   const handleChange = useCallback((key: string, value: number) => {
     setValues((prev) => {
       const next = { ...prev, [key]: value };
@@ -49,15 +53,32 @@ export default function SoundEditor({
     });
   }, [onValuesChange]);
 
-  const handleReset = useCallback(() => {
-    setValues(defaults);
-    onValuesChange?.(defaults);
-  }, [defaults, onValuesChange]);
+  const applyValues = useCallback((next: Record<string, number>) => {
+    setValues(next);
+    onValuesChange?.(next);
+  }, [onValuesChange]);
+
+  const variants = soundType?.variants;
+  /** Full slider values for a variant: its overrides on top of the defaults. */
+  const resolve = useCallback(
+    (v: SoundVariant) => ({ ...defaults, ...v.values }),
+    [defaults],
+  );
+  // Which variant the current values match (a pure read; editing a slider
+  // simply stops matching and the selection reads as "custom").
+  const selected = useMemo(() => {
+    if (!variants) return null;
+    return variants.find((v) => {
+      const r = resolve(v);
+      return Object.keys(r).every((k) => Math.abs((values[k] ?? r[k]) - r[k]) < 1e-4);
+    }) ?? null;
+  }, [variants, values, resolve]);
 
   if (!soundType) return null;
   const title = soundType.label.toLowerCase();
   // A lone group label would only repeat the panel's own eyebrow.
   const showGroupLabels = soundType.groups.length > 1;
+  const showSliders = !variants || expanded;
 
   return (
     <div className="sb-panel">
@@ -83,7 +104,7 @@ export default function SoundEditor({
         <button
           type="button"
           className="sb-icon-btn"
-          onClick={handleReset}
+          onClick={() => applyValues(defaults)}
           aria-label={`Reset ${title} to its defaults`}
         >
           <span className="material-symbols-rounded">restart_alt</span>
@@ -100,7 +121,36 @@ export default function SoundEditor({
         )}
       </div>
 
-      {soundType.groups.map(group => (
+      {variants && (
+        <div className="sb-variants" role="group" aria-label={`${title} presets`}>
+          {variants.map((v) => (
+            <button
+              key={v.name}
+              type="button"
+              className={`sb-variant${selected?.name === v.name ? ' active' : ''}`}
+              aria-pressed={selected?.name === v.name}
+              onClick={() => applyValues(resolve(v))}
+            >
+              {v.name}
+            </button>
+          ))}
+          {!selected && <span className="sb-variant custom" aria-hidden="true">custom</span>}
+        </div>
+      )}
+
+      {variants && (
+        <button
+          type="button"
+          className={`sb-finetune${expanded ? ' open' : ''}`}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+        >
+          <span>fine-tune</span>
+          <span className="material-symbols-rounded" aria-hidden="true">expand_more</span>
+        </button>
+      )}
+
+      {showSliders && soundType.groups.map(group => (
         <div key={group.label} className="sb-group">
           {showGroupLabels && <div className="sb-group-label">{group.label}</div>}
           <div className="sb-rows">

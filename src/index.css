@@ -1278,6 +1278,84 @@ header::after {
   font-variant-numeric: tabular-nums;
 }
 
+/* Variant chips — the editor leads with these named presets (level 2); the
+   sliders sit behind "fine-tune" (level 3). The active chip wears the card hue. */
+.sb-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.sb-variant {
+  padding: var(--sp-6) var(--sp-12);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-control);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
+  outline: none;
+}
+@media (hover: hover) {
+  .sb-variant:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+}
+.sb-variant.active {
+  border-color: var(--card-accent, var(--accent));
+  color: var(--card-accent, var(--accent));
+  background: var(--surface-hover);
+}
+/* Non-interactive marker shown once the sliders are nudged off any preset. */
+.sb-variant.custom {
+  cursor: default;
+  border-style: dashed;
+  color: var(--text-dim);
+  font-style: italic;
+  align-self: center;
+}
+.sb-variant:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* "Fine-tune" disclosure → reveals the sliders. */
+.sb-finetune {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-control);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color var(--dur-1);
+  outline: none;
+}
+@media (hover: hover) {
+  .sb-finetune:hover { color: var(--text-primary); }
+}
+.sb-finetune .material-symbols-rounded {
+  font-size: 18px;
+  transition: transform var(--dur-2) var(--ease);
+}
+.sb-finetune.open .material-symbols-rounded { transform: rotate(180deg); }
+.sb-finetune:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--r-xs);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-finetune .material-symbols-rounded { transition: none; }
+}
+
 /* ── Drift Mode ──────────────────────────────────────────────────── */
 /* Fullscreen night surface: app chrome fades out (.app-quiet), the living
    sky shows through, and only a clock, the mix, and a breathing play

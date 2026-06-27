@@ -111,6 +111,16 @@ npm run preview
 
 ## Changelog
 
+### 3.9.0
+- **Sound "variants" + progressive disclosure.** Opening a sound now leads with a
+  row of named character presets (chips) instead of a wall of sliders — e.g. rain
+  → *Drizzle · Steady · Downpour · On a Roof · At a Window*, fire → *Campfire ·
+  Embers · Hearth · Bonfire · Crackling*. Every editable sound gets 3–5 evocative
+  variants. The full sliders moved behind a **"fine-tune"** disclosure, collapsed
+  by default, so the three depths are: card (toggle + volume) → variant chips →
+  sliders. The default character is unchanged for every sound. Picking a chip
+  applies its values live; nudging a slider shows a quiet "custom" marker.
+
 ### 3.8.2
 - **Decluttered the rain editor** (10 sliders → 7). Folded overlapping controls
   that shape one thing into single macro sliders: the bed's tone now follows

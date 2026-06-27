@@ -138,4 +138,33 @@ describe('sound editor models', () => {
       }
     }
   });
+
+  it('every sound has variants, each named, with keys/values valid for that sound', () => {
+    for (const [id, model] of Object.entries(SOUND_EDITOR_MODELS)) {
+      const params = new Map(model.groups.flatMap((g) => g.params).map((p) => [p.key, p] as const));
+      expect(model.variants, `${id} has variants`).toBeTruthy();
+      const variants = model.variants!;
+      expect(variants.length, `${id} variant count`).toBeGreaterThanOrEqual(3);
+
+      const names = variants.map((v) => v.name);
+      expect(new Set(names).size, `${id} unique variant names`).toBe(names.length);
+
+      for (const v of variants) {
+        expect(v.name.trim().length, `${id}/"${v.name}" name`).toBeGreaterThan(0);
+        for (const [k, val] of Object.entries(v.values)) {
+          const p = params.get(k);
+          expect(p, `${id}/"${v.name}" key "${k}" is a real param`).toBeTruthy();
+          expect(val, `${id}/"${v.name}".${k} >= min`).toBeGreaterThanOrEqual(p!.min);
+          expect(val, `${id}/"${v.name}".${k} <= max`).toBeLessThanOrEqual(p!.max);
+        }
+      }
+    }
+  });
+
+  it('exactly one variant per sound is the default (empty overrides)', () => {
+    for (const [id, model] of Object.entries(SOUND_EDITOR_MODELS)) {
+      const defaultsCount = model.variants!.filter((v) => Object.keys(v.values).length === 0).length;
+      expect(defaultsCount, `${id} default-variant count`).toBe(1);
+    }
+  });
 });
