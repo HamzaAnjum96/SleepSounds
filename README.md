@@ -111,6 +111,16 @@ npm run preview
 
 ## Changelog
 
+### 5.5.1
+- **Fix: save name field too small on phone.** The save row now takes its own
+  full-width line below the actions, with the name field on its own line above a
+  full-width save button, instead of a cramped inline field.
+- **Fix: fire crackle sounded bubbly again.** Stabilising the worklet pan (5.x
+  audio work) removed an old per-channel smoothing that had been masking the
+  crackle's resonant ring; on clean stereo those tonal pings read as water
+  bubbles. The crackle bandpass Q is dropped to a broad, dry band and blended
+  with a raw transient, so each crackle snaps rather than plinks.
+
 ### 5.5.0
 - **UX redesign — sprint 6: review, refactor, docs.** Closes the 5.x UI/UX pass.
   Verified the whole flow across mobile and desktop, documented the new layout

@@ -1071,20 +1071,24 @@ header::after {
 
 /* The naming row takes the save-mix button's own slot (right half of the
    actions row), so it never sprawls a full-width line of its own. */
+/* Saving takes its own full-width line below the actions (it wraps there via
+   .sheet-actions flex-wrap), and the name field gets its own line above the
+   save button — a cramped inline field was too small to read on a phone. */
 .preset-save-row {
-  flex: 1;
+  flex-basis: 100%;
   min-width: 0;
   display: flex;
-  gap: var(--sp-6);
+  flex-direction: column;
+  gap: var(--sp-8);
   animation: fadeSlideUp var(--dur-3) var(--ease) backwards;
 }
 
 .preset-input {
-  flex: 1;
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--warm-line);
   border-radius: var(--r-md);
-  padding: var(--sp-8) var(--sp-10);
+  padding: var(--sp-10) var(--sp-12);
   font-family: var(--font-body);
   font-size: var(--fs-body);
   font-weight: 300;
@@ -1102,7 +1106,8 @@ header::after {
 }
 
 .preset-save-btn {
-  padding: var(--sp-8) var(--sp-14);
+  width: 100%;
+  padding: var(--sp-10) var(--sp-14);
   border-radius: var(--r-md);
   border: 1px solid var(--warm-line);
   background: var(--warm-glow);
@@ -1114,7 +1119,6 @@ header::after {
   cursor: pointer;
   transition: border-color var(--dur-1), background var(--dur-1);
   outline: none;
-  flex-shrink: 0;
 }
 @media (hover: hover) {
   .preset-save-btn:hover:not(:disabled) {
@@ -2553,6 +2557,7 @@ body:has(.mini-player) .toast {
 
 .sheet-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-8);
 }
 .sheet-action {

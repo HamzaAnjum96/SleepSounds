@@ -77,7 +77,11 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const life = Math.floor(sampleRate * (0.004 + this.rnd() * 0.015));
     const amp = (0.02 + 0.08 * this.rnd() * this.rnd()) * (0.55 + 0.45 * intensity) * (0.5 + 0.8 * crackleBias);
     const tone = 1200 + this.rnd() * 4200;
-    const q = 1.2 + this.rnd() * 4.0;
+    // Low Q: a broad, dry colored-noise snap, not a high-Q resonant ring. A
+    // resonant bandpass on a short burst is a pitched "pluck" that reads as a
+    // water bubble — fine when the old per-channel smoothing masked it, wrong
+    // now that both channels carry the crackle cleanly. Keep it broadband.
+    const q = 0.5 + this.rnd() * 1.2;
     this.crackleEvents.push({ age: 0, life, amp, tone, q, z1: 0, z2: 0 });
     this.stress = Math.max(0, this.stress - (0.08 + 0.12 * this.rnd()));
     this.embers = Math.min(1.2, this.embers + 0.08 + 0.12 * this.rnd());
@@ -113,7 +117,9 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       const y = (b0 / a0) * n + ev.z1;
       ev.z1 = (b1 / a0) * n - (a1 / a0) * y + ev.z2;
       ev.z2 = (b2 / a0) * n - (a2 / a0) * y;
-      out += y;
+      // Blend a dry broadband transient with the colored ring so each crackle
+      // snaps rather than plinks.
+      out += y + n * 0.4;
       ev.age++;
     }
     return out;
