@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.3.1
+### 7.4.0
 - **Rain — Tin Roof no longer rings like wind chimes.** At high *metallic* the
   solid drops each fired a ~90 ms pure sine at a random 2.4–5 kHz pitch, so a tin
   roof played a chord of different notes. Real heavy rain on tin is bright
