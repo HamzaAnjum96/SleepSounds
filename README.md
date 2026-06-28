@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.11.1
+### 7.12.0
 - **Cleanup pass.** A comprehensive audit (worklet params, runtime console, dead
   exports, type escapes, both worklets' numerical safety) found the codebase
   healthy; fixed the genuine inconsistencies it surfaced:
