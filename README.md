@@ -111,6 +111,18 @@ npm run preview
 
 ## Changelog
 
+### 7.7.1
+- **Soft-square design system — phase 1: controls off the pill.** Per the
+  soft-square visual report, controls are now rounded *rectangles*, not capsules.
+  Replaced the `--r-pill` (20px) token with a proportional radius scale and
+  semantic aliases (`--radius-control-sm` 8, `--radius-control` 10,
+  `--radius-button` 12, `--radius-card` 14, `--radius-card-lg` 16,
+  `--radius-sheet` 20). Category filters, timer keys, variant chips, the
+  fine-tune toggle, install / cookie / toast / crash actions all move to 8–10px
+  soft squares; the short floating bars (mini-player, toast) drop from a 20px
+  pill to 16px. Circles stay only for genuinely circular objects (play orb,
+  dots, thumbs, slider track). Cards and the rename/focus pass follow in 7.8.x.
+
 ### 7.7.0
 - **Fine-tune control reads as a button.** The sound-editor disclosure that
   reveals the per-parameter sliders was bare muted text with a small chevron, so

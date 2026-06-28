@@ -63,14 +63,29 @@
   --tracking-eyebrow: 0.2em;
   --tracking-wordmark: 0.06em;
 
-  /* ── Radius ───────────────────────────────────────────────────── */
+  /* ── Radius ───────────────────────────────────────────────────────
+     Soft-square system: controls are rounded *rectangles*, not capsules.
+     A shape reads as a pill once its radius ≥ half its height, so controls
+     stay well under that (8–12px on 34–48px controls). Circles (--r-full)
+     are reserved for genuinely circular objects — orbs, dots, thumbs,
+     round icon buttons, slider tracks — never as a default button shape. */
   --r-xs:   6px;
   --r-sm:   8px;
   --r-md:   10px;
   --r-lg:   12px;
-  --r-xl:   14px;   /* cards, master bar */
-  --r-pill: 20px;
+  --r-xl:   14px;
+  --r-2xl:  16px;
   --r-full: 999px;
+
+  /* semantic radius roles — prefer these over raw numbers */
+  --radius-detail:     var(--r-xs);   /*  6 — tiny badges, insets        */
+  --radius-control-sm: var(--r-sm);   /*  8 — timer keys, small actions  */
+  --radius-control:    var(--r-md);   /* 10 — filters, chips, toggles    */
+  --radius-button:     var(--r-lg);   /* 12 — primary / secondary buttons*/
+  --radius-card:       var(--r-xl);   /* 14 — sound cards                */
+  --radius-card-lg:    var(--r-2xl);  /* 16 — scene/mix cards, float bars*/
+  --radius-sheet:      20px;          /* 20 — tall now-playing sheet     */
+  --radius-round:      var(--r-full); /* circles only                    */
 
   /* ── Spacing scale (px) ───────────────────────────────────────── */
   --sp-2:  2px;
@@ -149,7 +164,7 @@ button, input { touch-action: manipulation; }
 }
 .crash-btn {
   padding: var(--sp-10) var(--sp-24);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-button);
   border: 1px solid var(--accent-line);
   background: var(--accent-tint);
   color: var(--accent);
@@ -465,7 +480,7 @@ header::after {
 .install-action {
   flex-shrink: 0;
   padding: var(--sp-6) var(--sp-12);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control-sm);
   border: 1px solid var(--accent-line);
   background: var(--accent-tint-2);
   color: var(--accent);
@@ -517,7 +532,7 @@ header::after {
 }
 .timer-btn {
   padding: var(--sp-6) var(--sp-10);
-  border-radius: var(--r-xs);
+  border-radius: var(--radius-control-sm);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
@@ -683,7 +698,7 @@ header::after {
   align-items: center;
   gap: var(--sp-5);
   padding: var(--sp-6) var(--sp-12);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
@@ -1269,7 +1284,7 @@ header::after {
   align-items: center;
   gap: var(--sp-4);
   padding: var(--sp-6) var(--sp-12) var(--sp-6) var(--sp-8);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control);
   border: 1px solid rgba(var(--cat), 0.35);
   background: rgba(var(--cat), 0.1);
   color: var(--card-accent, var(--accent));
@@ -1394,7 +1409,7 @@ header::after {
   align-items: center;
   gap: var(--sp-6);
   padding: var(--sp-6) var(--sp-12) var(--sp-6) var(--sp-8);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
@@ -1449,7 +1464,7 @@ header::after {
   align-items: center;
   gap: var(--sp-6);
   padding: var(--sp-6) var(--sp-12);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
@@ -1995,7 +2010,7 @@ body:has(.mini-player) .cookie-notice {
 }
 .cookie-ok {
   padding: var(--sp-6) var(--sp-16);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control-sm);
   border: none;
   background: var(--accent);
   color: #0a1020;
@@ -2032,7 +2047,7 @@ body:has(.mini-player) .cookie-notice {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   border: 1px solid rgba(123,167,232,0.22);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-card-lg);
   box-shadow:
     0 18px 48px rgba(2,6,18,0.7),
     0 0 0 1px rgba(255,255,255,0.04),
@@ -2184,7 +2199,7 @@ body:has(.mini-player) .cookie-notice {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   border: 1px solid rgba(255,255,255,0.12);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-card-lg);
   box-shadow: 0 18px 48px rgba(2,6,18,0.7);
   animation: playerRise 0.4s var(--ease) backwards;
 }
@@ -2203,7 +2218,7 @@ body:has(.mini-player) .toast {
 .toast-action {
   flex-shrink: 0;
   padding: var(--sp-6) var(--sp-14);
-  border-radius: var(--r-pill);
+  border-radius: var(--radius-control-sm);
   border: 1px solid var(--accent-line);
   background: var(--accent-tint-2);
   color: var(--accent);
