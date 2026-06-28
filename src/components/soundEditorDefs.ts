@@ -59,6 +59,7 @@ const FIRE_PARAM_GROUPS: ParamGroup[] = [
       { key: 'crackleBase', label: 'crackle rate',   min: 0, max: 15, step: 0.5,  def: 9 },
       { key: 'crackleVol',  label: 'crackle volume', min: 0, max: 6,  step: 0.1,  def: 3.1 },
       { key: 'popVol',      label: 'pop volume',     min: 0, max: 3,  step: 0.05, def: 0.55 },
+      { key: 'hiss',        label: 'hiss',           min: 0, max: 1,  step: 0.01, def: 0.18 },
     ],
   },
 ];
@@ -130,10 +131,18 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     groups: FIRE_PARAM_GROUPS,
     variants: vlist(
       ['Campfire', {}],
-      ['Embers',    { intensity: 0.20, size: 0.55, crackleBase: 8,  crackleVol: 3.5, popVol: 0.6, bodyVol: 0.9, roarMean: 0.5 }],
-      ['Hearth',    { intensity: 0.42, size: 0.80, distance: 0.40, crackleBase: 12, crackleVol: 5.0, bodyVol: 1.2 }],
-      ['Bonfire',   { intensity: 0.70, size: 1.0,  distance: 0.70, bodyVol: 1.8, roarMean: 0.95, crackleBase: 15, popVol: 2.0 }],
-      ['Crackling', { crackleBase: 15, crackleVol: 6, popVol: 2.4, bodyVol: 0.9, roarMean: 0.55, dryness: 0.80 }],
+      // Smouldering: low roar, sparse soft crackle, a thread of sizzle.
+      ['Embers',     { intensity: 0.16, size: 0.50, distance: 0.62, crackleBase: 5,  crackleVol: 2.4, popVol: 0.30, bodyVol: 0.85, roarMean: 0.45, dryness: 0.30, crackleBias: 0.45, hiss: 0.12 }],
+      // Steady indoor fireplace — close, warm, moderate even crackle.
+      ['Hearth',     { intensity: 0.40, size: 0.78, distance: 0.40, crackleBase: 11, crackleVol: 4.6, popVol: 0.80, bodyVol: 1.20, hiss: 0.16 }],
+      // Big open fire — roar dominates, frequent loud crackles and pops, little
+      // hiss (the low end carries it).
+      ['Bonfire',    { intensity: 0.72, size: 1.0,  distance: 0.70, bodyVol: 1.85, roarMean: 0.96, crackleBase: 14, crackleVol: 5.2, popVol: 2.10, dryness: 0.50, hiss: 0.10 }],
+      // Contained stove — dark low rumble and prominent escaping-air hiss, only
+      // a few distant pops. This is the texture the report's "wood stove" wants.
+      ['Wood Stove', { intensity: 0.26, size: 0.45, distance: 0.30, bodyVol: 1.30, bodyLp: 0.004, roarMean: 0.70, crackleBase: 5, crackleVol: 2.6, popVol: 0.35, dryness: 0.28, crackleBias: 0.40, hiss: 0.62 }],
+      // Dry kindling — emphasised rapid pops and crackle over a thinner roar.
+      ['Crackling',  { crackleBase: 15, crackleVol: 6, popVol: 2.4, bodyVol: 0.9, roarMean: 0.55, dryness: 0.80, hiss: 0.14 }],
     ),
   },
   birdsong: {

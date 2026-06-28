@@ -8,6 +8,10 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       { name: 'size',        defaultValue: 1.0,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       { name: 'distance',    defaultValue: 0.54,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       { name: 'crackleBias', defaultValue: 1.0,     minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
+      // hiss: level of the airy high-band sizzle that sits over the roar. Low on
+      // an open campfire (the roar dominates); high on a contained wood stove,
+      // where escaping steam/air is most of what you hear.
+      { name: 'hiss',        defaultValue: 0.18,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       { name: 'running',     defaultValue: 1,       minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       // ── Roar / thunder background ─────────────────────────────────────
       { name: 'bodyVol',     defaultValue: 1.4,     minValue: 0,       maxValue: 2,      automationRate: 'k-rate' },
@@ -32,6 +36,15 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     this.lpBody = 0;
     this.hpBody = 0;
     this.roarEnv = 0.81;     // start at roarMean
+
+    // Flame hiss: a band of high noise (one-pole high-pass into a gentle
+    // low-pass) that breathes with the flame energy. hpHissA is the high-pass
+    // coefficient for ~2.4 kHz; hissLp tames the very top so it reads as a warm
+    // sizzle rather than thin white noise.
+    this.hpHissA = Math.exp(-2 * Math.PI * 2400 / sampleRate);
+    this.hpHissPrev = 0;
+    this.hissXprev = 0;
+    this.hissLp = 0;
 
     this.crackleEvents = [];
     this.popEvents = [];
@@ -155,6 +168,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const size        = parameters.size[0]         ?? 1.0;
     const distance    = parameters.distance[0]     ?? 0.54;
     const crackleBias = parameters.crackleBias[0]  ?? 1.0;
+    const hiss        = parameters.hiss[0]          ?? 0.18;
 
     const bodyVol     = parameters.bodyVol[0]      ?? 1.4;
     const bodyLp      = parameters.bodyLp[0]       ?? 0.007;
@@ -188,7 +202,16 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       const emberRate = Math.max(0, (this.embers - 0.15) * 14);
       const ember = this.rnd() < emberRate / sampleRate ? (this.rnd() * 2 - 1) * (0.01 + 0.02 * this.embers) : 0;
 
-      let mix = body * bodyVol + crackles * crackleVol + pops * popVol + ember;
+      // Flame hiss: high-passed noise, band-limited and gated by flame energy and
+      // roar so it swells and falls with the fire instead of sitting as flat air.
+      const hn = this.rnd() * 2 - 1;
+      const hpy = this.hpHissA * (this.hpHissPrev + hn - this.hissXprev);
+      this.hpHissPrev = hpy;
+      this.hissXprev = hn;
+      this.hissLp += 0.45 * (hpy - this.hissLp);
+      const sizzle = this.hissLp * hiss * (0.35 + 0.65 * this.energy) * Math.max(0, this.roarEnv);
+
+      let mix = body * bodyVol + crackles * crackleVol + pops * popVol + ember + sizzle * 0.85;
 
       const nearness = 1 - distance;
       const lp = 0.018 + 0.04 * nearness;

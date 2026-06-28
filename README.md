@@ -111,6 +111,18 @@ npm run preview
 
 ## Changelog
 
+### 7.0.1
+- **Fire — flame hiss band + distinct presets.** The fire worklet gains a
+  dedicated high-band *hiss* (one-pole high-pass → gentle low-pass), gated by
+  flame energy and the roar envelope so it breathes with the fire instead of
+  sitting as flat air. A new **hiss** control exposes it. This unlocks textures
+  the old roar-plus-crackle model couldn't reach — most of all a **Wood Stove**
+  preset (dark low rumble, prominent escaping-air hiss, only a few distant pops).
+  Presets are retuned to actually diverge rather than differ by volume: Embers
+  smoulders (sparse soft crackle), Hearth is a steady close fireplace, Bonfire
+  lets the roar dominate with frequent loud pops and little hiss, Crackling stays
+  dry-kindling rapid. Verified: 71 unit + 16 e2e, typecheck, lint, build green.
+
 ### 7.0.0
 - **Rain & fire realism — opening the 7.x line.** A focused pass on the two
   generators the research report singled out: rain that reads as rain on soft
