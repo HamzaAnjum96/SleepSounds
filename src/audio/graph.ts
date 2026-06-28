@@ -23,6 +23,8 @@ export interface MasterBus {
   compressor: DynamicsCompressorNode;
   shelf: BiquadFilterNode;
   limiter: DynamicsCompressorNode;
+  /** Post-limiter tap for a headroom/clip meter (and test verification). */
+  analyser: AnalyserNode;
 }
 
 let bus: MasterBus | null = null;
@@ -64,16 +66,36 @@ export function getMasterBus(): MasterBus {
     release: 0.1,
   });
 
+  const analyser = new AnalyserNode(c, { fftSize: 256, smoothingTimeConstant: 0.6 });
+
   input.connect(compressor);
   compressor.connect(shelf);
   shelf.connect(limiter);
-  limiter.connect(c.destination);
+  limiter.connect(analyser);
+  analyser.connect(c.destination);
 
-  bus = { input, compressor, shelf, limiter };
+  bus = { input, compressor, shelf, limiter, analyser };
+  // Diagnostic hook for the audio-health meter and tests (reads the analyser).
+  (globalThis as unknown as { __driftMasterPeak?: () => number }).__driftMasterPeak = masterPeak;
   return bus;
 }
 
 /** Resume the shared context (call from a user gesture / on play). */
 export async function resumeAudio(): Promise<void> {
   try { await getAudioContext().resume(); } catch { /* not yet allowed */ }
+}
+
+/** Current peak sample magnitude (0..~1) at the master output — a cheap meter
+ *  for the UI and for confirming audio is actually flowing. 0 if the bus hasn't
+ *  been built yet. */
+export function masterPeak(): number {
+  if (!bus) return 0;
+  const buf = new Float32Array(bus.analyser.fftSize);
+  bus.analyser.getFloatTimeDomainData(buf);
+  let peak = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const x = Math.abs(buf[i]);
+    if (x > peak) peak = x;
+  }
+  return peak;
 }

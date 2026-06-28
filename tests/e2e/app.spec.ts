@@ -138,6 +138,16 @@ test('deleting a saved mix can be undone', async ({ page }) => {
   await expect(page.locator('.mix-card', { hasText: 'undo me' })).toBeVisible();
 });
 
+test('audio flows through the shared master bus', async ({ page }) => {
+  // Toggle a WAV sound (Fan, Air) and confirm signal reaches the master output —
+  // guards the unified graph (worklets + MediaElementSource-routed WAV) against
+  // a silent-wiring regression.
+  await page.locator('.sound-card[data-cat="Air"]').first().locator('.sound-card-toggle').click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __driftMasterPeak?: () => number }).__driftMasterPeak?.() ?? 0), { timeout: 6000 })
+    .toBeGreaterThan(0.01);
+});
+
 test('the privacy page is reachable', async ({ page }) => {
   const link = page.locator('.footer-privacy');
   await expect(link).toHaveAttribute('href', /privacy\.html$/);

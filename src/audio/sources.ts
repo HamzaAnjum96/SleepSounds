@@ -3,7 +3,23 @@
 // that builds the right one per sound. The React hook orchestrates these.
 
 import type { Sound } from '../types';
-import { getAudioContext, getMasterBus } from './graph';
+import { getAudioContext, getMasterBus, resumeAudio } from './graph';
+
+/** Wire an <audio> element's output into the shared graph (so the master bus
+ *  processes it), keeping the element itself as the player — its `.volume` still
+ *  scales the signal, and it still drives lock-screen / background playback. The
+ *  source node is returned so it can be disconnected when the element is
+ *  discarded. Returns null if the platform won't allow it (then the element
+ *  plays directly, as before). */
+function wireElement(el: HTMLAudioElement): MediaElementAudioSourceNode | null {
+  try {
+    const node = getAudioContext().createMediaElementSource(el);
+    node.connect(getMasterBus().input);
+    return node;
+  } catch {
+    return null;
+  }
+}
 
 const LOOP_XFADE_MS = 1400;
 const LOOP_XFADE_S = LOOP_XFADE_MS / 1000;
@@ -40,6 +56,9 @@ class CrossfadeAudio implements MixerSource {
   private _active = false;
   private _playbackRate = 1;
   private _gainMultiplier = 1;
+  /** Graph routing: each element's MediaElementSource, so it can be disconnected
+   *  when the element is rebuilt or destroyed. */
+  private _nodes = new Map<HTMLAudioElement, MediaElementAudioSourceNode>();
 
   constructor(getUrl: () => Promise<string>) {
     this._getUrl = getUrl;
@@ -70,7 +89,18 @@ class CrossfadeAudio implements MixerSource {
   private _make() {
     const el = new Audio(this._url ?? undefined);
     el.preload = 'auto';
+    const node = wireElement(el);
+    if (node) this._nodes.set(el, node);
     return el;
+  }
+
+  /** Tear down an element's graph routing before it's discarded. */
+  private _discard(el: HTMLAudioElement) {
+    const node = this._nodes.get(el);
+    if (node) {
+      try { node.disconnect(); } catch { /* already gone */ }
+      this._nodes.delete(el);
+    }
   }
 
   private get _primary() {
@@ -162,6 +192,10 @@ class CrossfadeAudio implements MixerSource {
   }
 
   async play() {
+    // The element is routed through the graph, so its audio only reaches the
+    // speakers while the context is running — resume it (we're inside the play
+    // gesture). No-op if routing fell back to direct element output.
+    await resumeAudio();
     await this._resolveUrl();
     this._ensureEls();
     this._active = true;
@@ -199,7 +233,7 @@ class CrossfadeAudio implements MixerSource {
       this._stopMonitor();
       this._els[0].removeEventListener('timeupdate', this._timeupdateA);
       this._els[1].removeEventListener('timeupdate', this._timeupdateB);
-      this._els.forEach(el => { el.pause(); el.currentTime = 0; });
+      this._els.forEach(el => { el.pause(); el.currentTime = 0; this._discard(el); });
       this._els = [this._make(), this._make()];
       this._els[0].addEventListener('timeupdate', this._timeupdateA);
       this._els[1].addEventListener('timeupdate', this._timeupdateB);
@@ -221,6 +255,7 @@ class CrossfadeAudio implements MixerSource {
     // Replace secondary element with new URL
     els[secIdx].removeEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
     els[secIdx].pause();
+    this._discard(els[secIdx]);
     els[secIdx] = this._make();
     els[secIdx].playbackRate = this._playbackRate;
     els[secIdx].defaultPlaybackRate = this._playbackRate;
@@ -256,6 +291,7 @@ class CrossfadeAudio implements MixerSource {
         const nowSecIdx = 1 - this._cur as 0 | 1;
         els[nowSecIdx].removeEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
         els[nowSecIdx].pause();
+        this._discard(els[nowSecIdx]);
         els[nowSecIdx] = this._make();
         els[nowSecIdx].playbackRate = this._playbackRate;
         els[nowSecIdx].defaultPlaybackRate = this._playbackRate;
@@ -293,6 +329,7 @@ class CrossfadeAudio implements MixerSource {
       this._els[1].removeEventListener('timeupdate', this._timeupdateB);
       this._els.forEach((el) => {
         el.pause();
+        this._discard(el);
         (el as HTMLAudioElement & { src: string }).src = '';
       });
       this._els = null;

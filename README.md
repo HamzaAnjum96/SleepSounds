@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 6.1.0
+- **Audio engine — sprint 2: WAV loops join the bus.** The rendered loop layers
+  now feed the shared graph too, via `MediaElementAudioSourceNode` → master bus.
+  The proven `HTMLAudioElement` crossfade still drives playback (so background /
+  lock-screen behaviour is preserved), but its output is processed with
+  everything else — the whole mix is finally gain-staged together. Falls back to
+  direct element output if a platform won't allow the routing. Added a master
+  analyser/peak meter (verified audio flows through the bus in-browser).
+
 ### 6.0.0
 - **Audio engine — sprint 1: shared master bus.** Introduced one Web Audio graph
   with a master bus (`src/audio/graph.ts`): a gentle glue compressor, a quiet
