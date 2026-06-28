@@ -58,3 +58,51 @@ export function layeringTrim(activeIds: string[], soundId: string): number {
   if (self.role === 'motion' && sameGroup > 1) return dbToGain(-1.0 * (sameGroup - 1));
   return 1;
 }
+
+export interface LayerShaping {
+  /** Level trim in dB (≤ 0). */
+  gainDb: number;
+  /** Lowpass cutoff in Hz (20000 = open / transparent). */
+  lpHz: number;
+  /** High-shelf cut in dB (≤ 0). */
+  shelfDb: number;
+}
+
+const TRANSPARENT: LayerShaping = { gainDb: 0, lpHz: 20000, shelfDb: 0 };
+
+/** Spectral slotting for a layer given everything else playing. A solo sound and
+ *  small mixes stay transparent. The level trim from {@link layeringTrim} still
+ *  applies (beds/motion), and beyond that, when **more than two** broadband or
+ *  water beds pile up, the non-accent ones move out of each other's way: the
+ *  extras get a darker top (lowpass), a high-shelf cut, and a small extra trim —
+ *  the busiest layer keeps the spectrum, the rest recede. Annoyance tracks
+ *  sharpness and roughness, not just level, so this calms a stack more than a
+ *  gain cut alone. */
+export function layerShaping(activeIds: string[], soundId: string): LayerShaping {
+  const self = LAYER_META[soundId];
+  if (!self) return TRANSPARENT;
+
+  let gainDb = 0;
+  let lpHz = 20000;
+  let shelfDb = 0;
+
+  const sameGroup = activeIds.filter(
+    (id) => id !== soundId && LAYER_META[id]?.maskGroup === self.maskGroup,
+  ).length;
+  if (self.role === 'bed' && sameGroup > 0) gainDb += -1.5 * sameGroup;
+  else if (self.role === 'motion' && sameGroup > 1) gainDb += -1.0 * (sameGroup - 1);
+
+  const broad = activeIds.filter((id) => {
+    const g = LAYER_META[id]?.maskGroup;
+    return g === 'broad' || g === 'water';
+  }).length;
+  const selfBroad = self.maskGroup === 'broad' || self.maskGroup === 'water';
+  if (selfBroad && self.role !== 'accent' && broad > 2) {
+    const extra = broad - 2;
+    lpHz = Math.max(5500, 11000 - 2200 * extra);
+    shelfDb += -2.0 * extra;
+    gainDb += -1.0 * extra;
+  }
+
+  return { gainDb, lpHz, shelfDb };
+}

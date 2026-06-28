@@ -80,6 +80,43 @@ export function getMasterBus(): MasterBus {
   return bus;
 }
 
+export interface LayerBus {
+  /** The source connects here. */
+  input: GainNode;
+  lp: BiquadFilterNode;
+  shelf: BiquadFilterNode;
+  /** Masking trim lives here, kept separate from the user's volume. */
+  output: GainNode;
+}
+
+/** A per-layer processing bus: lowpass → high-shelf → trim → master. Starts
+ *  transparent (full-range, 0 dB); the mixer darkens / shelves / trims it only
+ *  when broadband layers crowd each other. */
+export function createLayerBus(): LayerBus {
+  const c = getAudioContext();
+  const input = new GainNode(c, { gain: 1 });
+  const lp = new BiquadFilterNode(c, { type: 'lowpass', frequency: 20000, Q: 0.707 });
+  const shelf = new BiquadFilterNode(c, { type: 'highshelf', frequency: 5000, gain: 0 });
+  const output = new GainNode(c, { gain: 1 });
+  input.connect(lp);
+  lp.connect(shelf);
+  shelf.connect(output);
+  output.connect(getMasterBus().input);
+  return { input, lp, shelf, output };
+}
+
+/** Ease a layer bus toward a shaping target (no clicks). */
+export function applyLayerShaping(
+  c: AudioContext,
+  bus: LayerBus,
+  s: { gainDb: number; lpHz: number; shelfDb: number },
+): void {
+  const t = c.currentTime;
+  bus.lp.frequency.setTargetAtTime(Math.max(500, Math.min(20000, s.lpHz)), t, 0.2);
+  bus.shelf.gain.setTargetAtTime(s.shelfDb, t, 0.2);
+  bus.output.gain.setTargetAtTime(dbToGain(s.gainDb), t, 0.2);
+}
+
 /** Resume the shared context (call from a user gesture / on play). */
 export async function resumeAudio(): Promise<void> {
   try { await getAudioContext().resume(); } catch { /* not yet allowed */ }

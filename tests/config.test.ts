@@ -4,7 +4,7 @@ import { SCENES, presetSoundIds } from '../src/lib/scenes';
 import { SOUND_EDITOR_MODELS, EDITABLE_SOUND_IDS } from '../src/components/soundEditorDefs';
 import { CATEGORY_ICONS, CATEGORY_COLORS } from '../src/lib/categoryIcons';
 import { SOUND_ICONS } from '../src/lib/soundIcons';
-import { LAYER_META, layeringTrim } from '../src/audio/layerMeta';
+import { LAYER_META, layeringTrim, layerShaping } from '../src/audio/layerMeta';
 
 const soundIds = new Set(SOUND_LIBRARY.map((s) => s.id));
 const validCategory = new Set(CATEGORIES.filter((c) => c !== 'All'));
@@ -195,5 +195,37 @@ describe('layer masking', () => {
   it('two same-group motion layers are kept; three duck the extras', () => {
     expect(layeringTrim(['rain', 'ocean'], 'rain')).toBe(1);
     expect(layeringTrim(['rain', 'ocean', 'stream'], 'rain')).toBeLessThan(1);
+  });
+});
+
+describe('layer spectral shaping', () => {
+  it('a solo sound is transparent', () => {
+    const s = layerShaping(['fan'], 'fan');
+    expect(s).toEqual({ gainDb: 0, lpHz: 20000, shelfDb: 0 });
+  });
+
+  it('one or two broadband beds stay full-range', () => {
+    expect(layerShaping(['fan', 'white-noise'], 'fan').lpHz).toBe(20000);
+  });
+
+  it('a third broadband bed darkens and shelves the non-accents', () => {
+    const s = layerShaping(['fan', 'white-noise', 'pink-noise'], 'fan');
+    expect(s.lpHz, 'darkened').toBeLessThan(20000);
+    expect(s.lpHz, 'still audible').toBeGreaterThanOrEqual(5500);
+    expect(s.shelfDb, 'top shelved').toBeLessThan(0);
+    expect(s.gainDb, 'extra trim').toBeLessThan(0);
+  });
+
+  it('more beds darken further but never collapse', () => {
+    const four = layerShaping(['fan', 'white-noise', 'pink-noise', 'wind'], 'fan');
+    const three = layerShaping(['fan', 'white-noise', 'pink-noise'], 'fan');
+    expect(four.lpHz).toBeLessThan(three.lpHz);
+    expect(four.lpHz).toBeGreaterThanOrEqual(5500);
+  });
+
+  it('accents keep their top even amid a broadband crowd', () => {
+    const s = layerShaping(['fan', 'white-noise', 'pink-noise', 'fire'], 'fire');
+    expect(s.lpHz).toBe(20000);
+    expect(s.shelfDb).toBe(0);
   });
 });

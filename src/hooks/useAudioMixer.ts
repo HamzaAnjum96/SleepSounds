@@ -3,7 +3,7 @@ import type { Sound, SoundState } from '../types';
 import { generateSoundWav, defaultVolumeFor } from '../data';
 import { logger } from '../utils/logger';
 import { makeSource, type MixerSource } from '../audio/sources';
-import { layeringTrim } from '../audio/layerMeta';
+import { layerShaping } from '../audio/layerMeta';
 
 const createInitialState = (sounds: Sound[]) =>
   sounds.reduce<Record<string, SoundState>>((acc, sound) => {
@@ -54,22 +54,31 @@ export const useAudioMixer = (sounds: Sound[]) => {
     (soundId: string, volume: number) => {
       const source = audioMapRef.current[soundId];
       if (!source) return;
-      // Masking trim: duck stacked beds / piled-up motion layers so several
-      // broadband sounds at once stay clear instead of fogging together.
-      const activeIds = Object.entries(soundState)
-        .filter(([, s]) => s.enabled)
-        .map(([id]) => id);
-      const trim = layeringTrim(activeIds, soundId);
-      source.volume = Math.min(1, Math.max(0, volume * trim * masterVolume * masterFade));
+      // The user's level only. Masking (gain trim + spectral darkening) now lives
+      // on each layer's bus via applyShaping, so it can shape tone, not just level.
+      source.volume = Math.min(1, Math.max(0, volume * masterVolume * masterFade));
     },
-    [masterVolume, masterFade, soundState],
+    [masterVolume, masterFade],
   );
+
+  // Masking-aware shaping: duck and darken stacked beds / piled-up broadband so
+  // several broadband sounds at once stay clear and soft instead of fogging or
+  // sharpening together. Recomputed whenever the active set changes.
+  const applyShaping = useCallback(() => {
+    const activeIds = Object.entries(soundState)
+      .filter(([, s]) => s.enabled)
+      .map(([id]) => id);
+    activeIds.forEach((soundId) => {
+      audioMapRef.current[soundId]?.setShaping?.(layerShaping(activeIds, soundId));
+    });
+  }, [soundState]);
 
   useEffect(() => {
     Object.entries(soundState).forEach(([soundId, state]) => {
       applyVolume(soundId, state.volume);
     });
-  }, [masterVolume, soundState, applyVolume]);
+    applyShaping();
+  }, [masterVolume, soundState, applyVolume, applyShaping]);
 
   const clearFade = useCallback((soundId: string) => {
     if (fadeTimersRef.current[soundId] != null) {

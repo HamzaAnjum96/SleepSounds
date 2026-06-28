@@ -3,18 +3,21 @@
 // that builds the right one per sound. The React hook orchestrates these.
 
 import type { Sound } from '../types';
-import { getAudioContext, getMasterBus, resumeAudio } from './graph';
+import { getAudioContext, resumeAudio, createLayerBus, applyLayerShaping, type LayerBus } from './graph';
 
-/** Wire an <audio> element's output into the shared graph (so the master bus
- *  processes it), keeping the element itself as the player — its `.volume` still
- *  scales the signal, and it still drives lock-screen / background playback. The
- *  source node is returned so it can be disconnected when the element is
- *  discarded. Returns null if the platform won't allow it (then the element
- *  plays directly, as before). */
-function wireElement(el: HTMLAudioElement): MediaElementAudioSourceNode | null {
+/** Per-layer spectral shaping target (set by the mixer's masking logic). */
+export interface Shaping { gainDb: number; lpHz: number; shelfDb: number; }
+const TRANSPARENT: Shaping = { gainDb: 0, lpHz: 20000, shelfDb: 0 };
+
+/** Wire an <audio> element's output into the shared graph at `target`, keeping
+ *  the element itself as the player — its `.volume` still scales the signal, and
+ *  it still drives lock-screen / background playback. Returns the source node so
+ *  it can be disconnected when the element is discarded, or null if the platform
+ *  won't allow it (then the element plays directly, as before). */
+function wireElement(el: HTMLAudioElement, target: AudioNode): MediaElementAudioSourceNode | null {
   try {
     const node = getAudioContext().createMediaElementSource(el);
-    node.connect(getMasterBus().input);
+    node.connect(target);
     return node;
   } catch {
     return null;
@@ -32,6 +35,8 @@ interface MixerSource {
   swapUrl?: (newUrl: string) => void;
   /** Live k-rate control for worklet-backed sounds (rain, thunder, forest, fire). */
   setParams?: (values: Record<string, number>) => void;
+  /** Per-layer spectral shaping (masking): darken / shelve / trim this layer. */
+  setShaping?: (s: Shaping) => void;
   play(): Promise<void>;
   pause(): void;
   stop(): void;
@@ -59,6 +64,10 @@ class CrossfadeAudio implements MixerSource {
   /** Graph routing: each element's MediaElementSource, so it can be disconnected
    *  when the element is rebuilt or destroyed. */
   private _nodes = new Map<HTMLAudioElement, MediaElementAudioSourceNode>();
+  /** This layer's processing bus (lowpass / shelf / trim) into the master bus.
+   *  Lazily built with the first element so unplayed sounds cost nothing. */
+  private _layerBus: LayerBus | null = null;
+  private _shaping: Shaping = TRANSPARENT;
 
   constructor(getUrl: () => Promise<string>) {
     this._getUrl = getUrl;
@@ -86,12 +95,34 @@ class CrossfadeAudio implements MixerSource {
     return this._els;
   }
 
+  /** The layer bus, built on demand and routed to the master bus. If creating it
+   *  fails (no Web Audio), returns null and elements play directly. */
+  private _ensureLayerBus(): LayerBus | null {
+    if (this._layerBus) return this._layerBus;
+    try {
+      this._layerBus = createLayerBus();
+      applyLayerShaping(getAudioContext(), this._layerBus, this._shaping);
+    } catch {
+      this._layerBus = null;
+    }
+    return this._layerBus;
+  }
+
   private _make() {
     const el = new Audio(this._url ?? undefined);
     el.preload = 'auto';
-    const node = wireElement(el);
-    if (node) this._nodes.set(el, node);
+    const bus = this._ensureLayerBus();
+    if (bus) {
+      const node = wireElement(el, bus.input);
+      if (node) this._nodes.set(el, node);
+    }
     return el;
+  }
+
+  setShaping(s: Shaping) {
+    this._shaping = s;
+    const bus = this._layerBus;
+    if (bus) applyLayerShaping(getAudioContext(), bus, s);
   }
 
   /** Tear down an element's graph routing before it's discarded. */
@@ -334,6 +365,15 @@ class CrossfadeAudio implements MixerSource {
       });
       this._els = null;
     }
+    if (this._layerBus) {
+      try {
+        this._layerBus.input.disconnect();
+        this._layerBus.lp.disconnect();
+        this._layerBus.shelf.disconnect();
+        this._layerBus.output.disconnect();
+      } catch { /* already gone */ }
+      this._layerBus = null;
+    }
     // Revoke any live blob URLs so long retuning sessions don't leak. (An
     // unplayed-but-tuned source holds only _urlOverride; cover both.)
     if (this._url) { URL.revokeObjectURL(this._url); this._url = null; }
@@ -373,7 +413,9 @@ function loadWorkletModule(ctx: AudioContext, module: string): Promise<void> {
 class WorkletSource implements MixerSource {
   private gainNode: GainNode | null = null;
   private node: AudioWorkletNode | null = null;
+  private layerBus: LayerBus | null = null;
   private _volume = 0;
+  private _shaping: Shaping = TRANSPARENT;
   private started = false;
   private playing = false;
   private pending: Record<string, number> | null = null;
@@ -393,10 +435,17 @@ class WorkletSource implements MixerSource {
     });
     this.gainNode = new GainNode(ctx, { gain: 0 });
     this.node.connect(this.gainNode);
-    // Through the shared master bus (compressor / shelf / limiter), not straight
-    // to the speakers — so the live worklet sounds are gain-staged with the rest.
-    this.gainNode.connect(getMasterBus().input);
+    // Through this layer's bus (lowpass / shelf / trim) into the shared master
+    // bus — so the live worklet sounds are EQ'd and gain-staged with the rest.
+    this.layerBus = createLayerBus();
+    applyLayerShaping(ctx, this.layerBus, this._shaping);
+    this.gainNode.connect(this.layerBus.input);
     if (this.pending) { this.applyParams(this.pending); this.pending = null; }
+  }
+
+  setShaping(s: Shaping) {
+    this._shaping = s;
+    if (this.layerBus) applyLayerShaping(getWorkletCtx(), this.layerBus, s);
   }
 
   private applyParams(values: Record<string, number>) {
@@ -444,6 +493,15 @@ class WorkletSource implements MixerSource {
     this.node?.parameters.get('running')?.setValueAtTime(0, getWorkletCtx().currentTime);
     this.node?.disconnect();
     this.gainNode?.disconnect();
+    if (this.layerBus) {
+      try {
+        this.layerBus.input.disconnect();
+        this.layerBus.lp.disconnect();
+        this.layerBus.shelf.disconnect();
+        this.layerBus.output.disconnect();
+      } catch { /* already gone */ }
+      this.layerBus = null;
+    }
     this.node = null;
     this.gainNode = null;
     this.started = false;
@@ -486,6 +544,12 @@ class WorkletWithFallback implements MixerSource {
   setParams(values: Record<string, number>) {
     // Live params apply to the worklet; the WAV fallback can't change live.
     if (!this.failedOver) this.primary.setParams?.(values);
+  }
+
+  setShaping(s: Shaping) {
+    // Shape whichever path is (or will be) active.
+    this.primary.setShaping?.(s);
+    this.fallback.setShaping?.(s);
   }
 
   swapUrl(newUrl: string) {

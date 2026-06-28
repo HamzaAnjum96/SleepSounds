@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 6.2.0
+- **Audio engine — sprint 3: per-layer EQ + spectral masking.** Every layer now
+  runs through its own bus (lowpass → high-shelf → trim) into the master bus.
+  Masking is no longer just a level trim: when **more than two** broadband/water
+  beds stack, the non-accent ones move out of each other's way — a darker top, a
+  high-shelf cut, and a small extra trim — so the busiest layer keeps the
+  spectrum and the rest recede. Solo sounds and small mixes stay transparent;
+  accents keep their top. (Sharpness drives listening fatigue more than level.)
+
 ### 6.1.0
 - **Audio engine — sprint 2: WAV loops join the bus.** The rendered loop layers
   now feed the shared graph too, via `MediaElementAudioSourceNode` → master bus.
