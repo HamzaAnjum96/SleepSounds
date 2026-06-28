@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Sound, SoundState } from '../types';
 import { CATEGORY_ICONS } from '../lib/categoryIcons';
+import { features } from '../config/features';
 import { sliderFill } from '../lib/sliderFill';
 import { haptic } from '../lib/haptics';
 import { formatCountdown } from '../lib/time';
@@ -132,22 +133,24 @@ export default function MixControls({
                   onChange={(e) => onSoundVolume(sound.id, Number(e.target.value))}
                 />
               </div>
-              <div className="layer-toggles">
-                <button
-                  type="button"
-                  className={`layer-toggle${muted ? ' on' : ''}`}
-                  aria-pressed={muted}
-                  onClick={() => onToggleMute(sound.id)}
-                  aria-label={`${muted ? 'Unmute' : 'Mute'} ${sound.name}`}
-                >M</button>
-                <button
-                  type="button"
-                  className={`layer-toggle${soloed ? ' on' : ''}`}
-                  aria-pressed={soloed}
-                  onClick={() => onToggleSolo(sound.id)}
-                  aria-label={`${soloed ? 'Unsolo' : 'Solo'} ${sound.name}`}
-                >S</button>
-              </div>
+              {features.layerMuteSolo && (
+                <div className="layer-toggles">
+                  <button
+                    type="button"
+                    className={`layer-toggle${muted ? ' on' : ''}`}
+                    aria-pressed={muted}
+                    onClick={() => onToggleMute(sound.id)}
+                    aria-label={`${muted ? 'Unmute' : 'Mute'} ${sound.name}`}
+                  >M</button>
+                  <button
+                    type="button"
+                    className={`layer-toggle${soloed ? ' on' : ''}`}
+                    aria-pressed={soloed}
+                    onClick={() => onToggleSolo(sound.id)}
+                    aria-label={`${soloed ? 'Unsolo' : 'Solo'} ${sound.name}`}
+                  >S</button>
+                </div>
+              )}
               <button
                 type="button"
                 className="layer-remove"

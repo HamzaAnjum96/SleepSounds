@@ -111,6 +111,12 @@ npm run preview
 
 ## Changelog
 
+### 7.9.1
+- **Hide per-layer mute / solo for now.** The **M** (mute) and **S** (solo)
+  toggles on each now-playing layer are hidden behind a new `layerMuteSolo`
+  feature flag (off). The mixer logic stays fully wired up, so flipping the flag
+  back on restores them; the e2e coverage is skipped meanwhile.
+
 ### 7.9.0
 - **Soft-square design system — phase 2: cards, rename, docs.** Scene cards, mix
   cards and the empty-mix tile move to the 16px `--radius-card-lg`; sound cards

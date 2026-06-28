@@ -148,7 +148,10 @@ test('audio flows through the shared master bus', async ({ page }) => {
     .toBeGreaterThan(0.01);
 });
 
-test('muting a layer silences the mix, and unmuting restores it', async ({ page }) => {
+// The per-layer M (mute) / S (solo) toggles are hidden behind the
+// `layerMuteSolo` feature flag (off for now); the mixer logic stays wired up.
+// Re-enable this test when the flag is flipped back on.
+test.skip('muting a layer silences the mix, and unmuting restores it', async ({ page }) => {
   const peak = () => page.evaluate(() => (window as unknown as { __driftMasterPeak?: () => number }).__driftMasterPeak?.() ?? 0);
   await page.locator('.sound-card[data-cat="Air"]').first().locator('.sound-card-toggle').click();
   await page.locator('.mp-body').click();
