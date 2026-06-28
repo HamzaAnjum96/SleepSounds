@@ -39,10 +39,19 @@ export const useAudioMixer = (sounds: Sound[]) => {
     try { return localStorage.getItem(SLEEP_SAFE_KEY) !== '0'; }
     catch { return true; }
   });
-  /** A layer is audible unless muted, or unless something else is soloed. */
+  // Mirror mute/solo into refs so the (long-lived) fade-timer closures read the
+  // current state, not the value captured when the fade started — otherwise a
+  // fade-in started just before a mute would keep ramping the volume back up.
+  const mutedRef = useRef<string[]>([]);
+  const soloRef = useRef<string[]>([]);
+  useEffect(() => { mutedRef.current = mutedIds; }, [mutedIds]);
+  useEffect(() => { soloRef.current = soloIds; }, [soloIds]);
+
+  /** A layer is audible unless muted, or unless something else is soloed.
+   *  Reads refs, so it's always current and stable across renders. */
   const audible = useCallback(
-    (soundId: string) => !mutedIds.includes(soundId) && (soloIds.length === 0 || soloIds.includes(soundId)),
-    [mutedIds, soloIds],
+    (soundId: string) => !mutedRef.current.includes(soundId) && (soloRef.current.length === 0 || soloRef.current.includes(soundId)),
+    [],
   );
   const audioMapRef = useRef<Record<string, MixerSource>>({});
   const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
@@ -98,7 +107,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
       applyVolume(soundId, state.volume);
     });
     applyShaping();
-  }, [masterVolume, soundState, applyVolume, applyShaping]);
+  }, [masterVolume, soundState, applyVolume, applyShaping, mutedIds, soloIds]);
 
   // Reflect sleep-safe mode onto the master shelf, and persist the choice.
   useEffect(() => {

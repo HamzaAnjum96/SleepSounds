@@ -111,6 +111,19 @@ npm run preview
 
 ## Changelog
 
+### 6.5.0
+- **Audio engine — sprint 6: final check + fix.** Closes the 6.x audio pass.
+  Documented the unified mix graph, per-layer EQ, two-dimensional masking,
+  mute/solo, and sleep-safe in `DESIGN.md`. Fixed a mute/fade race (a fade-in
+  started just before a mute could ramp the volume back up) by reading mute/solo
+  from refs so live fade timers see current state. Verified end to end:
+  71 unit + 16 e2e (incl. audio-flow, mute-silences, sleep-safe), typecheck,
+  lint, build all green.
+  - **Note for device testing:** WAV layers route through the graph via
+    `MediaElementAudioSourceNode`, which is verified on Chromium but can be silent
+    on some iOS Safari versions; the code falls back to direct output if routing
+    is refused. Please confirm background / lock-screen playback on an iPhone.
+
 ### 6.4.0
 - **Audio engine — sprint 5: mute / solo + sleep-safe toggle.** Every layer in
   the now-playing controls gains compact **M** (mute) and **S** (solo) toggles —

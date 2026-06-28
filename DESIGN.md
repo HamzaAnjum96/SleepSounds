@@ -293,11 +293,34 @@ since widening tonal/bass material combs or smears the image. The worklets pan a
 **held position that drifts** between events rather than jittering per sample, so
 a fire or bird reads as a located source that sways, not as fizz.
 
-Layering is **masking-aware**: `layerMeta.ts` tags every sound with a role
-(bed/motion/accent) and a mask group (broad/water/low/detail). When same-group
-layers stack, `layeringTrim` applies small automatic dB cuts so a second bed in
-the same band doesn't double up and muddy the mix; `useAudioMixer` folds the
-trim into each source's gain from the live active set.
+### Mix graph (v6)
+
+Every source — live worklets and the rendered loops — runs through **one Web
+Audio graph** (`src/audio/graph.ts`). A loop's `HTMLAudioElement` still drives
+playback (so background / lock-screen behaviour is preserved) but is routed in
+via `MediaElementAudioSourceNode`; worklets connect their gain node directly.
+Each layer passes through its own **layer bus** (lowpass → high-shelf → trim)
+before summing at the **master bus**: a gentle glue compressor, a master
+high-shelf, and a fast safety limiter, with a post-limiter analyser for the
+headroom meter. The chain is ~loudness-neutral on a single sound; it only works
+when layers stack. If a platform refuses `MediaElementSource`, the element falls
+back to direct output.
+
+Masking is **two-dimensional**: `layerMeta.ts` tags every sound with a role
+(bed/motion/accent) and mask group (broad/water/low/detail). `layerShaping`
+returns a gain trim **and** spectral targets per active layer: beds/motion duck
+for same-group neighbours, and when more than two broadband/water beds stack the
+non-accent ones move out of each other's way — darker lowpass, high-shelf cut,
+extra trim — applied on each layer bus (`useAudioMixer` recomputes on every
+active-set change). (`layeringTrim` remains as the gain-only predecessor.)
+
+Per layer, **mute (M)** and **solo (S)** gate a layer's gain without removing it
+(folded into the level, fade-safe). A **sleep-safe** toggle (default on,
+persisted) deepens the master high-shelf and enables the spectral slotting; off
+eases both back for a brighter balance. Defaults across the library are tuned
+**sleep-first** (calmer beds, quieter crackle/whistle/sparkle, darker noise);
+WAV loops render from their editor `def`s, the single source of truth for a
+default.
 
 ## Atmosphere
 
