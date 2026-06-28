@@ -92,10 +92,18 @@ export const WORKLET_SOUND_IDS = new Set(
   SOUND_LIBRARY.filter((s) => s.source.mode === 'worklet').map((s) => s.id),
 );
 
-/** The library minus unfinished sounds: experimental ones appear only when the
- *  experimentalSounds feature flag is on. */
+/** Finished sounds pulled from the library for now. Unlike `experimental`, these
+ *  are always hidden (the feature flag doesn't reveal them) — delete an id to
+ *  bring a sound back into the lineup. Their generators and editors stay intact,
+ *  so saved mixes or presets that reference them still play. */
+export const HIDDEN_SOUND_IDS = new Set(['stream', 'shower']);
+
+/** The library minus hidden sounds, and minus unfinished (experimental) ones
+ *  unless the experimentalSounds feature flag is on. */
 export function releasableSounds(includeExperimental: boolean): Sound[] {
-  return includeExperimental ? SOUND_LIBRARY : SOUND_LIBRARY.filter((s) => s.quality !== 'experimental');
+  return SOUND_LIBRARY.filter(
+    (s) => !HIDDEN_SOUND_IDS.has(s.id) && (includeExperimental || s.quality !== 'experimental'),
+  );
 }
 
 export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;

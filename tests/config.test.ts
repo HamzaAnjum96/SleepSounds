@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SOUND_LIBRARY, CATEGORIES, BUILTIN_PRESETS, defaultVolumeFor, releasableSounds } from '../src/data';
+import { SOUND_LIBRARY, CATEGORIES, BUILTIN_PRESETS, defaultVolumeFor, releasableSounds, HIDDEN_SOUND_IDS } from '../src/data';
 import { SCENES, presetSoundIds } from '../src/lib/scenes';
 import { SOUND_EDITOR_MODELS, EDITABLE_SOUND_IDS } from '../src/components/soundEditorDefs';
 import { CATEGORY_ICONS, CATEGORY_COLORS } from '../src/lib/categoryIcons';
@@ -38,12 +38,16 @@ describe('sound library', () => {
     }
   });
 
-  it('releasableSounds hides experimental sounds unless opted in', () => {
+  it('releasableSounds hides experimental and hidden sounds', () => {
+    const visible = SOUND_LIBRARY.filter((s) => !HIDDEN_SOUND_IDS.has(s.id));
     const all = releasableSounds(true);
     const released = releasableSounds(false);
-    expect(all.length).toBe(SOUND_LIBRARY.length);
+    // hidden sounds never appear, even with experimental opted in
+    expect(all.length).toBe(visible.length);
+    expect(all.some((s) => HIDDEN_SOUND_IDS.has(s.id))).toBe(false);
+    // experimental ones are hidden unless opted in
     expect(released.every((s) => s.quality !== 'experimental')).toBe(true);
-    expect(released.length).toBe(SOUND_LIBRARY.filter((s) => s.quality !== 'experimental').length);
+    expect(released.length).toBe(visible.filter((s) => s.quality !== 'experimental').length);
   });
 
   it('every sound declares a well-formed source (worklet or wav)', () => {

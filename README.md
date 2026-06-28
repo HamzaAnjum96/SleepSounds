@@ -111,6 +111,13 @@ npm run preview
 
 ## Changelog
 
+### 7.12.1
+- **Hide Stream and Shower for now.** Both are pulled from the library via a new
+  explicit `HIDDEN_SOUND_IDS` set in `data.ts` (cleaner than marking finished
+  sounds "experimental"; the flag never reveals them). Their generators and
+  editors stay intact, so any saved mix or preset referencing them still plays —
+  delete an id to bring a sound back. Updated the `releasableSounds` test.
+
 ### 7.12.0
 - **Cleanup pass.** A comprehensive audit (worklet params, runtime console, dead
   exports, type escapes, both worklets' numerical safety) found the codebase
