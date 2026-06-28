@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 7.6.1
+- **Fine-tune control reads as a button.** The sound-editor disclosure that
+  reveals the per-parameter sliders was bare muted text with a small chevron, so
+  it was easy to miss and unclear what it did. It now uses the shared pill
+  vocabulary (bordered, tappable), leads with a `tune` (sliders) icon, states the
+  action ("fine-tune sliders" → "hide sliders"), and takes the category-accent
+  "open" state of a real toggle.
+
 ### 7.6.0
 - **Variant chips gain crafted marks.** Each preset chip in the sound editor now
   leads with a small 16px mark (new `src/lib/variantIcons.tsx`, drawn in

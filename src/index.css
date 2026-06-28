@@ -1440,31 +1440,41 @@ header::after {
   outline-offset: 2px;
 }
 
-/* "Fine-tune" disclosure → reveals the sliders. */
+/* "Fine-tune" disclosure → reveals the per-parameter sliders. Styled as a pill
+   (the shared control vocabulary) so it reads as a button, with a sliders icon
+   and an action label, and the category-accent "open" state of a real toggle. */
 .sb-finetune {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-2) 0;
-  background: none;
-  border: none;
+  gap: var(--sp-6);
+  padding: var(--sp-6) var(--sp-12);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: var(--fs-control);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: color var(--dur-1);
+  transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
   outline: none;
 }
 @media (hover: hover) {
-  .sb-finetune:hover { color: var(--text-primary); }
+  .sb-finetune:hover { border-color: var(--border-strong); color: var(--text-primary); }
 }
-.sb-finetune .material-symbols-rounded {
+.sb-finetune.open {
+  border-color: var(--card-accent, var(--accent));
+  color: var(--card-accent, var(--accent));
+  background: var(--surface-hover);
+}
+.sb-finetune-icon { font-size: 18px; }
+.sb-finetune-caret {
   font-size: 18px;
+  margin-left: calc(var(--sp-4) * -1);
   transition: transform var(--dur-2) var(--ease);
 }
-.sb-finetune.open .material-symbols-rounded { transform: rotate(180deg); }
+.sb-finetune.open .sb-finetune-caret { transform: rotate(180deg); }
 .sb-finetune:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
