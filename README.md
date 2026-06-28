@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.6.1
+### 7.7.0
 - **Fine-tune control reads as a button.** The sound-editor disclosure that
   reveals the per-parameter sliders was bare muted text with a small chevron, so
   it was easy to miss and unclear what it did. It now uses the shared pill
