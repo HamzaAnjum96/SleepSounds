@@ -111,6 +111,19 @@ npm run preview
 
 ## Changelog
 
+### 7.4.1
+- **Rain — open-air drops become a super-muted soft patter.** The open-air
+  variants (Light Rain, Drizzle, Steady, Downpour) keep their drops, but as a
+  soft, dull patter sitting under the wash — rain on soft ground or a tent
+  canvas — rather than discrete taps even with the bed. The `dropGain` floor is
+  lowered (0.8 → 0.5) so low `drops` genuinely recedes, and the open-air variants
+  drop to roughly half their previous hit level (e.g. Steady dropGain 1.34 →
+  0.71). At metallic 0 the hits are already dull/dark (the de-tinning), so muted
+  reads as soft, not tinny. The surface variants (On a Roof, At a Window, Tin
+  Roof) raise `drops` to compensate exactly, so their crisp hits are unchanged
+  (e.g. Tin Roof dropGain stays 2.36). WAV fallback floor matched. Verified: 71
+  unit + 16 e2e, typecheck, lint, build green.
+
 ### 7.4.0
 - **Rain — Tin Roof no longer rings like wind chimes.** At high *metallic* the
   solid drops each fired a ~90 ms pure sine at a random 2.4–5 kHz pitch, so a tin

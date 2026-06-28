@@ -392,10 +392,13 @@ class RainProcessor extends AudioWorkletProcessor {
     const nearRate = 1.6 * k, midRate = 8 * k, farRate = 42 * k;
     // patter steers how often clumps land and (in startCluster) how big they are
     const clusterRate = (0.18 + effIntensity * 0.8) * (0.3 + patter * 1.7);
-    // drops pushes the surface hits forward against the bed. The bed is the
-    // quiet curtain; the hits are the *subject*, so this scales them well past
-    // bed level (default already lands hits roughly even with the bed).
-    const dropGain = 0.8 + drops * 3.0;
+    // drops sets how forward the surface hits sit against the bed. For the
+    // surface variants (Roof / Window / Tin) the hits are the *subject* and push
+    // well past the bed. For open-air rain the drops are a super-muted soft
+    // patter — rain landing on soft ground or a tent canvas — so the floor is
+    // low: at small `drops` the (already dull, de-tinned) hits sit well *under*
+    // the bed rather than even with it.
+    const dropGain = 0.5 + drops * 3.0;
 
     // per-band bed gains for this block: heaviness darkens (more body, less
     // air); intensity opens the top a little. Folds in each band's base level.

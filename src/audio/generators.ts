@@ -282,9 +282,11 @@ function genRain(params?: Record<string, number>): string {
   // seam (sin is 0 at both ends). Mild by default, deeper as swell climbs.
   const swellDepth = swell * 0.6;
   // drops pushes the surface hits (and their bubble tails) forward against the
-  // bed, matching the live worklet's drop-prominence control.
-  const impGain = 0.10 + drops * 0.20;
-  const bubGain = 0.05 + drops * 0.08;
+  // bed, matching the live worklet's drop-prominence control. Low floor so the
+  // open-air variants read as a soft muted patter under the wash, while the
+  // surface variants (high drops) push their hits forward.
+  const impGain = 0.05 + drops * 0.22;
+  const bubGain = 0.03 + drops * 0.09;
   // bed trims the continuous curtain (matches the live worklet's bed control).
   const bedGain = 0.78 * bedLevel;
   for (let i = 0; i < N; i++) {

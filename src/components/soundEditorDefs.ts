@@ -170,24 +170,29 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     {
       label: 'character',
       params: [
-        { key: 'drops',    label: 'drops',     min: 0, max: 1, step: 0.01, def: 0.18 },
+        { key: 'drops',    label: 'drops',     min: 0, max: 1, step: 0.01, def: 0.07 },
         { key: 'movement', label: 'movement',  min: 0, max: 1, step: 0.01, def: 0.22 },
         { key: 'space',    label: 'space',     min: 0, max: 1, step: 0.01, def: 0.18 },
         { key: 'metallic', label: 'metallic',  min: 0, max: 1, step: 0.01, def: 0 },
       ],
     },
   ], variants: vlist(
-    // Very sparse, intermittent light rain — few drops over a thin bed.
-    ['Light Rain',  { intensity: 0.18, heaviness: 0.22, surface: 0.55, bed: 0.50, drops: 0.22, movement: 0.40, space: 0.20 }],
-    ['Drizzle',     { intensity: 0.32, heaviness: 0.30, surface: 0.55, bed: 0.85, drops: 0.18, movement: 0.30 }],
+    // Open-air variants (Light Rain, Drizzle, Steady, Downpour): the drops are a
+    // super-muted, soft, dull patter — rain on soft ground or a tent canvas — so
+    // `drops` stays low and the hits sit under the wash. The surface variants
+    // below raise `drops` to push their crisp hits forward (compensating for the
+    // lower dropGain floor, so their prominence is unchanged).
+    // Very sparse, intermittent light rain — a thin wash with soft, far patter.
+    ['Light Rain',  { intensity: 0.18, heaviness: 0.22, surface: 0.55, bed: 0.50, drops: 0.08, movement: 0.40, space: 0.20 }],
+    ['Drizzle',     { intensity: 0.32, heaviness: 0.30, surface: 0.55, bed: 0.85, drops: 0.06, movement: 0.30 }],
     ['Steady', {}],
-    ['Downpour',    { intensity: 0.92, heaviness: 0.72, surface: 0.42, drops: 0.30, movement: 0.55, space: 0.35 }],
+    ['Downpour',    { intensity: 0.92, heaviness: 0.72, surface: 0.42, drops: 0.13, movement: 0.55, space: 0.35 }],
     // Wooden roof — muffled, body-heavy taps, almost no metal ring.
-    ['On a Roof',   { surface: 0.30, heaviness: 0.65, intensity: 0.62, drops: 0.45, bed: 0.80, space: 0.48, movement: 0.25, metallic: 0.05 }],
+    ['On a Roof',   { surface: 0.30, heaviness: 0.65, intensity: 0.62, drops: 0.55, bed: 0.80, space: 0.48, movement: 0.25, metallic: 0.05 }],
     // Glass — brighter taps, roomy, a touch of ring (you're indoors looking out).
-    ['At a Window', { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.45, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }],
+    ['At a Window', { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }],
     // Corrugated tin — sharp, bright, ringing pings on purpose.
-    ['Tin Roof',    { surface: 0.15, heaviness: 0.42, intensity: 0.60, drops: 0.52, bed: 0.55, space: 0.40, movement: 0.30, metallic: 0.72 }],
+    ['Tin Roof',    { surface: 0.15, heaviness: 0.42, intensity: 0.60, drops: 0.62, bed: 0.55, space: 0.40, movement: 0.30, metallic: 0.72 }],
   ) },
   ocean: { label: 'Ocean', mode: 'simple', groups: simpleGroup(
     { key: 'waveSize', label: 'wave size', def: 0.40 },
