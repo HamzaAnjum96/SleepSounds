@@ -36,6 +36,12 @@ interface NowPlayingSheetProps {
   /** Open straight into the save-name field — used when the user taps save on
    *  the mini player rather than opening the sheet to browse. */
   startSaving?: boolean;
+  mutedIds: string[];
+  soloIds: string[];
+  onToggleMute: (id: string) => void;
+  onToggleSolo: (id: string) => void;
+  sleepSafe: boolean;
+  onSleepSafe: (on: boolean) => void;
 }
 
 interface DragState {
@@ -67,6 +73,12 @@ export default function NowPlayingSheet({
   onDrift,
   onSave,
   startSaving = false,
+  mutedIds,
+  soloIds,
+  onToggleMute,
+  onToggleSolo,
+  sleepSafe,
+  onSleepSafe,
 }: NowPlayingSheetProps) {
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
@@ -219,6 +231,12 @@ export default function NowPlayingSheet({
             onDrift={onDrift}
             onSave={onSave}
             startSaving={startSaving}
+            mutedIds={mutedIds}
+            soloIds={soloIds}
+            onToggleMute={onToggleMute}
+            onToggleSolo={onToggleSolo}
+            sleepSafe={sleepSafe}
+            onSleepSafe={onSleepSafe}
           />
         </div>
       </div>

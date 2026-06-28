@@ -45,6 +45,12 @@ interface MixControlsProps {
   onSave: (name: string) => void;
   /** Open straight into the save-name field. */
   startSaving?: boolean;
+  mutedIds: string[];
+  soloIds: string[];
+  onToggleMute: (id: string) => void;
+  onToggleSolo: (id: string) => void;
+  sleepSafe: boolean;
+  onSleepSafe: (on: boolean) => void;
 }
 
 export default function MixControls({
@@ -64,6 +70,12 @@ export default function MixControls({
   onDrift,
   onSave,
   startSaving = false,
+  mutedIds,
+  soloIds,
+  onToggleMute,
+  onToggleSolo,
+  sleepSafe,
+  onSleepSafe,
 }: MixControlsProps) {
   const [saving, setSaving] = useState(startSaving);
   const [name, setName] = useState('');
@@ -96,6 +108,8 @@ export default function MixControls({
         </div>
         {activeSounds.map((sound) => {
           const volume = soundState[sound.id]?.volume ?? 0.5;
+          const muted = mutedIds.includes(sound.id);
+          const soloed = soloIds.includes(sound.id);
           return (
             <div key={sound.id} className="layer-row" data-cat={sound.category}>
               <span className="material-symbols-rounded layer-icon" aria-hidden="true">
@@ -117,6 +131,22 @@ export default function MixControls({
                   aria-label={`${sound.name} volume`}
                   onChange={(e) => onSoundVolume(sound.id, Number(e.target.value))}
                 />
+              </div>
+              <div className="layer-toggles">
+                <button
+                  type="button"
+                  className={`layer-toggle${muted ? ' on' : ''}`}
+                  aria-pressed={muted}
+                  onClick={() => onToggleMute(sound.id)}
+                  aria-label={`${muted ? 'Unmute' : 'Mute'} ${sound.name}`}
+                >M</button>
+                <button
+                  type="button"
+                  className={`layer-toggle${soloed ? ' on' : ''}`}
+                  aria-pressed={soloed}
+                  onClick={() => onToggleSolo(sound.id)}
+                  aria-label={`${soloed ? 'Unsolo' : 'Solo'} ${sound.name}`}
+                >S</button>
               </div>
               <button
                 type="button"
@@ -148,6 +178,16 @@ export default function MixControls({
           aria-label="Master volume"
           onChange={(e) => onMasterVolume(Number(e.target.value))}
         />
+        <button
+          type="button"
+          className={`sleep-safe${sleepSafe ? ' on' : ''}`}
+          aria-pressed={sleepSafe}
+          onClick={() => onSleepSafe(!sleepSafe)}
+        >
+          <span className="sleep-safe-dot" aria-hidden="true" />
+          sleep-safe
+          <span className="sleep-safe-hint">{sleepSafe ? 'softer when layered' : 'off'}</span>
+        </button>
       </div>
 
       <div className="sheet-timer">

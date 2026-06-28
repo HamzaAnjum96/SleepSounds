@@ -29,6 +29,13 @@ interface SidePanelProps {
   onClearMix: () => void;
   onDrift: () => void;
   onSave: (name: string) => void;
+  startSaving?: boolean;
+  mutedIds: string[];
+  soloIds: string[];
+  onToggleMute: (id: string) => void;
+  onToggleSolo: (id: string) => void;
+  sleepSafe: boolean;
+  onSleepSafe: (on: boolean) => void;
 }
 
 export default function SidePanel({

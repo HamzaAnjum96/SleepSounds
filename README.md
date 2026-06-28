@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 6.4.0
+- **Audio engine — sprint 5: mute / solo + sleep-safe toggle.** Every layer in
+  the now-playing controls gains compact **M** (mute) and **S** (solo) toggles —
+  silence a layer or isolate it without removing it. A **sleep-safe** toggle in
+  the master section (on by default, persisted) enforces the calmer DSP policy: a
+  darker master high-shelf and the spectral slotting of stacked broadband beds;
+  turn it off for a brighter, more cinematic balance. Also fixed a fade race so
+  muting a just-started layer takes effect immediately.
+
 ### 6.3.0
 - **Audio engine — sprint 4: sleep-safe defaults.** Retuned the default character
   of most layers toward calmer, sleep-first listening (from the research report's

@@ -78,7 +78,7 @@ const TRANSPARENT: LayerShaping = { gainDb: 0, lpHz: 20000, shelfDb: 0 };
  *  the busiest layer keeps the spectrum, the rest recede. Annoyance tracks
  *  sharpness and roughness, not just level, so this calms a stack more than a
  *  gain cut alone. */
-export function layerShaping(activeIds: string[], soundId: string): LayerShaping {
+export function layerShaping(activeIds: string[], soundId: string, sleepSafe = true): LayerShaping {
   const self = LAYER_META[soundId];
   if (!self) return TRANSPARENT;
 
@@ -92,12 +92,14 @@ export function layerShaping(activeIds: string[], soundId: string): LayerShaping
   if (self.role === 'bed' && sameGroup > 0) gainDb += -1.5 * sameGroup;
   else if (self.role === 'motion' && sameGroup > 1) gainDb += -1.0 * (sameGroup - 1);
 
+  // Spectral slotting only in sleep-safe mode; off, masking is gain-only (more
+  // headroom for deliberately cinematic / bright stacks).
   const broad = activeIds.filter((id) => {
     const g = LAYER_META[id]?.maskGroup;
     return g === 'broad' || g === 'water';
   }).length;
   const selfBroad = self.maskGroup === 'broad' || self.maskGroup === 'water';
-  if (selfBroad && self.role !== 'accent' && broad > 2) {
+  if (sleepSafe && selfBroad && self.role !== 'accent' && broad > 2) {
     const extra = broad - 2;
     lpHz = Math.max(5500, 11000 - 2200 * extra);
     shelfDb += -2.0 * extra;

@@ -4,6 +4,9 @@ import { generateSoundWav, defaultVolumeFor } from '../data';
 import { logger } from '../utils/logger';
 import { makeSource, type MixerSource } from '../audio/sources';
 import { layerShaping } from '../audio/layerMeta';
+import { setMasterSleepSafe } from '../audio/graph';
+
+const SLEEP_SAFE_KEY = 'drift-sleep-safe';
 
 const createInitialState = (sounds: Sound[]) =>
   sounds.reduce<Record<string, SoundState>>((acc, sound) => {
@@ -26,6 +29,21 @@ export const useAudioMixer = (sounds: Sound[]) => {
   // Playback-level wind-down multiplier (sleep-timer fade). 1 = no fade.
   // Applied on top of master volume; owned by the UI's timer logic.
   const [masterFade, setMasterFade] = useState(1);
+  // Per-layer mute / solo (silence without removing). A non-empty solo set means
+  // only soloed layers are audible.
+  const [mutedIds, setMutedIds] = useState<string[]>([]);
+  const [soloIds, setSoloIds] = useState<string[]>([]);
+  // Sleep-safe mode: calmer DSP policy (darker master shelf + spectral slotting
+  // of stacked broadband). On by default; persisted.
+  const [sleepSafe, setSleepSafeState] = useState(() => {
+    try { return localStorage.getItem(SLEEP_SAFE_KEY) !== '0'; }
+    catch { return true; }
+  });
+  /** A layer is audible unless muted, or unless something else is soloed. */
+  const audible = useCallback(
+    (soundId: string) => !mutedIds.includes(soundId) && (soloIds.length === 0 || soloIds.includes(soundId)),
+    [mutedIds, soloIds],
+  );
   const audioMapRef = useRef<Record<string, MixerSource>>({});
   const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const tuningTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -54,11 +72,13 @@ export const useAudioMixer = (sounds: Sound[]) => {
     (soundId: string, volume: number) => {
       const source = audioMapRef.current[soundId];
       if (!source) return;
-      // The user's level only. Masking (gain trim + spectral darkening) now lives
-      // on each layer's bus via applyShaping, so it can shape tone, not just level.
-      source.volume = Math.min(1, Math.max(0, volume * masterVolume * masterFade));
+      // The user's level, gated by mute/solo. Masking (gain trim + spectral
+      // darkening) lives on each layer's bus via applyShaping, so it can shape
+      // tone, not just level.
+      const gate = audible(soundId) ? 1 : 0;
+      source.volume = Math.min(1, Math.max(0, volume * masterVolume * masterFade * gate));
     },
-    [masterVolume, masterFade],
+    [masterVolume, masterFade, audible],
   );
 
   // Masking-aware shaping: duck and darken stacked beds / piled-up broadband so
@@ -69,9 +89,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
       .filter(([, s]) => s.enabled)
       .map(([id]) => id);
     activeIds.forEach((soundId) => {
-      audioMapRef.current[soundId]?.setShaping?.(layerShaping(activeIds, soundId));
+      audioMapRef.current[soundId]?.setShaping?.(layerShaping(activeIds, soundId, sleepSafe));
     });
-  }, [soundState]);
+  }, [soundState, sleepSafe]);
 
   useEffect(() => {
     Object.entries(soundState).forEach(([soundId, state]) => {
@@ -79,6 +99,22 @@ export const useAudioMixer = (sounds: Sound[]) => {
     });
     applyShaping();
   }, [masterVolume, soundState, applyVolume, applyShaping]);
+
+  // Reflect sleep-safe mode onto the master shelf, and persist the choice.
+  useEffect(() => {
+    setMasterSleepSafe(sleepSafe);
+    try { localStorage.setItem(SLEEP_SAFE_KEY, sleepSafe ? '1' : '0'); } catch { /* private mode */ }
+  }, [sleepSafe]);
+
+  const toggleMute = useCallback((soundId: string) => {
+    setMutedIds((prev) => (prev.includes(soundId) ? prev.filter((id) => id !== soundId) : [...prev, soundId]));
+  }, []);
+
+  const toggleSolo = useCallback((soundId: string) => {
+    setSoloIds((prev) => (prev.includes(soundId) ? prev.filter((id) => id !== soundId) : [...prev, soundId]));
+  }, []);
+
+  const setSleepSafe = useCallback((on: boolean) => setSleepSafeState(on), []);
 
   const clearFade = useCallback((soundId: string) => {
     if (fadeTimersRef.current[soundId] != null) {
@@ -95,11 +131,14 @@ export const useAudioMixer = (sounds: Sound[]) => {
       let step = 0;
       fadeTimersRef.current[soundId] = setInterval(() => {
         step++;
-        source.volume = Math.min(1, (step / FADE_STEPS) * targetVol);
+        // Respect a mute/solo set mid-fade, so muting a just-started layer sticks
+        // instead of being overridden by the fade ramp.
+        const gate = audible(soundId) ? 1 : 0;
+        source.volume = Math.min(1, (step / FADE_STEPS) * targetVol) * gate;
         if (step >= FADE_STEPS) clearFade(soundId);
       }, FADE_MS / FADE_STEPS);
     },
-    [clearFade],
+    [clearFade, audible],
   );
 
   const doFadeOut = useCallback(
@@ -171,6 +210,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
       } else {
         clearFade(soundId);
         setLoadingState((prev) => ({ ...prev, [soundId]: false }));
+        // A removed layer shouldn't carry a stale mute/solo into its next life.
+        setMutedIds((prev) => prev.filter((id) => id !== soundId));
+        setSoloIds((prev) => prev.filter((id) => id !== soundId));
         doFadeOut(soundId, () => source.stop());
       }
     },
@@ -246,6 +288,8 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const stopAll = useCallback(() => {
     Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
     Object.values(audioMapRef.current).forEach((source) => source.stop());
+    setMutedIds([]);
+    setSoloIds([]);
     setSoundState((prev) => {
       const next: Record<string, SoundState> = {};
       let changed = false;
@@ -316,6 +360,12 @@ export const useAudioMixer = (sounds: Sound[]) => {
     stopAll,
     activeSounds,
     restoreMixerState,
+    mutedIds,
+    soloIds,
+    toggleMute,
+    toggleSolo,
+    sleepSafe,
+    setSleepSafe,
   };
 };
 

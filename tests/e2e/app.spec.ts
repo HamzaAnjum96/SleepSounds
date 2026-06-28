@@ -148,6 +148,31 @@ test('audio flows through the shared master bus', async ({ page }) => {
     .toBeGreaterThan(0.01);
 });
 
+test('muting a layer silences the mix, and unmuting restores it', async ({ page }) => {
+  const peak = () => page.evaluate(() => (window as unknown as { __driftMasterPeak?: () => number }).__driftMasterPeak?.() ?? 0);
+  await page.locator('.sound-card[data-cat="Air"]').first().locator('.sound-card-toggle').click();
+  await page.locator('.mp-body').click();
+  // The M (mute) toggle is the first layer toggle in the row; wait for the sheet
+  // to settle so the click lands on the settled control.
+  const mute = page.locator('.layer-row .layer-toggle').first();
+  await expect(mute).toBeVisible();
+  await expect.poll(peak, { timeout: 6000 }).toBeGreaterThan(0.01);
+  await mute.click();
+  await expect(mute).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(peak, { timeout: 4000 }).toBeLessThan(0.01);
+  await mute.click();
+  await expect.poll(peak, { timeout: 4000 }).toBeGreaterThan(0.01);
+});
+
+test('sleep-safe is on by default and can be toggled', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-body').click();
+  const toggle = page.locator('.sleep-safe');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('the privacy page is reachable', async ({ page }) => {
   const link = page.locator('.footer-privacy');
   await expect(link).toHaveAttribute('href', /privacy\.html$/);

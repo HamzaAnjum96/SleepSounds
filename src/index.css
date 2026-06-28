@@ -2494,6 +2494,85 @@ body:has(.mini-player) .toast {
   text-align: center;
 }
 
+/* Per-layer mute (M) / solo (S): compact letter toggles in the layer row. */
+.layer-toggles {
+  display: flex;
+  gap: var(--sp-4);
+  flex-shrink: 0;
+}
+.layer-toggle {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  outline: none;
+  transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1);
+}
+@media (hover: hover) {
+  .layer-toggle:hover { color: var(--text-primary); border-color: var(--border-strong); }
+}
+.layer-toggle.on {
+  color: var(--card-accent);
+  border-color: rgba(var(--cat), 0.5);
+  background: rgba(var(--cat), 0.14);
+}
+.layer-toggle:focus-visible { box-shadow: 0 0 0 2px var(--border-active); }
+
+/* Sleep-safe toggle in the master section. */
+.sleep-safe {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-top: var(--sp-12);
+  padding: var(--sp-8) var(--sp-12);
+  width: 100%;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-faint);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-control);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  outline: none;
+  transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1);
+}
+.sleep-safe-dot {
+  width: 8px; height: 8px;
+  border-radius: var(--r-full);
+  background: var(--border-strong);
+  flex-shrink: 0;
+  transition: background var(--dur-2), box-shadow var(--dur-2);
+}
+.sleep-safe.on {
+  color: var(--text-primary);
+  border-color: var(--accent-line);
+  background: var(--accent-tint);
+}
+.sleep-safe.on .sleep-safe-dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+.sleep-safe-hint {
+  margin-left: auto;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.sleep-safe:focus-visible { box-shadow: 0 0 0 2px var(--accent-line); }
+
 .sheet-master,
 .sheet-timer {
   display: flex;

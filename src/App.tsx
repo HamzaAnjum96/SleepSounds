@@ -140,6 +140,12 @@ export default function App() {
     stopAll,
     activeSounds,
     restoreMixerState,
+    mutedIds,
+    soloIds,
+    toggleMute,
+    toggleSolo,
+    sleepSafe,
+    setSleepSafe,
   } = useAudioMixer(SOUND_LIBRARY);
 
   const mediaArtwork = useMemo(() => buildMediaArtwork(512), []);
@@ -988,6 +994,12 @@ export default function App() {
             onClearMix={handleStopMix}
             onDrift={() => setDriftOpen(true)}
             onSave={handleSaveMix}
+            mutedIds={mutedIds}
+            soloIds={soloIds}
+            onToggleMute={toggleMute}
+            onToggleSolo={toggleSolo}
+            sleepSafe={sleepSafe}
+            onSleepSafe={setSleepSafe}
           />
         )}
       </div>
@@ -1028,6 +1040,12 @@ export default function App() {
             onClearMix={handleStopMix}
             onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
             onSave={handleSaveMix}
+            mutedIds={mutedIds}
+            soloIds={soloIds}
+            onToggleMute={toggleMute}
+            onToggleSolo={toggleSolo}
+            sleepSafe={sleepSafe}
+            onSleepSafe={setSleepSafe}
           />
         </Suspense>
       )}

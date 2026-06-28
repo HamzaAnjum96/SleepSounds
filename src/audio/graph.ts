@@ -117,6 +117,14 @@ export function applyLayerShaping(
   bus.output.gain.setTargetAtTime(dbToGain(s.gainDb), t, 0.2);
 }
 
+/** Sleep-safe mode deepens the master high-shelf cut (darker, calmer top);
+ *  off, it eases back for a brighter, more cinematic balance. */
+export function setMasterSleepSafe(on: boolean): void {
+  if (!bus) getMasterBus();
+  const b = bus!;
+  b.shelf.gain.setTargetAtTime(on ? -2.5 : -0.5, getAudioContext().currentTime, 0.2);
+}
+
 /** Resume the shared context (call from a user gesture / on play). */
 export async function resumeAudio(): Promise<void> {
   try { await getAudioContext().resume(); } catch { /* not yet allowed */ }
