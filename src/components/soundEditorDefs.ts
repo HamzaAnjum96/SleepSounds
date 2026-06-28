@@ -35,18 +35,18 @@ const FIRE_PARAM_GROUPS: ParamGroup[] = [
   {
     label: 'character',
     params: [
-      { key: 'intensity',   label: 'intensity',     min: 0, max: 1, step: 0.01, def: 0.39 },
-      { key: 'dryness',     label: 'dryness',       min: 0, max: 1, step: 0.01, def: 0.47 },
-      { key: 'crackleBias', label: 'crackle bias',  min: 0, max: 1, step: 0.01, def: 1.0 },
-      { key: 'size',        label: 'fire size',     min: 0, max: 1, step: 0.01, def: 1.0 },
-      { key: 'distance',    label: 'distance',      min: 0, max: 1, step: 0.01, def: 0.54 },
-      { key: 'wind',        label: 'wind',          min: 0, max: 1, step: 0.01, def: 0.5 },
+      { key: 'intensity',   label: 'intensity',     min: 0, max: 1, step: 0.01, def: 0.30 },
+      { key: 'dryness',     label: 'dryness',       min: 0, max: 1, step: 0.01, def: 0.38 },
+      { key: 'crackleBias', label: 'crackle bias',  min: 0, max: 1, step: 0.01, def: 0.65 },
+      { key: 'size',        label: 'fire size',     min: 0, max: 1, step: 0.01, def: 0.65 },
+      { key: 'distance',    label: 'distance',      min: 0, max: 1, step: 0.01, def: 0.58 },
+      { key: 'wind',        label: 'wind',          min: 0, max: 1, step: 0.01, def: 0.22 },
     ],
   },
   {
     label: 'roar',
     params: [
-      { key: 'bodyVol',   label: 'roar volume',     min: 0,        max: 2,      step: 0.05,     def: 1.4 },
+      { key: 'bodyVol',   label: 'roar volume',     min: 0,        max: 2,      step: 0.05,     def: 1.0 },
       { key: 'bodyLp',    label: 'roar brightness', min: 0.001,    max: 0.05,   step: 0.001,    def: 0.007 },
       { key: 'roarMean',  label: 'roar level',      min: 0,        max: 1,      step: 0.01,     def: 0.81 },
       { key: 'roarSpeed', label: 'roll speed',      min: 0.000005, max: 0.0002, step: 0.000005, def: 0.00005 },
@@ -56,9 +56,9 @@ const FIRE_PARAM_GROUPS: ParamGroup[] = [
   {
     label: 'balance',
     params: [
-      { key: 'crackleBase', label: 'crackle rate',   min: 0, max: 15, step: 0.5,  def: 13.5 },
-      { key: 'crackleVol',  label: 'crackle volume', min: 0, max: 6,  step: 0.1,  def: 5.4 },
-      { key: 'popVol',      label: 'pop volume',     min: 0, max: 3,  step: 0.05, def: 1.35 },
+      { key: 'crackleBase', label: 'crackle rate',   min: 0, max: 15, step: 0.5,  def: 9 },
+      { key: 'crackleVol',  label: 'crackle volume', min: 0, max: 6,  step: 0.1,  def: 3.1 },
+      { key: 'popVol',      label: 'pop volume',     min: 0, max: 3,  step: 0.05, def: 0.55 },
     ],
   },
 ];
@@ -152,18 +152,18 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     {
       label: 'rainfall',
       params: [
-        { key: 'intensity', label: 'intensity',  min: 0, max: 1, step: 0.01, def: 0.65 },
-        { key: 'heaviness', label: 'heaviness',  min: 0, max: 1, step: 0.01, def: 0.50 },
-        { key: 'surface',   label: 'surface',    min: 0, max: 1, step: 0.01, def: 0.50 },
-        { key: 'bed',       label: 'background',  min: 0, max: 1, step: 0.01, def: 1.00 },
+        { key: 'intensity', label: 'intensity',  min: 0, max: 1, step: 0.01, def: 0.48 },
+        { key: 'heaviness', label: 'heaviness',  min: 0, max: 1, step: 0.01, def: 0.42 },
+        { key: 'surface',   label: 'surface',    min: 0, max: 1, step: 0.01, def: 0.55 },
+        { key: 'bed',       label: 'background',  min: 0, max: 1, step: 0.01, def: 0.62 },
       ],
     },
     {
       label: 'character',
       params: [
-        { key: 'drops',    label: 'drops',     min: 0, max: 1, step: 0.01, def: 0.25 },
-        { key: 'movement', label: 'movement',  min: 0, max: 1, step: 0.01, def: 0.40 },
-        { key: 'space',    label: 'space',     min: 0, max: 1, step: 0.01, def: 0.30 },
+        { key: 'drops',    label: 'drops',     min: 0, max: 1, step: 0.01, def: 0.18 },
+        { key: 'movement', label: 'movement',  min: 0, max: 1, step: 0.01, def: 0.22 },
+        { key: 'space',    label: 'space',     min: 0, max: 1, step: 0.01, def: 0.18 },
       ],
     },
   ], variants: vlist(
@@ -174,35 +174,35 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['At a Window', { surface: 0.62, space: 0.62, drops: 0.45, bed: 0.68, intensity: 0.50, heaviness: 0.45 }],
   ) },
   ocean: { label: 'Ocean', mode: 'simple', groups: simpleGroup(
-    { key: 'waveSize', label: 'wave size', def: 0.55 },
-    { key: 'foam', label: 'foam', def: 0.50 },
-    { key: 'depth', label: 'depth', def: 0.50 },
+    { key: 'waveSize', label: 'wave size', def: 0.40 },
+    { key: 'foam', label: 'foam', def: 0.28 },
+    { key: 'depth', label: 'depth', def: 0.58 },
   ), variants: vlist(
     ['Calm Shore',    { waveSize: 0.30, foam: 0.35, depth: 0.40 }],
     ['Rolling Waves', {}],
     ['Storm Surf',    { waveSize: 0.85, foam: 0.75, depth: 0.70 }],
   )},
   wind: { label: 'Wind', mode: 'simple', groups: simpleGroup(
-    { key: 'gusts', label: 'gusts', def: 0.50 },
-    { key: 'whistle', label: 'whistle', def: 0.30 },
-    { key: 'tone', label: 'tone', def: 0.50 },
+    { key: 'gusts', label: 'gusts', def: 0.35 },
+    { key: 'whistle', label: 'whistle', def: 0.08 },
+    { key: 'tone', label: 'tone', def: 0.40 },
   ), variants: vlist(
     ['Breeze',       { gusts: 0.25, whistle: 0.15, tone: 0.45 }],
     ['Gusty', {}],
     ['Howling Gale', { gusts: 0.85, whistle: 0.60, tone: 0.60 }],
   )},
   forest: { label: 'Windy Forest', mode: 'simple', groups: simpleGroup(
-    { key: 'leaves', label: 'leaf rustle', def: 0.70 },
-    { key: 'twigs', label: 'branch detail', def: 0.35 },
-    { key: 'breeze', label: 'wind speed', def: 0.50 },
+    { key: 'leaves', label: 'leaf rustle', def: 0.52 },
+    { key: 'twigs', label: 'branch detail', def: 0.12 },
+    { key: 'breeze', label: 'wind speed', def: 0.34 },
   ), variants: vlist(
     ['Light Rustle',       { leaves: 0.45, twigs: 0.20, breeze: 0.30 }],
     ['Breezy Canopy', {}],
     ['Storm in the Trees', { leaves: 0.90, twigs: 0.60, breeze: 0.80 }],
   )},
   stream: { label: 'Stream', mode: 'simple', groups: simpleGroup(
-    { key: 'flow', label: 'flow', def: 0.60 },
-    { key: 'sparkle', label: 'sparkle', def: 0.45 },
+    { key: 'flow', label: 'flow', def: 0.46 },
+    { key: 'sparkle', label: 'sparkle', def: 0.22 },
     { key: 'depth', label: 'depth', def: 0.50 },
   ), variants: vlist(
     ['Trickle',        { flow: 0.30, sparkle: 0.30, depth: 0.35 }],
@@ -210,19 +210,19 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Rushing Creek',  { flow: 0.85, sparkle: 0.60, depth: 0.65 }],
   )},
   thunder: { label: 'Thunder', mode: 'simple', groups: simpleGroup(
-    { key: 'stormIntensity', label: 'storm intensity', def: 0.50 },
-    { key: 'rumble', label: 'rumble', def: 0.60 },
-    { key: 'distance', label: 'distance', def: 0.40 },
+    { key: 'stormIntensity', label: 'storm intensity', def: 0.16 },
+    { key: 'rumble', label: 'rumble', def: 0.48 },
+    { key: 'distance', label: 'distance', def: 0.72 },
   ), variants: vlist(
     ['Far Off',       { stormIntensity: 0.30, rumble: 0.50, distance: 0.75 }],
     ['Rolling Storm', {}],
     ['Overhead',      { stormIntensity: 0.80, rumble: 0.75, distance: 0.15 }],
   )},
   fan: { label: 'Fan', mode: 'simple', groups: shapeGroup(
-    { key: 'speed', label: 'speed', def: 0.10 },
-    { key: 'hum', label: 'hum', def: 0.40 },
-    { key: 'airflow', label: 'airflow', def: 0.60 },
-    { key: 'size', label: 'fan size', def: 0.20 },
+    { key: 'speed', label: 'speed', def: 0.08 },
+    { key: 'hum', label: 'hum', def: 0.50 },
+    { key: 'airflow', label: 'airflow', def: 0.38 },
+    { key: 'size', label: 'fan size', def: 0.18 },
   ), variants: vlist(
     ['Low Hum',    { speed: 0.05, hum: 0.55, airflow: 0.40, size: 0.20 }],
     ['Steady', {}],
@@ -238,35 +238,35 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Fast Express',    { speed: 0.80, rumble: 0.60, clatter: 0.60 }],
   )},
   night: { label: 'Night Insects', mode: 'simple', groups: shapeGroup(
-    { key: 'cosmic', label: 'shimmer', def: 0.40 },
-    { key: 'pulse', label: 'drift', def: 0.30 },
+    { key: 'cosmic', label: 'shimmer', def: 0.22 },
+    { key: 'pulse', label: 'drift', def: 0.18 },
   ), variants: vlist(
     ['Still',        { cosmic: 0.20, pulse: 0.15 }],
     ['Summer Night', {}],
     ['Deep Drift',   { cosmic: 0.60, pulse: 0.55 }],
   )},
   'white-noise': { label: 'White Noise', mode: 'simple', groups: simpleGroup(
-    { key: 'brightness', label: 'brightness', def: 0.55 },
-    { key: 'depth', label: 'depth', def: 0.50 },
-    { key: 'texture', label: 'texture', def: 0.40 },
+    { key: 'brightness', label: 'brightness', def: 0.32 },
+    { key: 'depth', label: 'depth', def: 0.58 },
+    { key: 'texture', label: 'texture', def: 0.22 },
   ), variants: vlist(
     ['Soft',     { brightness: 0.35, depth: 0.60, texture: 0.30 }],
     ['Balanced', {}],
     ['Bright',   { brightness: 0.80, depth: 0.40, texture: 0.55 }],
   )},
   'pink-noise': { label: 'Pink Noise', mode: 'simple', groups: simpleGroup(
-    { key: 'warmth', label: 'warmth', def: 0.60 },
-    { key: 'focus', label: 'focus', def: 0.45 },
-    { key: 'air', label: 'air', def: 0.40 },
+    { key: 'warmth', label: 'warmth', def: 0.70 },
+    { key: 'focus', label: 'focus', def: 0.35 },
+    { key: 'air', label: 'air', def: 0.20 },
   ), variants: vlist(
     ['Warm',     { warmth: 0.80, focus: 0.35, air: 0.25 }],
     ['Balanced', {}],
     ['Airy',     { warmth: 0.45, focus: 0.55, air: 0.70 }],
   )},
   'brown-noise': { label: 'Brown Noise', mode: 'simple', groups: simpleGroup(
-    { key: 'depth', label: 'depth', def: 0.70 },
-    { key: 'rumble', label: 'rumble', def: 0.40 },
-    { key: 'smoothness', label: 'smoothness', def: 0.50 },
+    { key: 'depth', label: 'depth', def: 0.72 },
+    { key: 'rumble', label: 'rumble', def: 0.20 },
+    { key: 'smoothness', label: 'smoothness', def: 0.78 },
   ), variants: vlist(
     ['Smooth',  { depth: 0.60, rumble: 0.25, smoothness: 0.75 }],
     ['Rolling', {}],

@@ -34,7 +34,11 @@ function lazyWav(id: string): () => Promise<string> {
   let pending: Promise<string> | null = null;
   return () => {
     if (!pending) {
-      pending = generateSoundWav(id, {}).then((url) => {
+      // Render with the sound's editor defaults so the single source of truth for
+      // a default WAV is its editor `def`s (which match the generator's internal
+      // defaults today) — change a default once, in soundEditorDefs, and both the
+      // played loop and the slider agree.
+      pending = generateSoundWav(id, editorDefaults(id)).then((url) => {
         if (url == null) throw new Error(`no WAV generator for sound "${id}"`);
         return url;
       });

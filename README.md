@@ -111,6 +111,17 @@ npm run preview
 
 ## Changelog
 
+### 6.3.0
+- **Audio engine — sprint 4: sleep-safe defaults.** Retuned the default character
+  of most layers toward calmer, sleep-first listening (from the research report's
+  sleep-safe table): a fainter, softer rain bed with fewer drops; quieter, darker
+  fire crackle; wind whistle way down; sparser, more distant thunder; less twig
+  detail in the forest; lower ocean foam and stream sparkle; darker white noise;
+  warmer pink/brown noise; quieter night insects. WAV loops now render from their
+  editor `def`s (single source of truth for a default), so a default lives in one
+  place. Named variants and saved mixes are unaffected; every value is still
+  editable.
+
 ### 6.2.0
 - **Audio engine — sprint 3: per-layer EQ + spectral masking.** Every layer now
   runs through its own bus (lowpass → high-shelf → trim) into the master bus.
