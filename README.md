@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.7.1
+### 7.8.0
 - **Soft-square design system — phase 1: controls off the pill.** Per the
   soft-square visual report, controls are now rounded *rectangles*, not capsules.
   Replaced the `--r-pill` (20px) token with a proportional radius scale and
