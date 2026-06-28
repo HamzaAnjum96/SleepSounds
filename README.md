@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.12.1
+### 7.13.0
 - **Hide Stream and Shower for now.** Both are pulled from the library via a new
   explicit `HIDDEN_SOUND_IDS` set in `data.ts` (cleaner than marking finished
   sounds "experimental"; the flag never reveals them). Their generators and
