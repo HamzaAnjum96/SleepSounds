@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.9.1
+### 7.10.0
 - **Hide per-layer mute / solo for now.** The **M** (mute) and **S** (solo)
   toggles on each now-playing layer are hidden behind a new `layerMuteSolo`
   feature flag (off). The mixer logic stays fully wired up, so flipping the flag
