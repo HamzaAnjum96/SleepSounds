@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.8.1
+### 7.9.0
 - **Soft-square design system — phase 2: cards, rename, docs.** Scene cards, mix
   cards and the empty-mix tile move to the 16px `--radius-card-lg`; sound cards
   and the inline editor adopt the semantic `--radius-card` (14px, unchanged
