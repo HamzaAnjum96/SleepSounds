@@ -878,7 +878,7 @@ export default function App() {
             <span className="section-meta">{SOUND_LIBRARY.length} generated sounds</span>
           </div>
 
-          <div className="cat-pills">
+          <div className="cat-filters">
             {CATEGORIES.map((cat) => {
               const n = activeInCategory(cat);
               const hasCount = n > 0;
@@ -886,7 +886,7 @@ export default function App() {
                 <button
                   key={cat}
                   type="button"
-                  className={`cat-pill${category === cat ? ' active' : ''}`}
+                  className={`cat-filter${category === cat ? ' active' : ''}`}
                   data-cat={cat}
                   aria-pressed={category === cat}
                   onClick={() => selectCategory(cat)}

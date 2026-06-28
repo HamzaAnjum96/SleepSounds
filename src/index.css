@@ -680,19 +680,19 @@ header::after {
 
 /* A fixed 3×3 grid: every family visible, pills stretched to share each row
    equally, icon + name leading and the count ring anchored to the far edge. */
-.cat-pills {
+.cat-filters {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--sp-4);
   margin-bottom: var(--sp-12);
 }
-.cat-pill {
+.cat-filter {
   white-space: nowrap;
   min-width: 0;
 }
-.cat-pill .cat-count { margin-left: auto; }
+.cat-filter .cat-count { margin-left: auto; }
 
-.cat-pill {
+.cat-filter {
   --cat: 123,167,232;            /* "All" falls back to the accent blue */
   display: flex;
   align-items: center;
@@ -711,13 +711,13 @@ header::after {
   outline: none;
 }
 @media (hover: hover) {
-  .cat-pill:hover {
+  .cat-filter:hover {
     border-color: var(--border-strong);
     color: var(--text-primary);
   }
 }
 /* The active filter glows in its own category hue, tying the row to the cards. */
-.cat-pill.active {
+.cat-filter.active {
   border-color: rgba(var(--cat), 0.45);
   color: rgb(var(--cat));
   background: rgba(var(--cat), 0.12);
@@ -727,7 +727,7 @@ header::after {
   line-height: 1;
   opacity: 0.7;
 }
-.cat-pill.active .cat-icon {
+.cat-filter.active .cat-icon {
   opacity: 1;
 }
 /* The count badge rests as an empty ring — a quiet "nothing from this family
@@ -773,10 +773,10 @@ header::after {
    toward the 44px guideline for in-the-dark, one-handed use. The editor
    handle keeps its absolute positioning and only gains the halo. */
 
-.timer-btn, .cat-pill, .mix-del, .layer-remove {
+.timer-btn, .cat-filter, .mix-del, .layer-remove {
   position: relative;
 }
-.timer-btn::before, .cat-pill::before, .mix-del::before,
+.timer-btn::before, .cat-filter::before, .mix-del::before,
 .layer-remove::before, .card-editor-icon::before {
   content: '';
   position: absolute;
@@ -820,7 +820,7 @@ header::after {
   padding: var(--sp-16) var(--sp-16) var(--sp-14);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-xl);
+  border-radius: var(--radius-card);
   cursor: pointer;
   outline: none;
   transition: background var(--dur-2), border-color var(--dur-2), box-shadow var(--dur-2),
@@ -1076,7 +1076,7 @@ header::after {
   grid-column: 1 / -1;
   background: var(--surface-faint);
   border: 1px solid rgba(var(--cat), 0.18);
-  border-radius: var(--r-xl);
+  border-radius: var(--radius-card);
   padding: var(--sp-14) var(--sp-16);
   margin-top: -2px;
   animation: fadeSlideUp var(--dur-4) var(--ease) both;
@@ -1696,7 +1696,7 @@ header::after {
   align-items: flex-start;
   padding: var(--sp-12) var(--sp-14);
   border: 1px solid rgba(255,255,255,0.10);
-  border-radius: var(--r-xl);
+  border-radius: var(--radius-card-lg);
   cursor: pointer;
   outline: none;
   overflow: hidden;
@@ -1850,7 +1850,7 @@ header::after {
   padding: var(--sp-10) var(--sp-12) var(--sp-12);
   background-color: var(--surface);
   border: 1px solid var(--warm-line);
-  border-radius: var(--r-xl);
+  border-radius: var(--radius-card-lg);
   cursor: pointer;
   outline: none;
   text-align: left;
@@ -2269,7 +2269,7 @@ body:has(.mini-player) .toast {
   padding: var(--sp-14) var(--sp-16);
   background: var(--warm-glow);
   border: 1px dashed var(--warm-line);
-  border-radius: var(--r-xl);
+  border-radius: var(--radius-card-lg);
   color: var(--text-secondary);
   font-family: var(--font-display);
   font-style: italic;
@@ -2720,7 +2720,7 @@ body:has(.mini-player) .toast {
    ring for keyboard users only (`:focus-visible`), in the accent color. */
 
 .timer-btn:focus-visible,
-.cat-pill:focus-visible,
+.cat-filter:focus-visible,
 .scene-card:focus-visible,
 .mix-card-body:focus-visible,
 .mix-del:focus-visible,
@@ -2826,7 +2826,7 @@ html.samsung-browser .cookie-notice {
 }
 html.samsung-browser .scene-row,
 html.samsung-browser .mix-row,
-html.samsung-browser .cat-pills {
+html.samsung-browser .cat-filters {
   -webkit-mask-image: none;
   mask-image: none;
 }

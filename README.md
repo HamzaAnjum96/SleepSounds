@@ -111,6 +111,17 @@ npm run preview
 
 ## Changelog
 
+### 7.8.1
+- **Soft-square design system — phase 2: cards, rename, docs.** Scene cards, mix
+  cards and the empty-mix tile move to the 16px `--radius-card-lg`; sound cards
+  and the inline editor adopt the semantic `--radius-card` (14px, unchanged
+  value). Renamed `.cat-pill` → `.cat-filter` (and `.cat-pills` → `.cat-filters`)
+  across the CSS and markup so the category controls read as filter tiles, not
+  capsules, and the naming can't drift back. Documented the whole soft-square
+  radius system (scale + semantic roles table) in `DESIGN.md`. Focus rings
+  already follow each control's radius (outline / box-shadow respect
+  `border-radius`), so no change was needed there.
+
 ### 7.8.0
 - **Soft-square design system — phase 1: controls off the pill.** Per the
   soft-square visual report, controls are now rounded *rectangles*, not capsules.

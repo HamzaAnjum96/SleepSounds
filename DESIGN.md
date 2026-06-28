@@ -120,9 +120,25 @@ Rhythm is varied deliberately (e.g. card padding `16 16 14`, header
 
 ## Radius
 
-`--r-xs 6 · --r-sm 8 · --r-md 10 · --r-lg 12 · --r-xl 14 · --r-pill 20 ·
---r-full 999`. Cards and the master bar use `--r-xl`; pills and chips use
-`--r-pill`; circular controls use `--r-full`.
+A **soft-square** system: controls are rounded *rectangles*, not capsules. A
+shape reads as a pill once its radius reaches half its height, so controls stay
+well under that. Scale: `--r-xs 6 · --r-sm 8 · --r-md 10 · --r-lg 12 · --r-xl 14
+· --r-2xl 16 · --r-full 999` (the old `--r-pill 20` is gone). Components consume
+the **semantic roles**, not raw numbers:
+
+| Role | Value | Used by |
+|---|---|---|
+| `--radius-control-sm` | 8 | timer keys, install / cookie / toast actions |
+| `--radius-control` | 10 | category filters, variant chips, fine-tune toggle |
+| `--radius-button` | 12 | primary / secondary buttons (`.sheet-action`, `.crash-btn`) |
+| `--radius-card` | 14 | sound cards, inline editor |
+| `--radius-card-lg` | 16 | scene / mix cards, the short floating bars (mini-player, toast) |
+| `--radius-sheet` | 20 | the tall now-playing sheet |
+| `--radius-round` | 999 | circles only — orbs, dots, thumbs, round icon buttons, slider track |
+
+Circles are reserved for genuinely circular objects, never as a default button
+shape. Category filters are `.cat-filter` (a soft-square tile), not `.cat-pill`,
+so the language doesn't drift back toward capsules.
 
 ## Elevation
 
