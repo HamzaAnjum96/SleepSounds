@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.0.1
+### 7.1.0
 - **Fire — flame hiss band + distinct presets.** The fire worklet gains a
   dedicated high-band *hiss* (one-pole high-pass → gentle low-pass), gated by
   flame energy and the roar envelope so it breathes with the fire instead of
