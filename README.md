@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.10.1
+### 7.11.0
 - **"Fan & Rain" scene now really is rain on glass.** The preset's mood line is
   "a fan's hush over steady rain on glass," but its rain layer used a generic
   tuning. It now uses the **At a Window** variant (glassy taps, roomy, a touch of
