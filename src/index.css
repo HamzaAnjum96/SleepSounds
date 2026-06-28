@@ -1390,7 +1390,10 @@ header::after {
   gap: var(--sp-6);
 }
 .sb-variant {
-  padding: var(--sp-6) var(--sp-12);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-6) var(--sp-12) var(--sp-6) var(--sp-8);
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: transparent;
@@ -1402,6 +1405,17 @@ header::after {
   transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
   outline: none;
 }
+/* The mark inherits the chip's colour (muted idle, accent active) and sits a
+   hair dimmer than the label so the word stays the anchor. */
+.sb-variant-mark {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  opacity: 0.85;
+  transition: opacity var(--dur-1);
+}
+.sb-variant-label { line-height: 1; }
+.sb-variant.active .sb-variant-mark { opacity: 1; }
 @media (hover: hover) {
   .sb-variant:hover {
     border-color: var(--border-strong);

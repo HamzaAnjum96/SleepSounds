@@ -14,10 +14,14 @@ export interface ParamGroup {
 
 /** A named character preset for a sound: the chips shown above the sliders.
  *  `values` is a partial override of the param defaults. Exactly one variant per
- *  sound carries `{}` — the default character, selected when the editor opens. */
+ *  sound carries `{}` — the default character, selected when the editor opens.
+ *  `icon` is a presentation-only mark token (see `lib/variantIcons`); when
+ *  omitted the chip shows an intensity bar by position. The name stays the code
+ *  identity and the visible/accessible label. */
 export interface SoundVariant {
   name: string;
   values: Record<string, number>;
+  icon?: string;
 }
 
 export interface SoundEditorModel {
@@ -117,9 +121,11 @@ function shapeGroup(...items: { key: string; label: string; def: number }[]): Pa
 }
 
 /** Compact variant table: `vlist(['Steady', {}], ['Drizzle', { intensity: 0.3 }])`.
- *  Exactly one entry should be `{}` (the default character). */
-function vlist(...items: [string, Record<string, number>][]): SoundVariant[] {
-  return items.map(([name, values]) => ({ name, values }));
+ *  Exactly one entry should be `{}` (the default character). An optional third
+ *  tuple element is the chip's mark token (see `lib/variantIcons`); omit it to
+ *  get an intensity bar by position (simple sounds list their variants low→high). */
+function vlist(...items: ([string, Record<string, number>] | [string, Record<string, number>, string])[]): SoundVariant[] {
+  return items.map(([name, values, icon]) => (icon ? { name, values, icon } : { name, values }));
 }
 
 export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
@@ -129,20 +135,22 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     worklet: 'fire.worklet.js',
     processor: 'fire-synth',
     groups: FIRE_PARAM_GROUPS,
+    // Ordered low → high energy, with the two character specials (stove,
+    // crackling) last — so the marks read as a gentle ramp then two scenes.
     variants: vlist(
-      ['Campfire', {}],
       // Smouldering: low roar, sparse soft crackle, a thread of sizzle.
-      ['Embers',     { intensity: 0.16, size: 0.50, distance: 0.62, crackleBase: 5,  crackleVol: 2.4, popVol: 0.30, bodyVol: 0.85, roarMean: 0.45, dryness: 0.30, crackleBias: 0.45, hiss: 0.12 }],
+      ['Embers',     { intensity: 0.16, size: 0.50, distance: 0.62, crackleBase: 5,  crackleVol: 2.4, popVol: 0.30, bodyVol: 0.85, roarMean: 0.45, dryness: 0.30, crackleBias: 0.45, hiss: 0.12 }, 'ember'],
       // Steady indoor fireplace — close, warm, moderate even crackle.
-      ['Hearth',     { intensity: 0.40, size: 0.78, distance: 0.40, crackleBase: 11, crackleVol: 4.6, popVol: 0.80, bodyVol: 1.20, hiss: 0.16 }],
+      ['Hearth',     { intensity: 0.40, size: 0.78, distance: 0.40, crackleBase: 11, crackleVol: 4.6, popVol: 0.80, bodyVol: 1.20, hiss: 0.16 }, 'hearth'],
+      ['Campfire', {}, 'flame'],
       // Big open fire — roar dominates, frequent loud crackles and pops, little
       // hiss (the low end carries it).
-      ['Bonfire',    { intensity: 0.72, size: 1.0,  distance: 0.70, bodyVol: 1.85, roarMean: 0.96, crackleBase: 14, crackleVol: 5.2, popVol: 2.10, dryness: 0.50, hiss: 0.10 }],
+      ['Bonfire',    { intensity: 0.72, size: 1.0,  distance: 0.70, bodyVol: 1.85, roarMean: 0.96, crackleBase: 14, crackleVol: 5.2, popVol: 2.10, dryness: 0.50, hiss: 0.10 }, 'blaze'],
       // Contained stove — dark low rumble and prominent escaping-air hiss, only
       // a few distant pops. This is the texture the report's "wood stove" wants.
-      ['Wood Stove', { intensity: 0.26, size: 0.45, distance: 0.30, bodyVol: 1.30, bodyLp: 0.004, roarMean: 0.70, crackleBase: 5, crackleVol: 2.6, popVol: 0.35, dryness: 0.28, crackleBias: 0.40, hiss: 0.62 }],
+      ['Wood Stove', { intensity: 0.26, size: 0.45, distance: 0.30, bodyVol: 1.30, bodyLp: 0.004, roarMean: 0.70, crackleBase: 5, crackleVol: 2.6, popVol: 0.35, dryness: 0.28, crackleBias: 0.40, hiss: 0.62 }, 'stove'],
       // Dry kindling — emphasised rapid pops and crackle over a thinner roar.
-      ['Crackling',  { crackleBase: 15, crackleVol: 6, popVol: 2.4, bodyVol: 0.9, roarMean: 0.55, dryness: 0.80, hiss: 0.14 }],
+      ['Crackling',  { crackleBase: 15, crackleVol: 6, popVol: 2.4, bodyVol: 0.9, roarMean: 0.55, dryness: 0.80, hiss: 0.14 }, 'crackle'],
     ),
   },
   birdsong: {
@@ -182,17 +190,19 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     // `drops` stays low and the hits sit under the wash. The surface variants
     // below raise `drops` to push their crisp hits forward (compensating for the
     // lower dropGain floor, so their prominence is unchanged).
+    // Open-air variants first as a fine→heavy ramp (mist, then 1/2/3 drops),
+    // then the three surface scenes (roof, window, tin) always grouped last.
+    ['Drizzle',     { intensity: 0.32, heaviness: 0.30, surface: 0.55, bed: 0.85, drops: 0.06, movement: 0.30 }, 'mist'],
     // Very sparse, intermittent light rain — a thin wash with soft, far patter.
-    ['Light Rain',  { intensity: 0.18, heaviness: 0.22, surface: 0.55, bed: 0.50, drops: 0.08, movement: 0.40, space: 0.20 }],
-    ['Drizzle',     { intensity: 0.32, heaviness: 0.30, surface: 0.55, bed: 0.85, drops: 0.06, movement: 0.30 }],
-    ['Steady', {}],
-    ['Downpour',    { intensity: 0.92, heaviness: 0.72, surface: 0.42, drops: 0.13, movement: 0.55, space: 0.35 }],
+    ['Light Rain',  { intensity: 0.18, heaviness: 0.22, surface: 0.55, bed: 0.50, drops: 0.08, movement: 0.40, space: 0.20 }, 'drop1'],
+    ['Steady', {}, 'drop2'],
+    ['Downpour',    { intensity: 0.92, heaviness: 0.72, surface: 0.42, drops: 0.13, movement: 0.55, space: 0.35 }, 'drop3'],
     // Wooden roof — muffled, body-heavy taps, almost no metal ring.
-    ['On a Roof',   { surface: 0.30, heaviness: 0.65, intensity: 0.62, drops: 0.55, bed: 0.80, space: 0.48, movement: 0.25, metallic: 0.05 }],
+    ['On a Roof',   { surface: 0.30, heaviness: 0.65, intensity: 0.62, drops: 0.55, bed: 0.80, space: 0.48, movement: 0.25, metallic: 0.05 }, 'roof'],
     // Glass — brighter taps, roomy, a touch of ring (you're indoors looking out).
-    ['At a Window', { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }],
+    ['At a Window', { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }, 'window'],
     // Corrugated tin — sharp, bright, ringing pings on purpose.
-    ['Tin Roof',    { surface: 0.15, heaviness: 0.42, intensity: 0.60, drops: 0.62, bed: 0.55, space: 0.40, movement: 0.30, metallic: 0.72 }],
+    ['Tin Roof',    { surface: 0.15, heaviness: 0.42, intensity: 0.60, drops: 0.62, bed: 0.55, space: 0.40, movement: 0.30, metallic: 0.72 }, 'tin'],
   ) },
   ocean: { label: 'Ocean', mode: 'simple', groups: simpleGroup(
     { key: 'waveSize', label: 'wave size', def: 0.40 },
@@ -316,8 +326,8 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'cabin', label: 'cabin', def: 0.60 },
     { key: 'turbulence', label: 'turbulence', def: 0.30 },
   ), variants: vlist(
-    ['Cruise', {}],
     ['Cabin',     { altitude: 0.40, cabin: 0.80, turbulence: 0.20 }],
+    ['Cruise', {}],
     ['Turbulent', { altitude: 0.60, cabin: 0.55, turbulence: 0.70 }],
   )},
   heartbeat: { label: 'Heartbeat', mode: 'simple', groups: simpleGroup(
@@ -325,8 +335,8 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'chest', label: 'chest', def: 0.60 },
     { key: 'muffle', label: 'muffle', def: 0.50 },
   ), variants: vlist(
-    ['Resting', {}],
     ['Calm', { rate: 0.35, chest: 0.60, muffle: 0.55 }],
+    ['Resting', {}],
     ['Deep', { rate: 0.45, chest: 0.85, muffle: 0.70 }],
   )},
 };

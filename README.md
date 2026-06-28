@@ -111,6 +111,18 @@ npm run preview
 
 ## Changelog
 
+### 7.5.1
+- **Variant chips gain crafted marks.** Each preset chip in the sound editor now
+  leads with a small 16px mark (new `src/lib/variantIcons.tsx`, drawn in
+  `currentColor` so it inherits the chip's idle/active colour). Intensity sounds
+  show 1/2/3 ascending bars; rain shows fine drizzle → 1/2/3 drops, then the three
+  surface scenes (peaked **roof**, glazed **window**, corrugated **tin**) grouped
+  last; fire shows per-character flames (embers, hearth arch, campfire, bonfire,
+  wood-stove box, crackling sparks). The variant **name** stays the code identity
+  and the visible, accessible label (marks are `aria-hidden`); a couple of lists
+  were reordered so the bars read low→high. Verified in-browser (mobile
+  screenshots) and via 71 unit + 16 e2e, typecheck, lint, build.
+
 ### 7.5.0
 - **Rain — open-air drops become a super-muted soft patter.** The open-air
   variants (Light Rain, Drizzle, Steady, Downpour) keep their drops, but as a

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SOUND_EDITOR_MODELS, type SoundVariant } from './soundEditorDefs';
 import { SOUND_ICONS } from '../lib/soundIcons';
+import { VariantMark, variantToken } from '../lib/variantIcons';
 import { sliderFill } from '../lib/sliderFill';
 
 interface SoundEditorProps {
@@ -123,7 +124,7 @@ export default function SoundEditor({
 
       {variants && (
         <div className="sb-variants" role="group" aria-label={`${title} presets`}>
-          {variants.map((v) => (
+          {variants.map((v, i) => (
             <button
               key={v.name}
               type="button"
@@ -131,7 +132,8 @@ export default function SoundEditor({
               aria-pressed={selected?.name === v.name}
               onClick={() => applyValues(resolve(v))}
             >
-              {v.name}
+              <VariantMark token={variantToken(v.icon, i)} />
+              <span className="sb-variant-label">{v.name}</span>
             </button>
           ))}
           {!selected && <span className="sb-variant custom" aria-hidden="true">custom</span>}
