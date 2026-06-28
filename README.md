@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 7.0.0
+- **Rain & fire realism — opening the 7.x line.** A focused pass on the two
+  generators the research report singled out: rain that reads as rain on soft
+  ground rather than on tin, with intensities and surface variants that actually
+  diverge; and fire whose presets are distinct textures (stove, embers, hearth,
+  campfire, bonfire) rather than one bonfire at different volumes. This major
+  bump opens the line; the work lands across the 7.x minors that follow. No
+  behaviour change in this entry itself — it sets the baseline.
+
 ### 6.5.0
 - **Audio engine — sprint 6: final check + fix.** Closes the 6.x audio pass.
   Documented the unified mix graph, per-layer EQ, two-dimensional masking,
