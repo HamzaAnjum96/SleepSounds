@@ -193,6 +193,12 @@ class RainProcessor extends AudioWorkletProcessor {
     // master sub-trim
     this.masterHP_L = new Biquad(); this.masterHP_R = new Biquad();
     this.masterHP_L.highpass(42, 0.6); this.masterHP_R.highpass(42, 0.6);
+    // master tone: a gentle 2-pole lowpass over the whole shower (bed + drops +
+    // reflections). Dark by default — this is the decisive cut that stops the
+    // colored bandpass-noise skirts reading as a tinny hiss — and opens up with
+    // metallic for the bright tin/window surfaces. Cutoff is set per block.
+    this.masterLP_L = new Biquad(); this.masterLP_R = new Biquad();
+    this.masterLPcut = 0;
 
     // voice pool
     this.voices = [];
@@ -213,6 +219,7 @@ class RainProcessor extends AudioWorkletProcessor {
     this.rbR = new Float32Array(this.rbLen);
     this.rbPos = 0;
     this.dL = 0; this.dR = 0; // damping one-pole state
+    this.evLpL = 0; this.evLpR = 0; // metallic-driven brightness ceiling on drops
     const mk = (s, g) => ({ d: Math.max(1, Math.round(s * SR)), g });
     // a small spray of taps out to ~90 ms gives an audible sense of enclosure
     // when `space` is up; slightly different delays L vs R decorrelate them.
@@ -284,45 +291,48 @@ class RainProcessor extends AudioWorkletProcessor {
     const bright = 1.12 - surface * 0.34;
     const tail = 1 + surface * 0.45;
 
-    // Low Q throughout: a raindrop is a broadband *tick*, not a tuned beep.
-    // High Q on a short noise burst rings tonally — the "laser" artefact.
+    // Brightness axis. This is the whole fix for "everything sounds like tin":
+    // a raindrop on soft ground is a low, dull *pock*, not a bright tick in the
+    // 2–4 kHz glass/metal register. By default (`metallic` = 0) the drops sit
+    // LOW and broad; only as `metallic` climbs do their centres rise, their Q
+    // tighten and their rings come up — so the sharp, ringing surface is opt-in
+    // (Tin Roof / Window) and never the baseline.
+    const m = this.metallic;
+    const metalBright = 0.5 + m * 0.85;   // 0.5 dull → 1.35 bright/metallic
+    // Low Q throughout: a short noise burst at high Q rings tonally (the "beep").
     if (kind === 'solid') {
-      // Darker, broader ticks than before: a bright high-Q burst on a hard
-      // surface reads as rain on a tin roof, so by default the centre is lower,
-      // the Q is gentler, and the tonal ring is rare/faint — a *tap*, not a
-      // *ping*. The `metallic` macro deliberately walks that back: it brightens
-      // the tick a touch and turns the ring up (more often, higher, louder,
-      // longer) so a tin-roof / window surface can ring on purpose.
-      const m = this.metallic;
-      const f = (1500 + this.rnd() * 1900) / heavy * bright * (1 + m * 0.35);
-      // ring: bright metal band (2–5 kHz) when m is up, soft low click when not.
-      const ringBase = (800 + this.rnd() * 1100) / heavy;
+      // Default centre ~430–1100 Hz (a soft tap); only metallic lifts it into
+      // the bright tin register. Q stays broad until metallic tightens it.
+      const f = (900 + this.rnd() * 1100) / heavy * bright * metalBright;
+      const ringBase = (600 + this.rnd() * 700) / heavy;
       const ringHi = 2400 + this.rnd() * 2600;
       this.takeAndTrigger(v, {
-        freq: f, q: 0.7 + this.rnd() * 0.8 + m * 0.6,
-        attackS: 0.0014, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
-        peak: 0.12 * laneGain, pan: lanePan,
-        ringFreq: this.rnd() < 0.04 + m * 0.5 ? ringBase + (ringHi - ringBase) * m : 0,
-        ringAmt: (0.0022 + m * 0.02) * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012 + m * 0.06,
+        freq: f, q: 0.5 + this.rnd() * 0.4 + m * 0.9,
+        attackS: 0.0016, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
+        peak: 0.11 * laneGain, pan: lanePan,
+        // ring is essentially silent at the default and only emerges with metallic
+        ringFreq: this.rnd() < 0.02 + m * 0.55 ? ringBase + (ringHi - ringBase) * m : 0,
+        ringAmt: (0.0008 + m * 0.022) * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012 + m * 0.07,
       });
     } else if (kind === 'leaf') {
-      const f = (1100 + this.rnd() * 1900) / heavy * bright;
+      // Foliage damps the top hard — keep leaf hits dull regardless of metallic.
+      const f = (650 + this.rnd() * 1000) / heavy * bright * (0.72 + m * 0.4);
       this.takeAndTrigger(v, {
-        freq: f, q: 0.7 + this.rnd() * 0.8,
-        attackS: 0.002, decayS: (0.012 + this.rnd() * 0.03) * heavy * tail,
-        peak: 0.078 * laneGain, pan: lanePan,
+        freq: f, q: 0.5 + this.rnd() * 0.4,
+        attackS: 0.0024, decayS: (0.012 + this.rnd() * 0.03) * heavy * tail,
+        peak: 0.07 * laneGain, pan: lanePan,
       });
     } else {
-      // water plip: a low, soft noisy burst with a faint short resonance —
-      // NO descending glide (that is what read as a sci-fi laser). Wet/puddle
-      // surfaces (high surface) lean on these a little more for low-mid bloom.
-      const f = (650 + this.rnd() * 850) / heavy;
+      // water plip: a low, soft noisy burst. The old high Q (1.4–2.6) rang as a
+      // tonal "plip" that read as glass — keep it broad by default and only let
+      // it resonate with metallic.
+      const f = (560 + this.rnd() * 760) / heavy;
       this.takeAndTrigger(v, {
-        freq: f, q: 1.4 + this.rnd() * 1.2,
-        attackS: 0.002, decayS: (0.018 + this.rnd() * 0.035) * heavy * tail,
-        peak: (0.06 + surface * 0.02) * laneGain, pan: lanePan,
+        freq: f, q: 0.7 + this.rnd() * 0.5 + m * 1.4,
+        attackS: 0.0024, decayS: (0.018 + this.rnd() * 0.035) * heavy * tail,
+        peak: (0.055 + surface * 0.02) * laneGain, pan: lanePan,
         ringFreq: f * (1 + this.rnd() * 0.25),
-        ringAmt: (0.004 + surface * 0.003) * laneGain, ringDecayS: 0.015 + this.rnd() * 0.018,
+        ringAmt: (0.0012 + m * 0.005 + surface * 0.002) * laneGain, ringDecayS: 0.015 + this.rnd() * 0.018,
       });
     }
   }
@@ -342,7 +352,8 @@ class RainProcessor extends AudioWorkletProcessor {
     const movement = params.movement[0];
     const space = params.space[0];
     const running = params.running[0];
-    this.metallic = params.metallic[0];
+    const metallic = params.metallic[0];
+    this.metallic = metallic; // also stash for spawn()
 
     // Derived (folded) controls — one macro slider drives each pair:
     //  movement → slow swell + drop clustering
@@ -385,10 +396,15 @@ class RainProcessor extends AudioWorkletProcessor {
     // the top down (away from the metallic edge); brighter settings open it up.
     const toneHi = 0.20 + tone * 1.25;       // high/air-band scale
     const toneLo = 1.12 - tone * 0.22;        // gentle low lift when dark
+    // Sparkle: the 4 kHz "pitter-patter" and 8 kHz air bands are the colored,
+    // metallic-leaning part of the curtain. They sit well down by default (a
+    // soft, dark wash) and only open up with metallic — this, more than the
+    // drops, is what made the whole shower read as rain on tin.
+    const sparkle = 0.42 + metallic * 0.72;
     this.mult[0] = (0.80 + heaviness * 0.70) * BED_BANDS[0].base * toneLo;
     this.mult[1] = 1.00 * BED_BANDS[1].base;
-    this.mult[2] = (1.10 - heaviness * 0.55) * (0.70 + intensity * 0.45) * BED_BANDS[2].base * toneHi;
-    this.mult[3] = (0.90 - heaviness * 0.65) * (0.45 + intensity * 0.65) * BED_BANDS[3].base * toneHi;
+    this.mult[2] = (1.10 - heaviness * 0.55) * (0.70 + intensity * 0.45) * BED_BANDS[2].base * toneHi * sparkle;
+    this.mult[3] = (0.90 - heaviness * 0.65) * (0.45 + intensity * 0.65) * BED_BANDS[3].base * toneHi * sparkle;
     // Bed scales hard with intensity so it nearly clears out at intensity 0,
     // letting the discrete drops carry the low end of the range. The `bed`
     // control trims the whole curtain on top of that (1 = full, 0 = drops only).
@@ -402,6 +418,22 @@ class RainProcessor extends AudioWorkletProcessor {
         if (st.gt > 1 + depth) st.gt = 1 + depth;
         else if (st.gt < 1 - depth) st.gt = 1 - depth;
       }
+    }
+
+    // Brightness ceiling on the drop bus: a one-pole lowpass that sits low by
+    // default (~2.4 kHz — soft rain on the ground) and opens toward ~9 kHz as
+    // metallic rises (the bright, sharp top of a tin roof). This is the hard
+    // guarantee that the default never reads as tin even if a stray bright atom
+    // slips through.
+    const evCut = 2600 + this.metallic * 6500;
+    const evLpA = Math.exp(-TWO_PI * evCut / SR);
+
+    // master lowpass cutoff: dark (~2.5 kHz) by default, wide open with metallic.
+    // Recompute coefficients only when it moves enough to matter.
+    const lpCut = 3800 + metallic * 8200;
+    if (Math.abs(lpCut - this.masterLPcut) > 1) {
+      this.masterLPcut = lpCut;
+      this.masterLP_L.lowpass(lpCut, 0.707); this.masterLP_R.lowpass(lpCut, 0.707);
     }
 
     // space sets the early-reflection amount; surface tilts it (a sheltered /
@@ -467,6 +499,11 @@ class RainProcessor extends AudioWorkletProcessor {
       // push the surface hits forward (and into the reflections below) by drops
       evL *= dropGain; evR *= dropGain;
 
+      // brightness ceiling — dull by default, opens with metallic
+      this.evLpL = evL + (this.evLpL - evL) * evLpA;
+      this.evLpR = evR + (this.evLpR - evR) * evLpA;
+      evL = this.evLpL; evR = this.evLpR;
+
       // ── early reflections (event bus only → drops feel placed) ───
       this.rbL[this.rbPos] = evL; this.rbR[this.rbPos] = evR;
       let rL = 0, rR = 0;
@@ -487,8 +524,8 @@ class RainProcessor extends AudioWorkletProcessor {
       // stereo width as a mid/side blend on the summed shower
       let sumL = bedL + evL, sumR = bedR + evR;
       const mid = (sumL + sumR) * 0.5, side = (sumL - sumR) * 0.5 * widthAmt;
-      let outL = this.masterHP_L.process(mid + side);
-      let outR = this.masterHP_R.process(mid - side);
+      let outL = this.masterLP_L.process(this.masterHP_L.process(mid + side));
+      let outR = this.masterLP_R.process(this.masterHP_R.process(mid - side));
 
       // running fade
       this.level = levelTarget + (this.level - levelTarget) * levelCoef;

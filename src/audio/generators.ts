@@ -215,9 +215,13 @@ function genRain(params?: Record<string, number>): string {
   const bedHp = 120 + (1 - heaviness) * 120;
   // tone opens or closes the bed's top end (darker = less metallic).
   const bedLp = 1800 + tone * 6000 + (1 - heaviness) * 1800;
-  const bubbleChance = 0.22 + surface * 0.4;
-  // Rarer, fainter tonal pings — too many read as rain on a tin roof.
-  const pingChance = 0.12 + surface * 0.28;
+  // metallic (opt-in) drives the tonal, bright "tin/window" character. At 0 the
+  // fallback loop stays dark and soft like the worklet's default; raising it
+  // brings the pings and bright bubbles back. Keeps the WAV fallback aligned
+  // with the live path so neither reads as rain on tin by default.
+  const metallic = params?.metallic ?? 0;
+  const bubbleChance = (0.10 + surface * 0.2) * (0.4 + metallic * 1.4);
+  const pingChance = (0.04 + surface * 0.12) * (0.3 + metallic * 2.0);
   // Rain: diffuse bed + clustered impacts + tonal bubble-like micro-events
   const bed = pinkNoise();
   hp1(bed, bedHp);
@@ -268,8 +272,11 @@ function genRain(params?: Record<string, number>): string {
     }
     pos += Math.floor(SR * rand(0.03 * gapScale, 0.25 * gapScale));
   }
-  hp1(impacts, 1400); lp1(impacts, 9000);
-  hp1(bubbles, 420); lp1(bubbles, 4200);
+  // Keep more low-mid body in the impacts (a soft pock, not a bright tick) and
+  // cap their top low unless metallic opens it — the high-passed-at-1400 +
+  // 9 kHz ceiling of before is exactly what read as rain on tin.
+  hp1(impacts, 700); lp1(impacts, 2600 + metallic * 6000);
+  hp1(bubbles, 420); lp1(bubbles, 2600 + metallic * 3000);
   const mix = new Float32Array(N);
   // One full swell cycle per loop, so the shower rises and eases without a
   // seam (sin is 0 at both ends). Mild by default, deeper as swell climbs.

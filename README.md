@@ -111,6 +111,22 @@ npm run preview
 
 ## Changelog
 
+### 7.2.1
+- **Rain — the default no longer sounds like rain on tin.** The 7.2.0 metallic
+  control was opt-in but never actually darkened the baseline, so every preset
+  still rang in the bright glass/metal register. This reworks the default to be
+  genuinely soft rain on the ground and makes brightness ride entirely on the
+  **metallic** macro: drop centres sit low and broad (≈430–1000 Hz, not 1.5–3.4
+  kHz) and only rise with metallic; the water plips lose their tonal high-Q ring;
+  the colored 4 kHz/8 kHz bed bands sit well down; and a clean 2-pole **master
+  lowpass** (dark by default, opening with metallic) caps the whole shower.
+  Measured spectral centroid of the default fell from ≈4440 Hz to ≈1870 Hz
+  (energy above 2.5 kHz 55% → 26%), with a clean brightness gradient up through
+  At a Window (≈2510 Hz) to Tin Roof (≈3390 Hz). The WAV fallback is darkened to
+  match. A worklet-DSP probe (run in Node) caught a runtime ReferenceError the
+  unit tests can't reach, since the worklet isn't unit-tested. Verified: 71 unit
+  + 16 e2e, typecheck, lint, build green; peaks well below clipping, no NaN.
+
 ### 7.2.0
 - **Rain — opt-in metallic surface + clearer surface variants.** The rain worklet
   gains a **metallic** control: at 0 the default stays natural and de-tinned (rain
