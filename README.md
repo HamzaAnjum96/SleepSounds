@@ -111,6 +111,12 @@ npm run preview
 
 ## Changelog
 
+### 7.10.1
+- **"Fan & Rain" scene now really is rain on glass.** The preset's mood line is
+  "a fan's hush over steady rain on glass," but its rain layer used a generic
+  tuning. It now uses the **At a Window** variant (glassy taps, roomy, a touch of
+  ring), with the bed trimmed a little so it sits under the fan's hush.
+
 ### 7.10.0
 - **Hide per-layer mute / solo for now.** The **M** (mute) and **S** (solo)
   toggles on each now-playing layer are hidden behind a new `layerMuteSolo`
