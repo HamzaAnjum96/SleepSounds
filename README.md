@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.4.1
+### 7.5.0
 - **Rain — open-air drops become a super-muted soft patter.** The open-air
   variants (Light Rain, Drizzle, Steady, Downpour) keep their drops, but as a
   soft, dull patter sitting under the wash — rain on soft ground or a tent
