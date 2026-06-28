@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.1.1
+### 7.2.0
 - **Rain — opt-in metallic surface + clearer surface variants.** The rain worklet
   gains a **metallic** control: at 0 the default stays natural and de-tinned (rain
   on soft ground), but raising it brings the solid drops' ring back on purpose —
