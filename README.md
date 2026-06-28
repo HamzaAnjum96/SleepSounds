@@ -111,6 +111,16 @@ npm run preview
 
 ## Changelog
 
+### 6.0.0
+- **Audio engine — sprint 1: shared master bus.** Introduced one Web Audio graph
+  with a master bus (`src/audio/graph.ts`): a gentle glue compressor, a quiet
+  high-shelf to take the edge off the top, and a fast safety limiter against
+  clipping. The live worklet sounds (rain, fire, thunder, windy forest,
+  birdsong) — the most transient, harshness-prone layers — now play through it
+  instead of straight to the speakers. The chain is ~loudness-neutral on a single
+  sound; it only works when layers stack. (Start of an audio-architecture pass;
+  major bump to open the 6.x line. WAV loops join the bus next.)
+
 ### 5.5.1
 - **Fix: save name field too small on phone.** The save row now takes its own
   full-width line below the actions, with the name field on its own line above a

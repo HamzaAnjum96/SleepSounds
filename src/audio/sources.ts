@@ -3,6 +3,7 @@
 // that builds the right one per sound. The React hook orchestrates these.
 
 import type { Sound } from '../types';
+import { getAudioContext, getMasterBus } from './graph';
 
 const LOOP_XFADE_MS = 1400;
 const LOOP_XFADE_S = LOOP_XFADE_MS / 1000;
@@ -316,15 +317,10 @@ interface WorkletConfig {
   paramMap?: Record<string, string>;
 }
 
-/** One AudioContext shared across every worklet source, plus a per-module
- *  load promise so each worklet file is fetched and registered only once. */
-let sharedWorkletCtx: AudioContext | null = null;
+/** The shared engine AudioContext (worklets + WAV both run on it now), plus a
+ *  per-module load promise so each worklet file is fetched and registered once. */
+const getWorkletCtx = getAudioContext;
 const workletModulePromises = new Map<string, Promise<void>>();
-
-function getWorkletCtx(): AudioContext {
-  if (!sharedWorkletCtx) sharedWorkletCtx = new AudioContext();
-  return sharedWorkletCtx;
-}
 
 function loadWorkletModule(ctx: AudioContext, module: string): Promise<void> {
   let p = workletModulePromises.get(module);
@@ -360,7 +356,9 @@ class WorkletSource implements MixerSource {
     });
     this.gainNode = new GainNode(ctx, { gain: 0 });
     this.node.connect(this.gainNode);
-    this.gainNode.connect(ctx.destination);
+    // Through the shared master bus (compressor / shelf / limiter), not straight
+    // to the speakers — so the live worklet sounds are gain-staged with the rest.
+    this.gainNode.connect(getMasterBus().input);
     if (this.pending) { this.applyParams(this.pending); this.pending = null; }
   }
 
