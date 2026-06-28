@@ -111,6 +111,18 @@ npm run preview
 
 ## Changelog
 
+### 7.3.1
+- **Rain — Tin Roof no longer rings like wind chimes.** At high *metallic* the
+  solid drops each fired a ~90 ms pure sine at a random 2.4–5 kHz pitch, so a tin
+  roof played a chord of different notes. Real heavy rain on tin is bright
+  broadband *drumming*; a tuned ring only suits sparse drops on glass. The tonal
+  ring now peaks at moderate metallic (≈ At a Window) and fades out as metallic
+  climbs — at full Tin Roof the rings drop from ~42% of drops to ~7%, 6× quieter
+  and 3× shorter, with the broadband brightness carrying the metal instead. The
+  ramp is anchored so *At a Window* (metallic 0.30) is left exactly as it was.
+  Tin Roof stays bright (measured centroid ≈3380 Hz, above Window ≈2530 and the
+  ≈1880 default). Verified: 71 unit + 16 e2e, typecheck, lint, build green.
+
 ### 7.3.0
 - **Rain — the default no longer sounds like rain on tin.** The 7.2.0 metallic
   control was opt-in but never actually darkened the baseline, so every preset

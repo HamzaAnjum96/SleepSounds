@@ -306,13 +306,20 @@ class RainProcessor extends AudioWorkletProcessor {
       const f = (900 + this.rnd() * 1100) / heavy * bright * metalBright;
       const ringBase = (600 + this.rnd() * 700) / heavy;
       const ringHi = 2400 + this.rnd() * 2600;
+      // Tonal "ting" ring. A per-drop random pitch is exactly what reads as wind
+      // chimes, so it must NOT dominate a tin roof: a hard-hammered tin roof is
+      // bright broadband *drumming*, while a tuned ting only suits sparse drops on
+      // glass. So the ring peaks at moderate metallic (≈ At a Window) and fades
+      // out as metallic climbs — at full Tin Roof it is nearly gone and the
+      // broadband brightness carries the metal. `ting` is 1.0 exactly at
+      // metallic 0.30, so the At a Window character is left unchanged.
+      const ting = m < 0.30 ? 0.3 + 0.7 * (m / 0.30) : Math.max(0, 1 - (m - 0.30) / 0.50);
       this.takeAndTrigger(v, {
         freq: f, q: 0.5 + this.rnd() * 0.4 + m * 0.9,
         attackS: 0.0016, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
         peak: 0.11 * laneGain, pan: lanePan,
-        // ring is essentially silent at the default and only emerges with metallic
-        ringFreq: this.rnd() < 0.02 + m * 0.55 ? ringBase + (ringHi - ringBase) * m : 0,
-        ringAmt: (0.0008 + m * 0.022) * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012 + m * 0.07,
+        ringFreq: this.rnd() < (0.02 + m * 0.55) * ting ? ringBase + (ringHi - ringBase) * m : 0,
+        ringAmt: (0.0008 + m * 0.022) * ting * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012 + m * 0.07 * ting,
       });
     } else if (kind === 'leaf') {
       // Foliage damps the top hard — keep leaf hits dull regardless of metallic.
