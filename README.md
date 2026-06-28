@@ -111,6 +111,18 @@ npm run preview
 
 ## Changelog
 
+### 7.1.1
+- **Rain — opt-in metallic surface + clearer surface variants.** The rain worklet
+  gains a **metallic** control: at 0 the default stays natural and de-tinned (rain
+  on soft ground), but raising it brings the solid drops' ring back on purpose —
+  brighter (2–5 kHz band), louder, longer and more frequent — so a real tin-roof
+  surface can ring without that edge leaking into every preset. Two new variants
+  use it to pull the surfaces apart: **Tin Roof** (sharp ringing pings) and a
+  glassier **At a Window** (a touch of ring, roomier), while **On a Roof** is now
+  wooden and muffled with almost no ring. A **Light Rain** variant adds the very
+  sparse, intermittent end the intensity range was missing. Verified: 71 unit +
+  16 e2e, typecheck, lint, build green.
+
 ### 7.1.0
 - **Fire — flame hiss band + distinct presets.** The fire worklet gains a
   dedicated high-band *hiss* (one-pole high-pass → gentle low-pass), gated by

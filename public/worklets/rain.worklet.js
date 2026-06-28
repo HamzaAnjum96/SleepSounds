@@ -160,6 +160,12 @@ class RainProcessor extends AudioWorkletProcessor {
       { name: 'movement',  defaultValue: 0.40, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       // space: sense of room — early reflections plus stereo width together.
       { name: 'space',     defaultValue: 0.30, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // metallic: an *intentional* tin-roof/window ring on the solid drops. 0
+      // keeps the natural, de-tinned default (rain on soft ground); raising it
+      // makes solid hits ring brighter, longer, louder and more often, for the
+      // report's "rain on tin / on a window" surfaces. Deliberately opt-in so the
+      // metallic edge never leaks into the other variants.
+      { name: 'metallic',  defaultValue: 0,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',   defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -220,6 +226,7 @@ class RainProcessor extends AudioWorkletProcessor {
     this.swellPhase = Math.random() * TWO_PI;
 
     this.level = 0; // running fade
+    this.metallic = 0; // tin-roof ring amount, set per block from the param
   }
 
   rnd() { this.seed = (1664525 * this.seed + 1013904223) >>> 0; return this.seed / 4294967296; }
@@ -281,16 +288,22 @@ class RainProcessor extends AudioWorkletProcessor {
     // High Q on a short noise burst rings tonally — the "laser" artefact.
     if (kind === 'solid') {
       // Darker, broader ticks than before: a bright high-Q burst on a hard
-      // surface reads as rain on a tin roof, so the centre is lower, the Q is
-      // gentler, and the tonal ring is rarer/fainter — a *tap*, not a *ping*.
-      const f = (1500 + this.rnd() * 1900) / heavy * bright;
+      // surface reads as rain on a tin roof, so by default the centre is lower,
+      // the Q is gentler, and the tonal ring is rare/faint — a *tap*, not a
+      // *ping*. The `metallic` macro deliberately walks that back: it brightens
+      // the tick a touch and turns the ring up (more often, higher, louder,
+      // longer) so a tin-roof / window surface can ring on purpose.
+      const m = this.metallic;
+      const f = (1500 + this.rnd() * 1900) / heavy * bright * (1 + m * 0.35);
+      // ring: bright metal band (2–5 kHz) when m is up, soft low click when not.
+      const ringBase = (800 + this.rnd() * 1100) / heavy;
+      const ringHi = 2400 + this.rnd() * 2600;
       this.takeAndTrigger(v, {
-        freq: f, q: 0.7 + this.rnd() * 0.8,
+        freq: f, q: 0.7 + this.rnd() * 0.8 + m * 0.6,
         attackS: 0.0014, decayS: (0.006 + this.rnd() * 0.016) * heavy * tail,
         peak: 0.12 * laneGain, pan: lanePan,
-        // a faint, very short click only rarely; never a sustained ping
-        ringFreq: this.rnd() < 0.04 ? (800 + this.rnd() * 1100) / heavy : 0,
-        ringAmt: 0.0022 * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012,
+        ringFreq: this.rnd() < 0.04 + m * 0.5 ? ringBase + (ringHi - ringBase) * m : 0,
+        ringAmt: (0.0022 + m * 0.02) * laneGain, ringDecayS: 0.01 + this.rnd() * 0.012 + m * 0.06,
       });
     } else if (kind === 'leaf') {
       const f = (1100 + this.rnd() * 1900) / heavy * bright;
@@ -329,6 +342,7 @@ class RainProcessor extends AudioWorkletProcessor {
     const movement = params.movement[0];
     const space = params.space[0];
     const running = params.running[0];
+    this.metallic = params.metallic[0];
 
     // Derived (folded) controls — one macro slider drives each pair:
     //  movement → slow swell + drop clustering
