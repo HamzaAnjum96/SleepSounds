@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.5.1
+### 7.6.0
 - **Variant chips gain crafted marks.** Each preset chip in the sound editor now
   leads with a small 16px mark (new `src/lib/variantIcons.tsx`, drawn in
   `currentColor` so it inherits the chip's idle/active colour). Intensity sounds
