@@ -134,7 +134,7 @@ the **semantic roles**, not raw numbers:
 | `--radius-card` | 14 | sound cards, inline editor |
 | `--radius-card-lg` | 16 | scene / mix cards, the short floating bars (mini-player, toast) |
 | `--radius-sheet` | 20 | the tall now-playing sheet |
-| `--radius-round` | 999 | circles only — orbs, dots, thumbs, round icon buttons, slider track |
+| `--r-full` | 999 | circles only — orbs, dots, thumbs, round icon buttons, slider track |
 
 Circles are reserved for genuinely circular objects, never as a default button
 shape. Category filters are `.cat-filter` (a soft-square tile), not `.cat-pill`,

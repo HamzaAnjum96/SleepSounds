@@ -69,7 +69,6 @@
      stay well under that (8–12px on 34–48px controls). Circles (--r-full)
      are reserved for genuinely circular objects — orbs, dots, thumbs,
      round icon buttons, slider tracks — never as a default button shape. */
-  --r-xs:   6px;
   --r-sm:   8px;
   --r-md:   10px;
   --r-lg:   12px;
@@ -78,14 +77,13 @@
   --r-full: 999px;
 
   /* semantic radius roles — prefer these over raw numbers */
-  --radius-detail:     var(--r-xs);   /*  6 — tiny badges, insets        */
   --radius-control-sm: var(--r-sm);   /*  8 — timer keys, small actions  */
   --radius-control:    var(--r-md);   /* 10 — filters, chips, toggles    */
   --radius-button:     var(--r-lg);   /* 12 — primary / secondary buttons*/
   --radius-card:       var(--r-xl);   /* 14 — sound cards                */
   --radius-card-lg:    var(--r-2xl);  /* 16 — scene/mix cards, float bars*/
   --radius-sheet:      20px;          /* 20 — tall now-playing sheet     */
-  --radius-round:      var(--r-full); /* circles only                    */
+  /* circles use --r-full directly (orbs, dots, thumbs, round buttons)   */
 
   /* ── Spacing scale (px) ───────────────────────────────────────── */
   --sp-2:  2px;
@@ -1492,8 +1490,7 @@ header::after {
 .sb-finetune.open .sb-finetune-caret { transform: rotate(180deg); }
 .sb-finetune:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: var(--r-xs);
+  outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-finetune .material-symbols-rounded { transition: none; }
@@ -2323,7 +2320,7 @@ body:has(.mini-player) .toast {
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
   border: 1px solid rgba(255,255,255,0.10);
   border-bottom: none;
-  border-radius: var(--sp-20) var(--sp-20) 0 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   padding: var(--sp-8) var(--sp-20) calc(env(safe-area-inset-bottom, 0px) + var(--sp-20));
   animation: sheetRise 0.4s var(--ease) backwards;
   /* Spring-back after an abandoned drag. */
@@ -2545,7 +2542,7 @@ body:has(.mini-player) .toast {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--r-sm);
+  border-radius: var(--radius-control-sm);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-secondary);
@@ -2685,7 +2682,7 @@ body:has(.mini-player) .toast {
   justify-content: center;
   gap: var(--sp-6);
   padding: var(--sp-12);
-  border-radius: var(--r-lg);
+  border-radius: var(--radius-button);
   font-family: var(--font-body);
   font-size: var(--fs-control);
   font-weight: 400;

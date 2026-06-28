@@ -111,6 +111,22 @@ npm run preview
 
 ## Changelog
 
+### 7.11.1
+- **Cleanup pass.** A comprehensive audit (worklet params, runtime console, dead
+  exports, type escapes, both worklets' numerical safety) found the codebase
+  healthy; fixed the genuine inconsistencies it surfaced:
+  - **Fine-tune focus ring** no longer mismatches the button — removed a stale
+    `border-radius: var(--r-xs)` (6px) override left over from when the control
+    was a text link, so the keyboard outline follows the button's real corner.
+  - **Now-playing sheet** radius used a *spacing* token (`--sp-20`) for its
+    corners; it now uses `--radius-sheet`. `.sheet-action` and `.layer-toggle`
+    moved to their semantic radius roles too (no visual change).
+  - Removed dead tokens (`--radius-detail`, `--radius-round`, `--r-xs` — all
+    unused) and a dead feature flag (`customMixEditor`, the editor ships
+    unconditionally). Updated `DESIGN.md`.
+  - Verified both rain and fire worklets are NaN-free and non-clipping across
+    every variant (incl. hiss/metallic at max) via Node DSP probes.
+
 ### 7.11.0
 - **"Fan & Rain" scene now really is rain on glass.** The preset's mood line is
   "a fan's hush over steady rain on glass," but its rain layer used a generic
