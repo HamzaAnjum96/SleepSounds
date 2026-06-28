@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.2.1
+### 7.3.0
 - **Rain — the default no longer sounds like rain on tin.** The 7.2.0 metallic
   control was opt-in but never actually darkened the baseline, so every preset
   still rang in the bright glass/metal register. This reworks the default to be
