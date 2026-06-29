@@ -9,11 +9,12 @@
 //
 //   roll        4–13 overlapping band-limited noise swells, front-loaded, each
 //               lower and softer than the last (air absorption) — the rumble
-//   crack       a sharp, bright, *tearing* transient (rapid AM) — close strikes
+//   crack       click + snap + a deep BOOM + a sparse woody tear — close strikes
 //               only; a distant storm has no crack at all, just roll
 //   deepener    one long sub-bass swell under the roll
 //   reverb      a synthesised rolling tail (damped feedback combs) — no samples
-//   bed         a faint continuous far-rumble floor between strikes
+//
+// There is no constant noise floor: between strikes the sound falls to quiet.
 //
 // Timing is two-level: a slow "activity" walk plus clustering, so strikes come
 // as a quick flurry then a long lull rather than on a metronome. The first
@@ -115,11 +116,6 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.pending = []; // queued voice triggers: { at, type, freq, q, attackS, decayS, peak, pan, flutter }
     this.elapsed = 0;
 
-    // faint continuous far-rumble floor between strikes
-    this.bedLP = new Biquad(); this.bedLP.lowpass(95, 0.6);
-    this.bedHP = new Biquad(); this.bedHP.highpass(32, 0.6);
-    this.bedSwell = 0;
-
     // flutter noise (smoothed) for the crack tear
     this.flN = 0;
 
@@ -155,40 +151,50 @@ class ThunderProcessor extends AudioWorkletProcessor {
     // crack control is up), and never on the first strike (soft far roll first).
     const crackChance = first ? 0 : Math.min(0.95, near * 0.7 + crack * 0.6);
     if (this.rnd() < crackChance) {
-      const sharp = 0.5 + near * 0.35 + crack * 0.5;            // brightness/energy
-      // CLICK — a near-instantaneous broadband tick: the percussive leading edge
-      // that makes it read as a *crack* rather than a whoosh of noise.
+      // Brightness is restrained so the crack reads as a woody *CRACK*, not a
+      // bright electric zap. The energy lives mostly in the boom below.
+      const sharp = 0.4 + near * 0.28 + crack * 0.4;
+      // CLICK — a short, mid-weighted tick: the percussive leading edge.
       this.q(t0, {
-        type: 'bandpass', freq: 1800 + this.rnd() * 900, q: 0.5,
-        attackS: 0.00015, decayS: 0.004 + this.rnd() * 0.005,
-        peak: (0.5 + this.rnd() * 0.3) * sharp, pan: pan, flutter: 0,
+        type: 'bandpass', freq: 820 + this.rnd() * 520, q: 0.6,
+        attackS: 0.0002, decayS: 0.004 + this.rnd() * 0.006,
+        peak: (0.34 + this.rnd() * 0.2) * sharp, pan: pan, flutter: 0,
       });
-      // SNAP — the bright, fast transient right behind the click
+      // SNAP — bright but not piercing (kept under ~3 kHz), short.
       this.q(t0, {
-        type: 'highpass', freq: 1700 + sharp * 2800 + this.rnd() * 700, q: 0.7,
-        attackS: 0.0002, decayS: 0.01 + this.rnd() * 0.028,
-        peak: (0.4 + this.rnd() * 0.24) * sharp, pan: pan, flutter: 0,
+        type: 'highpass', freq: 800 + sharp * 1500 + this.rnd() * 400, q: 0.7,
+        attackS: 0.0003, decayS: 0.012 + this.rnd() * 0.03,
+        peak: (0.26 + this.rnd() * 0.18) * sharp, pan: pan, flutter: 0,
       });
-      // THUMP — a short low body so the snap has punch, not just hiss
+      // BOOM — an immediate deep impact: this is what turns a "zap" into thunder.
+      // It scales with proximity, so an overhead strike lands a real low punch
+      // right behind the crack (CRACK-boom) rather than a lone electric snap.
+      this.q(t0 + Math.floor((0.008 + this.rnd() * 0.025) * SR), {
+        type: 'lowpass', freq: 62 + this.rnd() * 38, q: 0.8,
+        attackS: 0.004, decayS: 0.5 + this.rnd() * 0.7,
+        peak: (0.7 + this.rnd() * 0.5) * near * (0.6 + rumbleAmt * 0.6), pan: pan * 0.4, flutter: 0,
+      });
+      // THUMP — mid body bridging the snap into the boom.
       this.q(t0, {
-        type: 'bandpass', freq: 280 + this.rnd() * 240, q: 0.8,
-        attackS: 0.0009, decayS: 0.05 + this.rnd() * 0.09,
-        peak: (0.3 + this.rnd() * 0.22) * (0.6 + near * 0.5), pan: pan, flutter: 0,
+        type: 'bandpass', freq: 180 + this.rnd() * 170, q: 0.7,
+        attackS: 0.001, decayS: 0.07 + this.rnd() * 0.11,
+        peak: (0.26 + this.rnd() * 0.18) * (0.55 + near * 0.5), pan: pan, flutter: 0,
       });
-      // TEAR — dense granular crackle thinning out over ~150–300 ms (the rip)
-      const tearLen = 0.13 + this.rnd() * 0.16 + crack * 0.12;
-      const nClicks = 12 + Math.floor(this.rnd() * (10 + crack * 16));
-      let ct = 0.002 + this.rnd() * 0.005;
+      // TEAR — sparse, lower, woody crackle (NOT a dense bright buzz, which is
+      // what read as a taser). A scatter of distinct pops that thins out.
+      const tearLen = 0.12 + this.rnd() * 0.14 + crack * 0.1;
+      const nClicks = 5 + Math.floor(this.rnd() * (5 + crack * 9));
+      let ct = 0.006 + this.rnd() * 0.012;
       for (let k = 0; k < nClicks; k++) {
         const prog = ct / tearLen;
         if (prog > 1) break;
         this.q(t0 + Math.floor(ct * SR), {
-          type: 'highpass', freq: 1400 + sharp * 2800 + this.rnd() * 1800, q: 0.6,
-          attackS: 0.0002, decayS: 0.0022 + this.rnd() * 0.009,
-          peak: (0.1 + this.rnd() * 0.16) * sharp * (1 - prog * 0.7),
-          pan: pan + (this.rnd() * 2 - 1) * 0.28, flutter: 0,
+          type: 'bandpass', freq: 600 + sharp * 1400 + this.rnd() * 1000, q: 0.8,
+          attackS: 0.0004, decayS: 0.004 + this.rnd() * 0.014,
+          peak: (0.07 + this.rnd() * 0.12) * sharp * (1 - prog * 0.7),
+          pan: pan + (this.rnd() * 2 - 1) * 0.3, flutter: 0,
         });
-        ct += (0.004 + this.rnd() * 0.013) * (1 + prog * 2.2);  // sparser as it thins
+        ct += (0.012 + this.rnd() * 0.03) * (1 + prog * 2);   // sparser, more pop-like
       }
     }
 
@@ -293,19 +299,15 @@ class ThunderProcessor extends AudioWorkletProcessor {
         vL += s * v.panL; vR += s * v.panR;
       }
 
-      // faint distant-rumble floor: a slow random swell of low noise.
-      this.bedSwell += (Math.abs(this.rnd() - this.rnd()) - this.bedSwell) * 0.000004;
-      const bedG = (0.014 + stormIntensity * 0.022) * (0.4 + rumbleAmt * 0.7) * (0.5 + this.bedSwell * 2.0);
-      const bed = this.bedHP.process(this.bedLP.process(noise)) * bedG;
-
-      // rolling reverb fed by the event voices (not the steady bed).
+      // rolling reverb fed by the event voices. Between strikes the voices fall
+      // silent and the tail decays to true quiet — no constant noise floor.
       const revIn = (vL + vR) * 0.5;
       let wl = (this.combL[0].process(revIn, revFb, revDamp) + this.combL[1].process(revIn, revFb, revDamp)) * 0.5;
       let wr = (this.combR[0].process(revIn, revFb, revDamp) + this.combR[1].process(revIn, revFb, revDamp)) * 0.5;
       wl = this.apL.process(wl); wr = this.apR.process(wr);
 
-      let sl = vL + bed + wl * revWet;
-      let sr = vR + bed + wr * revWet;
+      let sl = vL + wl * revWet;
+      let sr = vR + wr * revWet;
 
       // gentle, asymmetric level ramp: ease in slowly (no sudden onset), fall
       // a little faster when stopped.

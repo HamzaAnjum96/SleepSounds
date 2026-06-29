@@ -111,6 +111,19 @@ npm run preview
 
 ## Changelog
 
+### 7.20.1
+- **Thunder — killed the constant fizz, fixed the "taser zap".** Two issues: a
+  faint band-limited noise *floor* ran the whole time on every variant (a
+  persistent fizz), and an overhead strike read as a single electric zap. The
+  always-on floor is **removed** — between strikes the sound now falls to true
+  silence (the rolling tail decays naturally), which suits sleep. And the close
+  crack was rebuilt: the click and snap are lower and broader (woody crack, not a
+  piercing electric snap), the granular tear is sparser and lower (distinct pops,
+  not a dense buzz), and an **immediate deep boom** lands right behind the crack
+  and scales with proximity — so an overhead strike is CRACK-boom, not a lone
+  zap. Measured: silent floor (RMS 0), boom 1.5-3× the high-frequency snap energy,
+  NaN-free / non-clipping. 71 unit + 15 e2e, typecheck, lint, build green; console clean.
+
 ### 7.20.0
 - **Thunder crack made convincing.** The close-strike crack was a smooth,
   buzzy noise burst; it is now built like a real lightning snap: a
