@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.15.1
+### 7.16.0
 - **Variant chips line up as a two-column grid.** The justified (`flex: auto`)
   version grew chips by an equal *amount*, so rows with different label lengths
   didn't align. They now use a uniform two-column basis
