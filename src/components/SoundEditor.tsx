@@ -148,7 +148,10 @@ export default function SoundEditor({
           onClick={() => setExpanded((e) => !e)}
         >
           <span className="material-symbols-rounded sb-finetune-icon" aria-hidden="true">tune</span>
-          <span>{expanded ? 'hide sliders' : 'fine-tune sliders'}</span>
+          {/* Static label so the control is the same width open and closed; the
+              rotating caret and the accent "open" state carry the toggle, and
+              aria-expanded announces it to screen readers. */}
+          <span>fine-tune sliders</span>
           <span className="material-symbols-rounded sb-finetune-caret" aria-hidden="true">keyboard_arrow_down</span>
         </button>
       )}

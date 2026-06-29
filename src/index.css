@@ -1093,6 +1093,10 @@ header::after {
   display: flex;
   flex-direction: column;
   gap: var(--sp-8);
+  /* The field/button are full-width inside the sheet's scroll area, which
+     clips overflow — so inset them a few px to leave room for the focus
+     outline (offset + width), which would otherwise be sliced off the sides. */
+  padding-inline: var(--sp-6);
   animation: fadeSlideUp var(--dur-3) var(--ease) backwards;
 }
 

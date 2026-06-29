@@ -111,6 +111,26 @@ npm run preview
 
 ## Changelog
 
+### 7.13.1
+- **A batch of UI fixes.**
+  - **"your mixes" no longer pops in empty.** The section (and its "save this
+    mix" placeholder) only renders once you actually have a saved mix, so
+    starting a single sound no longer shoves the library down. Saving still
+    lives in the player.
+  - **Save-name focus ring no longer clipped.** The "name this mix" field is
+    full-width inside the sheet's scroll area, which clips overflow, so its focus
+    outline was sliced off the sides. The save row is now inset a few px to give
+    the ring room.
+  - **Presets show the variant they actually play.** Loading a preset/scene now
+    syncs each layer's editor values to what's playing, so opening rain's editor
+    during **Fan & Rain** shows **At a Window** (not a stale "Steady"). The
+    Fan & Rain preset was aligned to the exact At a Window variant so it reads as
+    a named variant rather than "custom".
+  - **Fine-tune toggle is one width.** Its label no longer swaps between
+    "fine-tune sliders" and "hide sliders" (which changed the button size); it's
+    a single static label, with the rotating caret + accent state carrying open
+    vs closed.
+
 ### 7.13.0
 - **Hide Stream and Shower for now.** Both are pulled from the library via a new
   explicit `HIDDEN_SOUND_IDS` set in `data.ts` (cleaner than marking finished

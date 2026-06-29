@@ -9,7 +9,7 @@ import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
 import SidePanel from './components/SidePanel';
 import Toast from './components/Toast';
-import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds } from './data';
+import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds, editorDefaults } from './data';
 import { features } from './config/features';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
 import { platform } from './platform';
@@ -364,6 +364,17 @@ export default function App() {
       return;
     }
     restoreMixerState(enrichPresetState(preset.state), preset.masterVolume, true);
+    // Sync each layer's editor values to what the preset actually plays, so the
+    // sound editor shows the real variant (e.g. rain's "At a Window") instead of
+    // a stale default ("Steady") — and so manually re-toggling a layer keeps that
+    // character rather than reverting to defaults.
+    setEditorValuesBySound((prev) => {
+      const next = { ...prev };
+      for (const [id, s] of Object.entries(preset.state)) {
+        if (s.enabled) next[id] = { ...editorDefaults(id), ...(s.tuning ?? {}) };
+      }
+      return next;
+    });
     setActiveMixId(preset.id);
     setIsPaused(false);
   }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState, enrichPresetState]);
@@ -815,20 +826,15 @@ export default function App() {
           </div>
         </section>
 
-        {(presets.length > 0 || (hasPlayer && !isDesktop)) && (
+        {/* Only shown once there's something saved — an empty "your mixes"
+            placeholder appearing the moment a sound starts shoves the library
+            down, which reads as jarring. Saving lives in the player instead. */}
+        {presets.length > 0 && (
           <section className="section" style={{ animationDelay: '0.18s' }}>
             <div className="section-head">
               <h2 className="section-title">your mixes</h2>
-              <span className="section-meta">
-                {presets.length > 0 ? `${presets.length} saved` : 'nothing saved yet'}
-              </span>
+              <span className="section-meta">{presets.length} saved</span>
             </div>
-            {presets.length === 0 ? (
-              <button type="button" className="mix-empty" onClick={handleSaveIntent}>
-                <span className="material-symbols-rounded" aria-hidden="true">bookmark_add</span>
-                save this mix to return to it any night
-              </button>
-            ) : (
             <div className="mix-row" role="list">
               {presets.map((preset) => {
                 const current = activeMixId === preset.id && activeSounds.length > 0;
@@ -868,7 +874,6 @@ export default function App() {
                 );
               })}
             </div>
-            )}
           </section>
         )}
 
