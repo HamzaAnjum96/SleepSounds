@@ -1407,9 +1407,11 @@ header::after {
   gap: var(--sp-6);
 }
 .sb-variant {
-  /* Grow to fill each wrapped line so the rows read as justified rather than
-     ragged — every line spans the full width, chips share the slack equally. */
-  flex: 1 1 auto;
+  /* Exactly two per row, each 50% (minus half the gap), so the chips share a
+     uniform width and the rows line up cleanly — and every label stays on one
+     line (three-up squeezes long names like "At a Window" onto two/three lines).
+     A lone trailing chip grows to fill its row. */
+  flex: 1 1 calc(50% - var(--sp-6));
   display: inline-flex;
   align-items: center;
   justify-content: center;

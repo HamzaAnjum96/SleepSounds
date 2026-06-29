@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 7.15.1
+- **Variant chips line up as a two-column grid.** The justified (`flex: auto`)
+  version grew chips by an equal *amount*, so rows with different label lengths
+  didn't align. They now use a uniform two-column basis
+  (`flex: 1 1 calc(50% - gap)`): every full row is a clean 50/50, columns line up
+  across rows, and labels stay on one line (three-up squeezed long names like
+  "Storm in the Trees" onto three lines). A lone trailing chip fills its row.
+
 ### 7.15.0
 - **Variant chips are justified.** The preset chips in the sound editor now grow
   to fill each wrapped line (`flex: 1 1 auto`, centred content), so the rows read
