@@ -69,12 +69,40 @@ class Clap {
   }
 }
 
+// ── Rolling reverb (procedural, no impulse-response files) ──────────────
+// A damped feedback comb: the tail re-circulates, losing its top each pass, so
+// a strike "rolls" and blooms away the way real thunder bounces off terrain.
+class Comb {
+  constructor(ms) { this.buf = new Float32Array(Math.max(2, Math.round(ms / 1000 * SR))); this.i = 0; this.damp = 0; }
+  process(x, fb, dampCoef) {
+    const y = this.buf[this.i];
+    this.damp = y * (1 - dampCoef) + this.damp * dampCoef; // one-pole LP in the loop
+    this.buf[this.i] = x + this.damp * fb;
+    if (++this.i >= this.buf.length) this.i = 0;
+    return y;
+  }
+}
+// Allpass diffusion smears the comb echoes into a continuous roll.
+class Allpass {
+  constructor(ms, g) { this.buf = new Float32Array(Math.max(2, Math.round(ms / 1000 * SR))); this.i = 0; this.g = g; }
+  process(x) {
+    const b = this.buf[this.i];
+    const y = b - x * this.g;
+    this.buf[this.i] = x + b * this.g;
+    if (++this.i >= this.buf.length) this.i = 0;
+    return y;
+  }
+}
+
 class ThunderProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
       { name: 'stormIntensity', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'rumble',         defaultValue: 0.6, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'distance',       defaultValue: 0.4, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // crack: high-frequency snap of the strike. Low = soft, distant, rounded
+      // rumble (the sleep-friendly default); high = a sharp, bright close clap.
+      { name: 'crack',          defaultValue: 0.35, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',        defaultValue: 1,   minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -101,25 +129,36 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.bedLP = new Biquad(); this.bedLP.lowpass(110, 0.6);
     this.bedHP = new Biquad(); this.bedHP.highpass(34, 0.6);
     this.bedSwell = 0;
+
+    // Rolling reverb: two damped combs per channel (different lengths L vs R so
+    // the tail is decorrelated/wide) into an allpass diffuser. Distance drives
+    // its feedback (length) and wet level, so a far storm rolls and blooms while
+    // an overhead strike stays tight and dry.
+    this.combL = [new Comb(67), new Comb(91)];
+    this.combR = [new Comb(73), new Comb(97)];
+    this.apL = new Allpass(13, 0.5);
+    this.apR = new Allpass(11, 0.5);
   }
 
   rnd() { this.seed = (1664525 * this.seed + 1013904223) >>> 0; return this.seed / 4294967296; }
 
-  scheduleEvent(stormIntensity, rumbleAmt, distance) {
+  scheduleEvent(stormIntensity, rumbleAmt, distance, crack) {
     // 62% of flashes are 1–2 claps; the rest 3–4.
     const claps = this.rnd() < 0.62 ? (1 + (this.rnd() < 0.5 ? 0 : 1)) : (3 + (this.rnd() < 0.5 ? 0 : 1));
     const pan = (this.rnd() * 2 - 1) * (0.25 + distance * 0.55);
     this.eventPanL = Math.cos((pan + 1) * Math.PI / 4);
     this.eventPanR = Math.sin((pan + 1) * Math.PI / 4);
     const near = 1 - distance;               // 1 = overhead, 0 = far
-    const bright = 0.45 + near * 0.55;
-    const lpHz = 1200 + near * 6000;
+    // `crack` adds the bright snap on top of proximity, so even a near strike
+    // can be soft (low crack) and a far one can keep a little edge.
+    const bright = 0.35 + near * 0.4 + crack * 0.45;
+    const lpHz = 900 + near * 4200 + crack * 4200;
 
     // Claps arrive as a short sequence (offsets 30–250 ms), not all at once,
     // which is what makes a multi-clap strike read as rolling thunder.
     let offset = 0;
     for (let i = 0; i < claps; i++) {
-      const f = (120 + this.rnd() * 1300) * (0.5 + near * 0.5);
+      const f = (120 + this.rnd() * 1300) * (0.5 + near * 0.5) * (0.72 + crack * 0.55);
       const decayS = 0.03 + Math.pow(this.rnd(), 2) * 0.22;
       const peak = (0.5 + this.rnd() * 0.4) * bright * (i === 0 ? 1 : 0.7);
       this.pendingClaps.push({
@@ -173,15 +212,22 @@ class ThunderProcessor extends AudioWorkletProcessor {
     const stormIntensity = params.stormIntensity[0];
     const rumbleAmt = params.rumble[0];
     const distance = params.distance[0];
+    const crack = params.crack[0];
     const running = params.running[0];
 
     const levelTarget = running > 0.5 ? 1 : 0;
     const levelCoef = Math.exp(-1 / (0.08 * SR));
     const afterInc = TWO_PI * 0.15 / SR;
 
+    // Rolling-reverb coefficients (k-rate, so per block): farther = longer tail
+    // (more feedback), darker (more damping) and wetter.
+    const revFb = 0.58 + distance * 0.30;     // 0.58 near → ~0.88 far
+    const revDamp = 0.35 + distance * 0.35;   // darker re-circulation when far
+    const revWet = 0.14 + distance * 0.42;    // far storms bloom; near stays dry
+
     for (let i = 0; i < n; i++) {
       this.elapsed++;
-      if (running > 0.5 && --this.nextEvent <= 0) this.scheduleEvent(stormIntensity, rumbleAmt, distance);
+      if (running > 0.5 && --this.nextEvent <= 0) this.scheduleEvent(stormIntensity, rumbleAmt, distance, crack);
 
       // fire any claps whose scheduled time has arrived
       if (this.pendingClaps.length) {
@@ -226,10 +272,17 @@ class ThunderProcessor extends AudioWorkletProcessor {
       const bedG = (0.018 + stormIntensity * 0.03) * (0.4 + rumbleAmt * 0.7) * (0.5 + this.bedSwell * 2.0);
       const bed = this.bedHP.process(this.bedLP.process(noise)) * bedG;
 
+      // rolling reverb fed by the event transients/bodies (not the steady bed,
+      // which would build up and drone). Two combs per channel → allpass.
+      const revIn = (clL + clR) * 0.5 + rum * 0.45 + dep * 0.4;
+      let wl = (this.combL[0].process(revIn, revFb, revDamp) + this.combL[1].process(revIn, revFb, revDamp)) * 0.5;
+      let wr = (this.combR[0].process(revIn, revFb, revDamp) + this.combR[1].process(revIn, revFb, revDamp)) * 0.5;
+      wl = this.apL.process(wl); wr = this.apR.process(wr);
+
       // mix: claps keep their own pan; bodies get a slight event-wide width.
       const body = rum + aft + bed;
-      let sl = clL + body * (0.55 + this.eventPanL * 0.45) + dep;
-      let sr = clR + body * (0.55 + this.eventPanR * 0.45) + dep;
+      let sl = clL + body * (0.55 + this.eventPanL * 0.45) + dep + wl * revWet;
+      let sr = clR + body * (0.55 + this.eventPanR * 0.45) + dep + wr * revWet;
 
       this.level = levelTarget + (this.level - levelTarget) * levelCoef;
       sl *= this.level; sr *= this.level;

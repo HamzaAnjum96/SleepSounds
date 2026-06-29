@@ -111,6 +111,21 @@ npm run preview
 
 ## Changelog
 
+### 7.17.1
+- **Thunder — rolling reverb + a crack control (from the thunder research
+  report, kept fully procedural).** The report's biggest realism levers were a
+  reverb/echo stage and a crack-sharpness control; both are now synthesised in
+  the worklet, no sample or impulse-response files (the app stays "generated, not
+  borrowed"). A **rolling reverb** (two damped feedback combs per channel into an
+  allpass diffuser) makes a strike bounce and bloom away; its feedback, damping
+  and wet level ride on **distance**, so a far storm rolls long and dark while an
+  overhead strike stays tight. A new **crack** slider sets the high-frequency
+  snap — low for a soft, rounded, distant rumble (the sleep default), high for a
+  sharp close clap. New variants: a soothing **Distant Rumble** (deep, far, almost
+  no crack, long bloom) alongside Far Off, Rolling Storm, Overhead. Verified
+  NaN-free and non-clipping across every variant incl. max-everything (Node DSP
+  probe); 71 unit + 15 e2e, typecheck, lint, build green; in-browser console clean.
+
 ### 7.17.0
 - **Fine-tune toggle goes full-width, with a gentle reveal.** The "fine-tune
   sliders" disclosure now stretches the full panel width like the chips and
