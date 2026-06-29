@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.21.1
+### 7.22.0
 - **"Fan & Rain" scene: fan volume down to 6%.** The fan now sits as a faint
   hush under the rain rather than a prominent layer.
 
