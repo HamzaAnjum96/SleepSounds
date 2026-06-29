@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.23.1
+### 7.24.0
 - **Fire — roar pulled well back everywhere.** The continuous roar/body bed is
   much quieter by default and across every fire scene (Embers, Hearth, Campfire,
   Bonfire, Wood Stove, Crackling), so the crackle and pop character leads instead
