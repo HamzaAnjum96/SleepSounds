@@ -111,6 +111,22 @@ npm run preview
 
 ## Changelog
 
+### 7.23.1
+- **Fire — roar pulled well back everywhere.** The continuous roar/body bed is
+  much quieter by default and across every fire scene (Embers, Hearth, Campfire,
+  Bonfire, Wood Stove, Crackling), so the crackle and pop character leads instead
+  of a steady rush. Driven by lowering `bodyVol` (roar volume) on the default,
+  all variants, and the worklet's own descriptor default; measured roar energy
+  drops ~60%.
+- **WAV fallbacks now honor every editor control.** The procedural fallback loops
+  (used when the live AudioWorklet can't load) were swept so each one responds to
+  its tuning. Two were silently ignoring their params entirely — **Fire** and
+  **Birdsong** — so their variants did nothing in fallback mode; both now scale
+  roar/crackle/pop/hiss (fire) and call/trill/peep density, pitch and balance
+  (birdsong) the same way the live sounds do. Rain's `space` control now nudges
+  the fallback too. A new test asserts every variant of every editable sound
+  renders distinct fallback audio, so this can't silently regress again.
+
 ### 7.23.0
 - **Thunder — cracks removed entirely, now chip-only.** Thunder is now pure
   rolling rumble: the crack synthesis (click/snap/boom/tear) is gone, leaving the

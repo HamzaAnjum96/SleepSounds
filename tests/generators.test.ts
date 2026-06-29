@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { SOUND_LIBRARY } from '../src/data';
 import { regenerateSound } from '../src/audio/generators';
+import { SOUND_EDITOR_MODELS } from '../src/components/soundEditorDefs';
 
 // The WAV generators call Blob + URL.createObjectURL; stub them for Node so we
 // can read the bytes back and check each sound actually produces valid audio.
@@ -103,6 +104,32 @@ describe('WAV generators', () => {
       expect(peak, 'not silent').toBeGreaterThan(0.05);
       expect(peak, 'not hard-clipped').toBeLessThanOrEqual(1.0);
       expect(rms, 'has real energy').toBeGreaterThan(0.01);
+    });
+  }
+});
+
+// A sound's WAV fallback must respond to its editor tuning — otherwise the
+// variants/sliders do nothing when the live worklet can't load. (genFire and
+// genBirdsong previously ignored their params entirely; this guards that.)
+describe('fallback honors editor tuning', () => {
+  // Resolve a variant to full params the way the editor does: overrides on top
+  // of the group defaults.
+  const editableWav = SOUND_LIBRARY.filter(
+    (s) => regenerateSound(s.id, {}) !== null && SOUND_EDITOR_MODELS[s.id]?.variants,
+  );
+
+  for (const sound of editableWav) {
+    const model = SOUND_EDITOR_MODELS[sound.id];
+    const defaults = Object.fromEntries(
+      model.groups.flatMap((g) => g.params).map((p) => [p.key, p.def]),
+    );
+    const variants = model.variants!;
+    it(`${sound.id}: each variant renders distinct audio`, () => {
+      const sums = variants.map((v) =>
+        checksum(regenerateSound(sound.id, { ...defaults, ...v.values })!),
+      );
+      // Every variant's checksum should be unique (none collapses to another).
+      expect(new Set(sums.map((n) => n.toFixed(2))).size).toBe(variants.length);
     });
   }
 });

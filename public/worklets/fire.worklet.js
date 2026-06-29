@@ -14,7 +14,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
       { name: 'hiss',        defaultValue: 0.18,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       { name: 'running',     defaultValue: 1,       minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       // ── Roar / thunder background ─────────────────────────────────────
-      { name: 'bodyVol',     defaultValue: 1.4,     minValue: 0,       maxValue: 2,      automationRate: 'k-rate' },
+      { name: 'bodyVol',     defaultValue: 0.72,    minValue: 0,       maxValue: 2,      automationRate: 'k-rate' },
       { name: 'bodyLp',      defaultValue: 0.007,   minValue: 0.001,   maxValue: 0.05,   automationRate: 'k-rate' },
       { name: 'roarMean',    defaultValue: 0.81,    minValue: 0,       maxValue: 1,      automationRate: 'k-rate' },
       { name: 'roarSpeed',   defaultValue: 0.00005, minValue: 0.000005,maxValue: 0.0002, automationRate: 'k-rate' },
@@ -170,7 +170,7 @@ class FireSynthProcessor extends AudioWorkletProcessor {
     const crackleBias = parameters.crackleBias[0]  ?? 1.0;
     const hiss        = parameters.hiss[0]          ?? 0.18;
 
-    const bodyVol     = parameters.bodyVol[0]      ?? 1.4;
+    const bodyVol     = parameters.bodyVol[0]      ?? 0.72;
     const bodyLp      = parameters.bodyLp[0]       ?? 0.007;
     const roarMean    = parameters.roarMean[0]     ?? 0.81;
     const roarSpeed   = parameters.roarSpeed[0]    ?? 0.00005;

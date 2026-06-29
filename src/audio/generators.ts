@@ -206,7 +206,7 @@ function genPink(params?: Record<string, number>): string {
 }
 
 function genRain(params?: Record<string, number>): string {
-  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, drops = 0.25, bed: bedLevel = 1, movement = 0.4 } = params ?? {};
+  const { intensity = 0.65, heaviness = 0.5, surface = 0.5, drops = 0.25, bed: bedLevel = 1, movement = 0.4, space = 0.18 } = params ?? {};
   // Folded controls (mirror the worklet): movement drives the swell, surface
   // colours the bed.
   const swell = movement * 0.4;
@@ -275,7 +275,8 @@ function genRain(params?: Record<string, number>): string {
   // Keep more low-mid body in the impacts (a soft pock, not a bright tick) and
   // cap their top low unless metallic opens it — the high-passed-at-1400 +
   // 9 kHz ceiling of before is exactly what read as rain on tin.
-  hp1(impacts, 700); lp1(impacts, 2600 + metallic * 6000);
+  // space (room/diffusion): a roomier field softens the transient bite a touch.
+  hp1(impacts, 700); lp1(impacts, 2600 + metallic * 6000 - space * 700);
   hp1(bubbles, 420); lp1(bubbles, 2600 + metallic * 3000);
   const mix = new Float32Array(N);
   // One full swell cycle per loop, so the shower rises and eases without a
@@ -287,8 +288,9 @@ function genRain(params?: Record<string, number>): string {
   // surface variants (high drops) push their hits forward.
   const impGain = 0.05 + drops * 0.22;
   const bubGain = 0.03 + drops * 0.09;
-  // bed trims the continuous curtain (matches the live worklet's bed control).
-  const bedGain = 0.78 * bedLevel;
+  // bed trims the continuous curtain (matches the live worklet's bed control);
+  // space fills the room a little more, so the wash sits fuller behind the hits.
+  const bedGain = 0.78 * bedLevel * (1 + space * 0.18);
   for (let i = 0; i < N; i++) {
     const s = 1 + swellDepth * Math.sin((2 * Math.PI * i) / N);
     mix[i] = (bed[i] * bedGain + impacts[i] * impGain + bubbles[i] * bubGain) * s;
@@ -412,18 +414,45 @@ function genWind(params?: Record<string, number>): string {
   return genStereo(left, right, 0.68);
 }
 
-function genFire(): string {
+function genFire(params?: Record<string, number>): string {
   // Fire: deep turbulent roar + flame body + hiss + ember + whoosh +
-  //       crackle bursts + spit crackles + pops + log shifts
+  //       crackle bursts + spit crackles + pops + log shifts.
+  // Honors the editor's fire params so the fallback's variants differ the same
+  // way the live worklet's do. Note gen() peak-normalizes, so only the *relative*
+  // balance / density / brightness survive — global levels are renormalized away.
+  const {
+    intensity = 0.30, dryness = 0.38, crackleBias = 0.65, size = 0.65,
+    distance = 0.58, wind = 0.22, bodyVol = 0.52, roarMean = 0.81,
+    crackleBase = 9, crackleVol = 3.1, popVol = 0.55, hiss: hissParam = 0.18,
+  } = params ?? {};
+  // Roar is deliberately held back (matches the worklet's lowered bodyVol): the
+  // crackle/pop character should lead, not the rush. roarLevel folds in bodyVol
+  // and roarMean; bigger fires keep a touch more body and low end.
+  const roarLevel = 0.16 * bodyVol * (0.45 + roarMean * 0.6);
+  const bodyLevel = 0.15 * bodyVol * (0.5 + intensity * 0.8);
+  const roarTop = 420 + size * 380;
+  const bodyTop = 900 + size * 650;
+  // Crackle density (crackleBase 0–15), loudness (crackleVol 0–6) and brightness
+  // (dryness) all scale; distance darkens the whole image and recedes the highs.
+  const crackDensity = 0.4 + (crackleBase / 15) * 1.5;
+  const crackAmpScale = 0.55 + (crackleVol / 6) * 1.4;
+  const popAmpScale = 0.4 + (popVol / 3) * 2.2;
+  const crackLp = 4200 + dryness * 4200 - distance * 1800;
+  const crackHp = 600 + dryness * 350;
+  const whooshLevel = 0.02 + wind * 0.05;
+  const hissLevel = 0.018 + hissParam * 0.06;
+  const emberLevel = 0.008 + hissParam * 0.03;
+  const masterLp = 8800 - distance * 5600;
+  const crackleMixW = 0.30 * (0.6 + crackleBias * 0.85);
 
   // ── 1. Deep roar body: brown rumble + pink mid-roar, independently modulated ──
   const roar = brownNoise();
   hp1(roar, 40);
-  lp1(roar, 600);
+  lp1(roar, roarTop);
 
   const body = pinkNoise();
   hp1(body, 100);
-  lp1(body, 1200);
+  lp1(body, bodyTop);
 
   // Irregular "breathing" — two uncorrelated slow LFOs compound-modulate the flame.
   const breathA = smoothRandomLfo(0.55, 1.0, 2.0, 6.0);
@@ -457,7 +486,7 @@ function genFire(): string {
   while (pos < N) {
     const burstDur = Math.floor(SR * rand(0.05, 0.30));
     const burstEnd = Math.min(N, pos + burstDur);
-    const burstIntensity = rand(0.08, 0.28);
+    const burstIntensity = rand(0.08, 0.28) * crackAmpScale;
     let cPos = pos;
     while (cPos < burstEnd) {
       const len = Math.floor(SR * rand(0.001, 0.008));
@@ -479,12 +508,12 @@ function genFire(): string {
             * Math.exp(-9 * (i / Math.max(1, pingLen))) * pingAmp;
         }
       }
-      cPos += Math.floor(SR * rand(0.003, 0.04));
+      cPos += Math.floor(SR * rand(0.003, 0.04) / crackDensity);
     }
-    pos = burstEnd + Math.floor(SR * rand(0.3, 1.8));
+    pos = burstEnd + Math.floor(SR * rand(0.3, 1.8) / crackDensity);
   }
-  hp1(crackles, 800);
-  lp1(crackles, 7000);
+  hp1(crackles, crackHp);
+  lp1(crackles, crackLp);
 
   // ── 6. Spit crackles: sparse individual snaps scattered between bursts.
   // Fire never fully stops crackling — these fill the gaps between burst clusters
@@ -508,7 +537,7 @@ function genFire(): string {
   let popPos = Math.floor(SR * rand(1.0, 3.0));
   while (popPos < N) {
     const len = Math.floor(SR * rand(0.008, 0.025));
-    const amp = rand(0.15, 0.40);
+    const amp = rand(0.15, 0.40) * popAmpScale;
     const f0 = rand(80, 250);
     let ph = 0;
     for (let i = 0; i < len && popPos + i < N; i++) {
@@ -546,26 +575,46 @@ function genFire(): string {
   lp1(logShifts, 280);
 
   // ── Mix ──
-  // Crackles and pops are the dominant character; roar/body are background texture.
+  // Crackles and pops lead; the roar/body bed is held well back (low bodyVol).
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const breath = breathA[i] * breathB[i]; // compound modulation
     mix[i] =
-      roar[i]       * 0.18 * breathA[i] +
-      body[i]       * 0.16 * breath +
-      hiss[i]       * 0.025 * breath +
-      ember[i]      * 0.012 * emberLfo[i] +
-      whoosh[i]     * 0.035 * breath +
-      crackles[i]   * 0.30 +
-      spits[i]      * 0.12 +
+      roar[i]       * roarLevel * breathA[i] +
+      body[i]       * bodyLevel * breath +
+      hiss[i]       * hissLevel * breath +
+      ember[i]      * emberLevel * emberLfo[i] +
+      whoosh[i]     * whooshLevel * breath +
+      crackles[i]   * crackleMixW +
+      spits[i]      * 0.12 * crackAmpScale +
       pops[i]       * 0.14 +
       logShifts[i]  * 0.04;
   }
+  // Distance darkens the whole image (a far fire loses its top end).
+  lp1(mix, masterLp);
   return gen(mix, 0.96);  // +1.5x headroom (default volume lowered to match)
 }
 
-function genBirdsong(): string {
-  // Birdsong: varied bird calls without ambience bed.
+function genBirdsong(params?: Record<string, number>): string {
+  // Birdsong: varied bird calls without ambience bed. Honors the editor's
+  // birdsong params so the fallback's variants (Distant / Garden / Dawn Chorus)
+  // differ like the live worklet's. gen() peak-normalizes, so the per-element
+  // *relative* volumes, call/trill/peep densities and pitches carry the variant
+  // character; the global `gain` is renormalized away and so is unused here.
+  const {
+    callRate = 2.0, callPitch = 0.5, callVol = 1.0, callVariety = 0.5,
+    trillRate = 0.30, trillPitch = 0.5, trillVol = 1.0, trillSpeed = 0.5,
+    peepRate = 0.50, peepVol = 0.5,
+  } = params ?? {};
+  // Densities are normalized so the defaults reproduce the original loop; a chip
+  // that raises callRate/trillRate/peepRate packs the events tighter.
+  const callDensity = Math.max(0.3, callRate / 2);
+  const trillDensity = 0.3 + trillRate * 2.33;
+  const peepDensity = 0.3 + peepRate * 1.4;
+  // callPitch sets the band centre; callVariety widens both the band and the
+  // per-chirp glide so a varied chorus spreads across more notes.
+  const callLo = 1500 + callPitch * 1800;
+  const callSpan = 600 + callVariety * 2400;
 
   // ── 1. Bird calls: short melodic chirps at varied pitches ──
   const calls = new Float32Array(N);
@@ -573,15 +622,15 @@ function genBirdsong(): string {
   while (callPos < N) {
     // Each bird call is a series of 2–6 chirps
     const numChirps = Math.floor(rand(2, 7));
-    const baseFreq = rand(1800, 4200);
+    const baseFreq = rand(callLo, callLo + callSpan);
     const chirpGap = rand(0.06, 0.14);
-    const callAmp = rand(0.08, 0.25);
+    const callAmp = rand(0.08, 0.25) * callVol;
 
     let chirpPos = callPos;
     for (let c = 0; c < numChirps && chirpPos < N; c++) {
       const chirpLen = Math.floor(SR * rand(0.03, 0.09));
-      const freq = baseFreq * rand(0.85, 1.25);
-      const freqEnd = freq * rand(0.7, 1.4); // pitch glide
+      const freq = baseFreq * rand(1 - callVariety * 0.25, 1 + callVariety * 0.3);
+      const freqEnd = freq * rand(0.7 - callVariety * 0.2, 1.3 + callVariety * 0.2); // pitch glide
       let ph = 0;
       for (let i = 0; i < chirpLen && chirpPos + i < N; i++) {
         const p = i / chirpLen;
@@ -594,8 +643,8 @@ function genBirdsong(): string {
       chirpPos += Math.floor(SR * (chirpLen / SR + chirpGap));
     }
 
-    // Gap between bird calls: 0.8–4.0 seconds
-    callPos = chirpPos + Math.floor(SR * rand(0.8, 4.0));
+    // Gap between bird calls, tighter as call density climbs.
+    callPos = chirpPos + Math.floor(SR * rand(0.8, 4.0) / callDensity);
   }
   hp1(calls, 1200);
   lp1(calls, 8000);
@@ -603,22 +652,23 @@ function genBirdsong(): string {
   // ── 2. Trills: rapid warbling sequences ──
   const trills = new Float32Array(N);
   let trillPos = Math.floor(SR * rand(1.5, 4.0));
+  const trillLo = 2000 + trillPitch * 2000;
+  const warbleRate = 12 + trillSpeed * 30;
   while (trillPos < N) {
     const trillLen = Math.floor(SR * rand(0.3, 0.8));
-    const trillFreq = rand(2400, 5000);
-    const trillRate = rand(18, 35); // warble rate in Hz
-    const trillAmp = rand(0.06, 0.16);
+    const trillFreq = rand(trillLo, trillLo + 1600);
+    const trillAmp = rand(0.06, 0.16) * trillVol;
     let ph = 0;
     for (let i = 0; i < trillLen && trillPos + i < N; i++) {
       const p = i / trillLen;
       // Fade in/out envelope
       const env = Math.sin(Math.PI * p) * trillAmp;
       // Frequency modulation for warble effect
-      const fMod = trillFreq + Math.sin(2 * Math.PI * trillRate * (i / SR)) * trillFreq * 0.15;
+      const fMod = trillFreq + Math.sin(2 * Math.PI * warbleRate * (i / SR)) * trillFreq * 0.15;
       ph += (2 * Math.PI * fMod) / SR;
       trills[trillPos + i] += Math.sin(ph) * env;
     }
-    trillPos += trillLen + Math.floor(SR * rand(2.5, 8.0));
+    trillPos += trillLen + Math.floor(SR * rand(2.5, 8.0) / trillDensity);
   }
   hp1(trills, 1800);
   lp1(trills, 9000);
@@ -626,10 +676,11 @@ function genBirdsong(): string {
   // ── 3. Distant soft peeps: very quiet background birds ──
   const peeps = new Float32Array(N);
   let peepPos = Math.floor(SR * rand(0.5, 2.0));
+  const peepAmpScale = peepVol * 2;
   while (peepPos < N) {
     const peepLen = Math.floor(SR * rand(0.015, 0.04));
     const peepFreq = rand(3000, 6000);
-    const peepAmp = rand(0.02, 0.06);
+    const peepAmp = rand(0.02, 0.06) * peepAmpScale;
     let ph = 0;
     for (let i = 0; i < peepLen && peepPos + i < N; i++) {
       const p = i / peepLen;
@@ -637,7 +688,7 @@ function genBirdsong(): string {
       ph += (2 * Math.PI * peepFreq) / SR;
       peeps[peepPos + i] += Math.sin(ph) * env;
     }
-    peepPos += Math.floor(SR * rand(0.3, 1.8));
+    peepPos += Math.floor(SR * rand(0.3, 1.8) / peepDensity);
   }
   lp1(peeps, 7000);
 
