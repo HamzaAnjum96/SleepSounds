@@ -40,12 +40,16 @@ export interface SoundEditorModel {
   variantsOnly?: boolean;
 }
 
+// Defaults are the "Crackling" character — dry kindling with rapid, prominent
+// pops and crackle over a thin roar — so it's the fire everywhere a default is
+// used (the opened editor, a tapped Fire, Reset, the WAV fallback, presets that
+// don't tune fire). The Campfire variant carries the old steady-fire values.
 const FIRE_PARAM_GROUPS: ParamGroup[] = [
   {
     label: 'character',
     params: [
       { key: 'intensity',   label: 'intensity',     min: 0, max: 1, step: 0.01, def: 0.30 },
-      { key: 'dryness',     label: 'dryness',       min: 0, max: 1, step: 0.01, def: 0.38 },
+      { key: 'dryness',     label: 'dryness',       min: 0, max: 1, step: 0.01, def: 0.80 },
       { key: 'crackleBias', label: 'crackle bias',  min: 0, max: 1, step: 0.01, def: 0.65 },
       { key: 'size',        label: 'fire size',     min: 0, max: 1, step: 0.01, def: 0.65 },
       { key: 'distance',    label: 'distance',      min: 0, max: 1, step: 0.01, def: 0.58 },
@@ -55,9 +59,9 @@ const FIRE_PARAM_GROUPS: ParamGroup[] = [
   {
     label: 'roar',
     params: [
-      { key: 'bodyVol',   label: 'roar volume',     min: 0,        max: 2,      step: 0.05,     def: 0.52 },
+      { key: 'bodyVol',   label: 'roar volume',     min: 0,        max: 2,      step: 0.05,     def: 0.46 },
       { key: 'bodyLp',    label: 'roar brightness', min: 0.001,    max: 0.05,   step: 0.001,    def: 0.007 },
-      { key: 'roarMean',  label: 'roar level',      min: 0,        max: 1,      step: 0.01,     def: 0.81 },
+      { key: 'roarMean',  label: 'roar level',      min: 0,        max: 1,      step: 0.01,     def: 0.55 },
       { key: 'roarSpeed', label: 'roll speed',      min: 0.000005, max: 0.0002, step: 0.000005, def: 0.00005 },
       { key: 'roarSigma', label: 'roar variation',  min: 0,        max: 0.005,  step: 0.0001,   def: 0.0015 },
     ],
@@ -65,10 +69,10 @@ const FIRE_PARAM_GROUPS: ParamGroup[] = [
   {
     label: 'balance',
     params: [
-      { key: 'crackleBase', label: 'crackle rate',   min: 0, max: 15, step: 0.5,  def: 9 },
-      { key: 'crackleVol',  label: 'crackle volume', min: 0, max: 6,  step: 0.1,  def: 3.1 },
-      { key: 'popVol',      label: 'pop volume',     min: 0, max: 3,  step: 0.05, def: 0.55 },
-      { key: 'hiss',        label: 'hiss',           min: 0, max: 1,  step: 0.01, def: 0.18 },
+      { key: 'crackleBase', label: 'crackle rate',   min: 0, max: 15, step: 0.5,  def: 15 },
+      { key: 'crackleVol',  label: 'crackle volume', min: 0, max: 6,  step: 0.1,  def: 6 },
+      { key: 'popVol',      label: 'pop volume',     min: 0, max: 3,  step: 0.05, def: 2.4 },
+      { key: 'hiss',        label: 'hiss',           min: 0, max: 1,  step: 0.01, def: 0.14 },
     ],
   },
 ];
@@ -147,15 +151,18 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
       ['Embers',     { intensity: 0.16, size: 0.50, distance: 0.62, crackleBase: 5,  crackleVol: 2.4, popVol: 0.30, bodyVol: 0.42, roarMean: 0.45, dryness: 0.30, crackleBias: 0.45, hiss: 0.12 }, 'ember'],
       // Steady indoor fireplace — close, warm, moderate even crackle.
       ['Hearth',     { intensity: 0.40, size: 0.78, distance: 0.40, crackleBase: 11, crackleVol: 4.6, popVol: 0.80, bodyVol: 0.62, hiss: 0.16 }, 'hearth'],
-      ['Campfire', {}, 'flame'],
+      // Steady open campfire — moderate even crackle over a fuller (but still
+      // restrained) roar; the old default character.
+      ['Campfire',   { dryness: 0.38, bodyVol: 0.52, roarMean: 0.81, crackleBase: 9, crackleVol: 3.1, popVol: 0.55, hiss: 0.18 }, 'flame'],
       // Big open fire — frequent loud crackles and pops lead; even here the roar
       // is held well back so the fire reads as crackle, not rush.
       ['Bonfire',    { intensity: 0.72, size: 1.0,  distance: 0.70, bodyVol: 0.95, roarMean: 0.96, crackleBase: 14, crackleVol: 5.2, popVol: 2.10, dryness: 0.50, hiss: 0.10 }, 'blaze'],
       // Contained stove — dark low rumble and prominent escaping-air hiss, only
       // a few distant pops. This is the texture the report's "wood stove" wants.
       ['Wood Stove', { intensity: 0.26, size: 0.45, distance: 0.30, bodyVol: 0.68, bodyLp: 0.004, roarMean: 0.70, crackleBase: 5, crackleVol: 2.6, popVol: 0.35, dryness: 0.28, crackleBias: 0.40, hiss: 0.62 }, 'stove'],
-      // Dry kindling — emphasised rapid pops and crackle over a thin roar.
-      ['Crackling',  { crackleBase: 15, crackleVol: 6, popVol: 2.4, bodyVol: 0.46, roarMean: 0.55, dryness: 0.80, hiss: 0.14 }, 'crackle'],
+      // Dry kindling — emphasised rapid pops and crackle over a thin roar. This
+      // is the default character (its values match the group defs above).
+      ['Crackling', {}, 'crackle'],
     ),
   },
   birdsong: {

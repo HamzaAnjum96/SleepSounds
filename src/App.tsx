@@ -20,7 +20,7 @@ import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEdito
 import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
 import { SOUND_ICONS } from './lib/soundIcons';
 import { haptic } from './lib/haptics';
-import { primeBackgroundAudio, setKeepAlive } from './lib/backgroundAudio';
+import { primeBackgroundAudio, setKeepAlive, setKeepAliveInterruptionHandler } from './lib/backgroundAudio';
 import { setAudioInterruptionHandler, setAudioIntent } from './audio/graph';
 import { SCENES, presetSoundIds } from './lib/scenes';
 import { formatCountdown } from './lib/time';
@@ -398,10 +398,15 @@ export default function App() {
     setAudioIntent(isPlaying);
   }, [isPlaying]);
 
-  // When another app takes audio focus (a call, a video, music), pause our mix
-  // and leave it paused — the user resumes with a tap, it never restarts itself.
+  // When another app takes audio focus (a call, a video, music) — or the user
+  // hits pause in the media notification — pause our mix and leave it paused. It
+  // resumes only on a deliberate tap, never on its own. Both signals route here:
+  // iOS via the AudioContext 'interrupted' state, Android via the OS pausing our
+  // keep-alive element.
   useEffect(() => {
-    setAudioInterruptionHandler(() => { pauseAll(); setIsPaused(true); });
+    const pause = () => { pauseAll(); setIsPaused(true); };
+    setAudioInterruptionHandler(pause);
+    setKeepAliveInterruptionHandler(pause);
   }, [pauseAll]);
 
   // Latch the first real playback — it releases the held-back prompts.
@@ -460,7 +465,9 @@ export default function App() {
       ],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-    navigator.mediaSession.setActionHandler('play',  () => { playAllActive(); setIsPaused(false); });
+    // Prime first: an explicit resume must mark the keep-alive as intended before
+    // the element plays, so the auto-resume guard doesn't suppress it.
+    navigator.mediaSession.setActionHandler('play',  () => { primeBackgroundAudio(); playAllActive(); setIsPaused(false); });
     navigator.mediaSession.setActionHandler('pause', () => { pauseAll();      setIsPaused(true); });
     navigator.mediaSession.setActionHandler('stop',  () => { stopAll();       setIsPaused(false); });
     try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch { /* ok */ }

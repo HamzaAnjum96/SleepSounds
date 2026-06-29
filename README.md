@@ -111,6 +111,21 @@ npm run preview
 
 ## Changelog
 
+### 7.25.1
+- **Android: another app (or the notification pause) now actually pauses the
+  mix.** On Android the media notification and audio-focus are driven by the
+  keep-alive `<audio>` element, not the Web Audio graph — so when YouTube took
+  focus, or the notification's pause button was tapped, the element paused but
+  the worklets kept playing. The keep-alive's pause is now the cross-platform
+  interruption signal: an unsolicited pause pauses the whole mix, and only an
+  explicit transport action (tap, notification play) resumes it. iOS keeps its
+  AudioContext-`interrupted` path as well; the two are complementary.
+- **Crackling is the default fire everywhere.** The fire's default character is
+  now Crackling (dry, pop-and-crackle-led over a thin roar) — in the opened
+  editor, a freshly tapped Fire, Reset, the WAV fallback, and presets that don't
+  tune fire. The previous steady character is still available as the **Campfire**
+  variant.
+
 ### 7.25.0
 - **Audio interruptions now pause for good — no self-restart.** When another app
   takes audio focus (a phone call, a video, music), the mix pauses and *stays*

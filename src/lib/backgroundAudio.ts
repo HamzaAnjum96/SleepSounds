@@ -24,10 +24,20 @@
  */
 
 let silent: HTMLAudioElement | null = null;
-// Whether we *want* the keep-alive running. Used to spot an OS auto-resume after
-// an audio interruption (another app finished) and push it back down, so a paused
-// mix never restarts itself.
+// Whether we *want* the keep-alive running. The keep-alive element is also the
+// element Android/Chrome builds the media notification from and the one the OS
+// pauses on audio-focus loss — so its play/pause is our cross-platform transport
+// signal. `keepAliveIntended` lets us tell our own pause/play apart from the
+// system's: an unsolicited pause = another app took focus (or the notification
+// pause button); an unsolicited play = an OS auto-resume we must push back down.
 let keepAliveIntended = false;
+let onInterruption: (() => void) | null = null;
+
+/** Register the callback fired when the OS pauses our keep-alive on its own
+ *  (audio-focus loss / a media-notification pause) — so the mix follows. */
+export function setKeepAliveInterruptionHandler(fn: () => void): void {
+  onInterruption = fn;
+}
 
 /** Build a 15-second mono WAV at the noise floor (≈-62 dBFS) as a blob URL. */
 function silentWavUrl(): string {
@@ -57,9 +67,13 @@ function ensureSilent(): HTMLAudioElement {
   el.loop = true;
   el.preload = 'auto';
   el.setAttribute('playsinline', '');
-  // If the OS auto-resumes the keep-alive after an interruption while we want it
-  // stopped, pause it straight back — the mix should only restart on a tap.
-  el.addEventListener('play', () => { if (!keepAliveIntended) el.pause(); });
+  // The OS paused our keep-alive on its own — another app took audio focus, or
+  // the user hit pause in the media notification. Pause the whole mix to match.
+  el.addEventListener('pause', () => { if (keepAliveIntended) onInterruption?.(); });
+  // The OS auto-resumed the keep-alive after an interruption while we want it
+  // stopped — pause it straight back; the mix only restarts on an explicit tap
+  // (which sets keepAliveIntended first, via setKeepAlive(true)).
+  el.addEventListener('play', () => { if (!keepAliveIntended) void el.pause(); });
   silent = el;
   return el;
 }
