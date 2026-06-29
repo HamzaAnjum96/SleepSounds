@@ -1407,8 +1407,12 @@ header::after {
   gap: var(--sp-6);
 }
 .sb-variant {
+  /* Grow to fill each wrapped line so the rows read as justified rather than
+     ragged — every line spans the full width, chips share the slack equally. */
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-6);
   padding: var(--sp-6) var(--sp-12) var(--sp-6) var(--sp-8);
   border-radius: var(--radius-control);
@@ -1446,6 +1450,9 @@ header::after {
 }
 /* Non-interactive marker shown once the sliders are nudged off any preset. */
 .sb-variant.custom {
+  /* The "custom" marker is informational, not a choice — it shouldn't stretch
+     to fill a line on its own. */
+  flex: 0 0 auto;
   cursor: default;
   border-style: dashed;
   color: var(--text-dim);

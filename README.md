@@ -111,6 +111,12 @@ npm run preview
 
 ## Changelog
 
+### 7.14.1
+- **Variant chips are justified.** The preset chips in the sound editor now grow
+  to fill each wrapped line (`flex: 1 1 auto`, centred content), so the rows read
+  as justified blocks instead of a ragged right edge — every line spans the full
+  width. The "custom" marker stays its natural size.
+
 ### 7.14.0
 - **A batch of UI fixes.**
   - **"your mixes" no longer pops in empty.** The section (and its "save this
