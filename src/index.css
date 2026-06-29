@@ -1348,11 +1348,19 @@ header::after {
 }
 
 /* Groups are quiet runs separated by a hairline, not boxes within the box. */
+/* Revealing the sliders eases them in rather than snapping — a slight fade and
+   downward settle when "fine-tune" opens (stilled under reduced-motion). */
+@keyframes sbReveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .sb-group {
   display: flex;
   flex-direction: column;
   gap: var(--sp-10);
+  animation: sbReveal var(--dur-3) var(--ease) both;
 }
+.sb-group + .sb-group { animation-delay: 55ms; }
 .sb-group + .sb-group {
   border-top: 1px solid var(--border);
   padding-top: var(--sp-12);
@@ -1470,11 +1478,11 @@ header::after {
    (the shared control vocabulary) so it reads as a button, with a sliders icon
    and an action label, and the category-accent "open" state of a real toggle. */
 .sb-finetune {
-  align-self: flex-start;
-  display: inline-flex;
+  align-self: stretch;          /* full width, like the chips and sliders */
+  display: flex;
   align-items: center;
   gap: var(--sp-6);
-  padding: var(--sp-6) var(--sp-12);
+  padding: var(--sp-8) var(--sp-12);
   border-radius: var(--radius-control);
   border: 1px solid var(--border);
   background: transparent;
@@ -1483,7 +1491,7 @@ header::after {
   font-size: var(--fs-control);
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1);
+  transition: border-color var(--dur-1), color var(--dur-1), background var(--dur-1), transform var(--dur-1) var(--ease);
   outline: none;
 }
 @media (hover: hover) {
@@ -1497,10 +1505,12 @@ header::after {
 .sb-finetune-icon { font-size: 18px; }
 .sb-finetune-caret {
   font-size: 18px;
-  margin-left: calc(var(--sp-4) * -1);
-  transition: transform var(--dur-2) var(--ease);
+  margin-left: auto;            /* pushed to the right edge of the full-width row */
+  transition: transform var(--dur-3) var(--ease);
 }
 .sb-finetune.open .sb-finetune-caret { transform: rotate(180deg); }
+/* A gentle press feedback so the toggle feels alive. */
+.sb-finetune:active { transform: scale(0.99); }
 .sb-finetune:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

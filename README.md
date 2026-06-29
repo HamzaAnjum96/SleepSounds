@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 7.16.1
+- **Fine-tune toggle goes full-width, with a gentle reveal.** The "fine-tune
+  sliders" disclosure now stretches the full panel width like the chips and
+  sliders, with its caret pushed to the right edge. Opening it eases the slider
+  groups in (a slight fade + downward settle, lightly staggered) instead of
+  snapping, and the button has a small press response. All stilled under
+  reduced-motion.
+
 ### 7.16.0
 - **Variant chips line up as a two-column grid.** The justified (`flex: auto`)
   version grew chips by an equal *amount*, so rows with different label lengths
