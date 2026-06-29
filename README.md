@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.25.1
+### 7.26.0
 - **Android: another app (or the notification pause) now actually pauses the
   mix.** On Android the media notification and audio-focus are driven by the
   keep-alive `<audio>` element, not the Web Audio graph — so when YouTube took
