@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.24.1
+### 7.25.0
 - **Audio interruptions now pause for good — no self-restart.** When another app
   takes audio focus (a phone call, a video, music), the mix pauses and *stays*
   paused; it only resumes on a deliberate tap. Previously iOS would mark the
