@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.13.1
+### 7.14.0
 - **A batch of UI fixes.**
   - **"your mixes" no longer pops in empty.** The section (and its "save this
     mix" placeholder) only renders once you actually have a saved mix, so
