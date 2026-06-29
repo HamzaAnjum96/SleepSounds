@@ -111,6 +111,10 @@ npm run preview
 
 ## Changelog
 
+### 7.21.1
+- **"Fan & Rain" scene: fan volume down to 6%.** The fan now sits as a faint
+  hush under the rain rather than a prominent layer.
+
 ### 7.21.0
 - **Thunder — killed the constant fizz, fixed the "taser zap".** Two issues: a
   faint band-limited noise *floor* ran the whole time on every variant (a

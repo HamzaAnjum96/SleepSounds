@@ -139,7 +139,7 @@ export const BUILTIN_PRESETS: Preset[] = [
   // Rain on glass — the exact "At a Window" variant (so the editor shows that
   // name, not "custom"), matching the scene's mood line. The fan's hush and the
   // masking graph keep the rain bed from competing, so no extra bed trim here.
-  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.25], ['rain', 0.50, { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }]]) },
+  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.06], ['rain', 0.50, { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }]]) },
   { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.41], ['night', 0.05]]) },
   { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
   { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.62]]) },
