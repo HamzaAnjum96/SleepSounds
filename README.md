@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.19.1
+### 7.20.0
 - **Thunder crack made convincing.** The close-strike crack was a smooth,
   buzzy noise burst; it is now built like a real lightning snap: a
   near-instantaneous broadband **click** (the percussive leading edge), a bright
