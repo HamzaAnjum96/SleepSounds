@@ -111,6 +111,23 @@ npm run preview
 
 ## Changelog
 
+### 7.18.1
+- **Thunder reworked for realism (and it no longer opens with a bang).** The
+  generator was rebuilt around how real thunder actually sounds: a lightning
+  channel is kilometres long, so its sound arrives over several seconds and
+  *rolls*. A strike is now a swarm of overlapping low-frequency **surges** spread
+  across the duration (the rumble climbs, dips and climbs again) rather than one
+  fading hump; a sharp, *tearing* **crack** (rapid AM) fires only when the storm
+  is close, so a distant storm is pure roll with no snap; and a long sub-bass
+  swell underpins it. Timing is now two-level and irregular — a drifting storm
+  "activity" plus clustering, so strikes come as a quick flurry then a long lull
+  instead of on a metronome. Crucially for a sleep app, the **first strike is
+  held back ~9–21s and softened, and the level eases in slowly** — no startle on
+  start. All still fully procedural (no samples). Measured: silent onset (peak
+  ~0.002 in the first 8s), undulating multi-surge envelope, low centroid (~300 Hz
+  distant), NaN-free / non-clipping across every variant. 71 unit + 15 e2e,
+  typecheck, lint, build green; in-browser console clean.
+
 ### 7.18.0
 - **Thunder — rolling reverb + a crack control (from the thunder research
   report, kept fully procedural).** The report's biggest realism levers were a

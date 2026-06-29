@@ -1,18 +1,28 @@
 // thunder.worklet.js — event-based thunder generator
 //
-// Thunder must not be a looped roar. It reads as thunder only when it is a
-// sparse SEQUENCE of related events over near-silence. Following the
-// signal-based browser thunder model (Fineberg et al.), each strike is built
-// from four submodels sharing one random seed so it feels like one physical
-// event:
+// Thunder is not a single bang. A lightning channel is kilometres long, so the
+// sound from its near and far segments arrives over several seconds, bending
+// and reflecting off cloud and terrain — that staggered arrival is the *roll*.
+// This generator models a strike as a swarm of overlapping low-frequency
+// "swells" spread over time (the roll), an optional sharp fluttering crack only
+// when the storm is close, and a long sub-bass tail felt more than heard.
 //
-//   clap        1–4 short broadband cracks (62% of strikes are 1–2 claps)
-//   rumble      a long body that sweeps its bandwidth downward (~6–9 s)
-//   afterimage  a low-mid width layer that undulates (~8–14 s)
-//   deepener    a sub-bass tail, felt more than heard (~12–18 s)
+//   roll        4–13 overlapping band-limited noise swells, front-loaded, each
+//               lower and softer than the last (air absorption) — the rumble
+//   crack       a sharp, bright, *tearing* transient (rapid AM) — close strikes
+//               only; a distant storm has no crack at all, just roll
+//   deepener    one long sub-bass swell under the roll
+//   reverb      a synthesised rolling tail (damped feedback combs) — no samples
+//   bed         a faint continuous far-rumble floor between strikes
 //
-// Controls (k-rate): stormIntensity (how often events arrive), rumble
-// (body/deep weight), distance (brightness loss + longer tail + width).
+// Timing is two-level: a slow "activity" walk plus clustering, so strikes come
+// as a quick flurry then a long lull rather than on a metronome. The first
+// strike is held back and softened, and the level eases in — a sleep app must
+// never open with a bang.
+//
+// Controls (k-rate): stormIntensity (how active the storm is), rumble (low-end
+// weight + length), distance (near↔far: crack vs pure roll, brightness, tail),
+// crack (how sharp the strike snaps when it is close).
 
 const SR = sampleRate;
 const TWO_PI = Math.PI * 2;
@@ -26,63 +36,55 @@ class Biquad {
     this.b0 = (1 + c) / 2 / a0; this.b1 = -(1 + c) / a0; this.b2 = (1 + c) / 2 / a0; this.a1 = -2 * c / a0; this.a2 = (1 - al) / a0; }
   lowpass(f, q) { const w = TWO_PI * f / SR, c = Math.cos(w), s = Math.sin(w), al = s / (2 * q), a0 = 1 + al;
     this.b0 = (1 - c) / 2 / a0; this.b1 = (1 - c) / a0; this.b2 = (1 - c) / 2 / a0; this.a1 = -2 * c / a0; this.a2 = (1 - al) / a0; }
+  reset() { this.x1 = this.x2 = this.y1 = this.y2 = 0; }
   process(x) { const y = this.b0 * x + this.b1 * this.x1 + this.b2 * this.x2 - this.a1 * this.y1 - this.a2 * this.y2;
     this.x2 = this.x1; this.x1 = x; this.y2 = this.y1; this.y1 = y; return y; }
 }
 
-// Piecewise-linear envelope driven sample by sample.
-class Env {
-  constructor() { this.v = 0; this.q = []; this.step = 0; this.left = 0; this.tgt = 0; }
-  clear(v) { this.q.length = 0; this.v = v; this.step = 0; this.left = 0; this.tgt = v; }
-  to(value, seconds) { this.q.push([value, Math.max(1, Math.floor(seconds * SR))]); }
-  next() {
-    if (this.left <= 0) {
-      if (this.q.length) { const seg = this.q.shift(); this.step = (seg[0] - this.v) / seg[1]; this.left = seg[1]; this.tgt = seg[0]; }
-      else { this.step = 0; }
-    }
-    if (this.left > 0) { this.v += this.step; this.left--; if (this.left <= 0) this.v = this.tgt; }
-    return this.v;
-  }
-}
-
-class Clap {
-  constructor() { this.active = false; this.a = new Biquad(); this.b = new Biquad();
-    this.env = 0; this.decay = 0; this.attacking = false; this.attack = 0; this.peak = 0;
-    this.panL = 0.7; this.panR = 0.7; this.lp = new Biquad(); }
-  trigger(f, q, peak, decayS, pan, lpHz) {
-    this.a.bandpass(f, q); this.b.bandpass(f * 0.5, q);
-    this.lp.lowpass(lpHz, 0.7);
-    this.a.x1 = this.a.x2 = this.a.y1 = this.a.y2 = 0;
-    this.b.x1 = this.b.x2 = this.b.y1 = this.b.y2 = 0;
-    this.env = 0; this.attacking = true; this.attack = 1 / Math.max(1, 0.002 * SR);
-    this.decay = Math.exp(-1 / Math.max(1, decayS * SR)); this.peak = peak;
-    this.panL = Math.cos((pan + 1) * Math.PI / 4); this.panR = Math.sin((pan + 1) * Math.PI / 4);
+// One band-limited noise swell: a filtered-noise burst with a soft attack and a
+// long decay, panned. Used for the roll, the deepener, and (with a fast attack
+// + flutter) the sharp crack. Flutter is a rapid amplitude tear that turns a
+// plain burst into the ripping sound of a close strike.
+class Voice {
+  constructor() { this.active = false; this.f = new Biquad();
+    this.env = 0; this.atk = 0; this.dec = 0; this.attacking = false; this.peak = 0;
+    this.panL = 0.7; this.panR = 0.7; this.fl = 0; }
+  trigger(o) {
+    if (o.type === 'highpass') this.f.highpass(o.freq, o.q);
+    else if (o.type === 'bandpass') this.f.bandpass(o.freq, o.q);
+    else this.f.lowpass(o.freq, o.q);
+    this.f.reset();
+    this.env = 0; this.attacking = true;
+    this.atk = 1 / Math.max(1, o.attackS * SR);
+    this.dec = Math.exp(-1 / Math.max(1, o.decayS * SR));
+    this.peak = o.peak;
+    this.panL = Math.cos((o.pan + 1) * Math.PI / 4);
+    this.panR = Math.sin((o.pan + 1) * Math.PI / 4);
+    this.fl = o.flutter || 0;
     this.active = true;
   }
-  sample(noise) {
-    let v = this.a.process(noise) + this.b.process(noise);
-    v = this.lp.process(v);
-    if (this.attacking) { this.env += this.attack; if (this.env >= 1) { this.env = 1; this.attacking = false; } }
-    else { this.env *= this.decay; }
-    if (!this.attacking && this.env < 0.0004) this.active = false;
-    return v * this.env * this.peak;
+  sample(noise, flN) {
+    const v = this.f.process(noise);
+    if (this.attacking) { this.env += this.atk; if (this.env >= 1) { this.env = 1; this.attacking = false; } }
+    else { this.env *= this.dec; }
+    let amp = this.env * this.peak;
+    if (this.fl > 0) amp *= (1 - this.fl) + this.fl * (0.5 + 0.5 * flN); // tearing
+    if (!this.attacking && this.env < 0.0003) this.active = false;
+    return v * amp;
   }
 }
 
 // ── Rolling reverb (procedural, no impulse-response files) ──────────────
-// A damped feedback comb: the tail re-circulates, losing its top each pass, so
-// a strike "rolls" and blooms away the way real thunder bounces off terrain.
 class Comb {
   constructor(ms) { this.buf = new Float32Array(Math.max(2, Math.round(ms / 1000 * SR))); this.i = 0; this.damp = 0; }
   process(x, fb, dampCoef) {
     const y = this.buf[this.i];
-    this.damp = y * (1 - dampCoef) + this.damp * dampCoef; // one-pole LP in the loop
+    this.damp = y * (1 - dampCoef) + this.damp * dampCoef;
     this.buf[this.i] = x + this.damp * fb;
     if (++this.i >= this.buf.length) this.i = 0;
     return y;
   }
 }
-// Allpass diffusion smears the comb echoes into a continuous roll.
 class Allpass {
   constructor(ms, g) { this.buf = new Float32Array(Math.max(2, Math.round(ms / 1000 * SR))); this.i = 0; this.g = g; }
   process(x) {
@@ -97,114 +99,121 @@ class Allpass {
 class ThunderProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
-      { name: 'stormIntensity', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'rumble',         defaultValue: 0.6, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'distance',       defaultValue: 0.4, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      // crack: high-frequency snap of the strike. Low = soft, distant, rounded
-      // rumble (the sleep-friendly default); high = a sharp, bright close clap.
-      { name: 'crack',          defaultValue: 0.35, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'running',        defaultValue: 1,   minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'stormIntensity', defaultValue: 0.4,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'rumble',         defaultValue: 0.55, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'distance',       defaultValue: 0.7,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'crack',          defaultValue: 0.3,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'running',        defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
 
   constructor() {
     super();
     this.seed = 0x51ed ^ 0x7777;
-    this.claps = []; for (let i = 0; i < 10; i++) this.claps.push(new Clap());
 
-    // long layers
-    this.rumbleEnv = new Env(); this.rumbleLP = new Biquad(); this.rumbleHP = new Biquad();
-    this.rumbleHP.highpass(170, 0.7); this.rumbleSweepFrom = 1000; this.rumbleSweep = 1000; this.rumbleSweepCoef = 1;
-    this.afterEnv = new Env(); this.afterBP = new Biquad(); this.afterBP.bandpass(333, 4); this.afterLfo = 0;
-    this.deepEnv = new Env(); this.deepLP = new Biquad(); this.deepHP = new Biquad();
-    this.deepLP.lowpass(70, 0.7); this.deepHP.highpass(30, 0.7);
+    this.voices = []; for (let i = 0; i < 48; i++) this.voices.push(new Voice());
+    this.pending = []; // queued voice triggers: { at, type, freq, q, attackS, decayS, peak, pan, flutter }
+    this.elapsed = 0;
 
-    this.eventPanL = 0.7; this.eventPanR = 0.7;
-    this.nextEvent = Math.floor((1.5 + Math.random() * 3) * SR);
-    this.pendingClaps = []; // { at, f, q, peak, decayS, pan, lpHz }
-    this.elapsed = 0;       // running sample counter for clap scheduling
-    this.level = 0;
-    // Faint continuous far-rumble bed, so a storm never falls fully silent
-    // between strikes (the old version went minutes between events).
-    this.bedLP = new Biquad(); this.bedLP.lowpass(110, 0.6);
-    this.bedHP = new Biquad(); this.bedHP.highpass(34, 0.6);
+    // faint continuous far-rumble floor between strikes
+    this.bedLP = new Biquad(); this.bedLP.lowpass(95, 0.6);
+    this.bedHP = new Biquad(); this.bedHP.highpass(32, 0.6);
     this.bedSwell = 0;
 
-    // Rolling reverb: two damped combs per channel (different lengths L vs R so
-    // the tail is decorrelated/wide) into an allpass diffuser. Distance drives
-    // its feedback (length) and wet level, so a far storm rolls and blooms while
-    // an overhead strike stays tight and dry.
+    // flutter noise (smoothed) for the crack tear
+    this.flN = 0;
+
+    // two-level timing: a slow storm-activity walk + clustering
+    this.activity = 0.3;
+    this.firstDone = false;
+    // hold the first strike well back, and start soft — never open with a bang
+    this.nextEvent = Math.floor((9 + Math.random() * 12) * SR);
+
+    // rolling reverb
     this.combL = [new Comb(67), new Comb(91)];
     this.combR = [new Comb(73), new Comb(97)];
     this.apL = new Allpass(13, 0.5);
     this.apR = new Allpass(11, 0.5);
+
+    this.level = 0;
   }
 
   rnd() { this.seed = (1664525 * this.seed + 1013904223) >>> 0; return this.seed / 4294967296; }
 
-  scheduleEvent(stormIntensity, rumbleAmt, distance, crack) {
-    // 62% of flashes are 1–2 claps; the rest 3–4.
-    const claps = this.rnd() < 0.62 ? (1 + (this.rnd() < 0.5 ? 0 : 1)) : (3 + (this.rnd() < 0.5 ? 0 : 1));
-    const pan = (this.rnd() * 2 - 1) * (0.25 + distance * 0.55);
-    this.eventPanL = Math.cos((pan + 1) * Math.PI / 4);
-    this.eventPanR = Math.sin((pan + 1) * Math.PI / 4);
-    const near = 1 - distance;               // 1 = overhead, 0 = far
-    // `crack` adds the bright snap on top of proximity, so even a near strike
-    // can be soft (low crack) and a far one can keep a little edge.
-    const bright = 0.35 + near * 0.4 + crack * 0.45;
-    const lpHz = 900 + near * 4200 + crack * 4200;
+  q(at, o) { o.at = at; this.pending.push(o); }
 
-    // Claps arrive as a short sequence (offsets 30–250 ms), not all at once,
-    // which is what makes a multi-clap strike read as rolling thunder.
-    let offset = 0;
-    for (let i = 0; i < claps; i++) {
-      const f = (120 + this.rnd() * 1300) * (0.5 + near * 0.5) * (0.72 + crack * 0.55);
-      const decayS = 0.03 + Math.pow(this.rnd(), 2) * 0.22;
-      const peak = (0.5 + this.rnd() * 0.4) * bright * (i === 0 ? 1 : 0.7);
-      this.pendingClaps.push({
-        at: this.elapsed + Math.floor(offset * SR),
-        f, q: 6 + this.rnd() * 3, peak, decayS,
-        pan: pan + (this.rnd() * 2 - 1) * 0.1, lpHz,
-      });
-      offset += 0.03 + this.rnd() * 0.22;
+  scheduleEvent(stormIntensity, rumbleAmt, distance, crack) {
+    const first = !this.firstDone; this.firstDone = true;
+    const near = 1 - distance;                    // 1 = overhead, 0 = far
+    const pan = (this.rnd() * 2 - 1) * (0.2 + distance * 0.5);
+    const t0 = this.elapsed;
+
+    // ── crack: only when close (or crack is high), and never on the first
+    // strike — the storm should reveal itself with a soft far roll first.
+    const crackChance = first ? 0 : Math.min(0.95, near * 0.7 + crack * 0.6);
+    if (this.rnd() < crackChance) {
+      const nC = 1 + (this.rnd() < 0.55 ? 0 : 1) + (this.rnd() < 0.2 ? 1 : 0); // 1–3, the rip
+      const baseBright = 0.4 + near * 0.4 + crack * 0.5;
+      let t = 0;
+      for (let i = 0; i < nC; i++) {
+        this.q(t0 + Math.floor(t * SR), {
+          type: 'highpass', freq: 280 + (near * 0.5 + crack * 0.5) * 2400 + this.rnd() * 700, q: 0.6,
+          attackS: 0.0008, decayS: 0.09 + this.rnd() * 0.22,
+          peak: (0.30 + this.rnd() * 0.22) * baseBright * (i === 0 ? 1 : 0.6),
+          pan: pan + (this.rnd() * 2 - 1) * 0.12, flutter: 0.45 + crack * 0.4,
+        });
+        t += 0.018 + this.rnd() * 0.08;
+      }
     }
 
-    const tail = 1 + distance * 1.4; // distance lengthens the tail
+    // ── the roll: a handful of distinct SURGES spread over several seconds, not
+    // one fading hump. Each surge (1–3 grains around a centre time) is the sound
+    // of another stretch of the channel reaching the ear — the rumble climbs,
+    // dips, and climbs again. Far storms roll longer with more, lower surges; the
+    // first strike is gentle and far.
+    const dist = first ? Math.max(distance, 0.85) : distance;
+    const fNear = 1 - dist;
+    const dur = (3.5 + this.rnd() * 3.5) * (1 + dist * 1.7);
+    const weight = (first ? 0.6 : 1) * (0.7 + rumbleAmt * 0.8);
+    const numSurges = 2 + Math.floor(this.rnd() * (1 + dist * 3.5));   // 2..~5
+    let sc = dur * 0.12 * this.rnd();                                  // first surge near the front
+    for (let s = 0; s < numSurges; s++) {
+      const sProg = Math.min(1, sc / dur);                            // 0..1 through the roll
+      // surges decay overall but each varies a lot, so the roll undulates.
+      const surge = weight * (0.45 + 0.6 * (1 - sProg)) * (0.55 + this.rnd() * 0.7);
+      const grainsHere = 1 + Math.floor(this.rnd() * 3);
+      for (let g = 0; g < grainsHere; g++) {
+        const offset = Math.max(0, sc + (this.rnd() * 2 - 1) * 0.5);
+        const f = Math.max(70, (235 - 145 * sProg) * (0.6 + this.rnd() * 0.6) * (0.7 + fNear * 0.5));
+        this.q(t0 + Math.floor(offset * SR), {
+          type: 'lowpass', freq: f, q: 0.7,
+          attackS: 0.05 + this.rnd() * 0.18, decayS: 0.35 + this.rnd() * 1.1,
+          peak: surge * (0.6 + this.rnd() * 0.5) * 0.55, pan: pan + (this.rnd() * 2 - 1) * 0.32, flutter: 0,
+        });
+      }
+      sc += (0.55 + this.rnd() * 0.9) * (dur / numSurges);            // step to the next surge
+    }
 
-    // rumble body
-    this.rumbleSweepFrom = 1000; this.rumbleSweep = 1000;
-    const rumbleLen = (6 + this.rnd() * 3) * tail;
-    this.rumbleSweepCoef = Math.exp(Math.log(140 / 1000) / Math.max(1, rumbleLen * SR));
-    const rPeak = (0.5 + rumbleAmt * 0.5);
-    this.rumbleEnv.clear(0);
-    this.rumbleEnv.to(rPeak, 0.05);
-    this.rumbleEnv.to(rPeak * 0.4, 0.5);
-    this.rumbleEnv.to(rPeak * 0.85, 0.35);
-    this.rumbleEnv.to(rPeak * 0.1, rumbleLen * 0.6);
-    this.rumbleEnv.to(0, rumbleLen * 0.4);
+    // ── deepener: a single long sub-bass swell under the roll (kept gentle so
+    // it underpins rather than smears the surges).
+    this.q(t0, {
+      type: 'lowpass', freq: 58 + this.rnd() * 26, q: 0.7,
+      attackS: 0.25, decayS: (2.5 + this.rnd() * 3.5) * (1 + dist),
+      peak: weight * 0.6, pan: pan * 0.4, flutter: 0,
+    });
 
-    // afterimage width
-    const afterLen = (8 + this.rnd() * 6) * (0.8 + distance * 0.6);
-    this.afterEnv.clear(0);
-    this.afterEnv.to(0.0, 0.4);
-    this.afterEnv.to(0.45 * (0.6 + distance * 0.6), 1.2);
-    this.afterEnv.to(0.2, afterLen * 0.5);
-    this.afterEnv.to(0, afterLen * 0.5);
-
-    // deepener tail
-    const deepLen = (12 + this.rnd() * 6) * tail;
-    const dPeak = 0.6 + rumbleAmt * 0.5;
-    this.deepEnv.clear(0);
-    this.deepEnv.to(dPeak, 0.3);
-    this.deepEnv.to(dPeak * 0.55, 2.0);
-    this.deepEnv.to(dPeak * 0.9, 1.0);
-    this.deepEnv.to(0, deepLen);
-
-    // next event gap: an active storm rolls, it doesn't strike once a minute.
-    // ~6-22s at the default intensity, down to ~3-9s at full, with the long
-    // rumble/deepener tails overlapping into near-continuous thunder.
-    const meanGap = (26 - stormIntensity * 20) * (0.5 + this.rnd() * 1.0);
-    this.nextEvent = Math.floor(Math.max(3, meanGap) * SR);
+    // ── next event: two-level, clustered, irregular.
+    // activity drifts (storm cells wax and wane); high activity → flurries.
+    this.activity += (this.rnd() * 2 - 1) * 0.28;
+    if (this.activity < 0) this.activity = 0; else if (this.activity > 1) this.activity = 1;
+    const active = stormIntensity * (0.35 + this.activity * 0.9);
+    let gap;
+    if (this.rnd() < 0.3 + active * 0.45) {
+      gap = 1.8 + this.rnd() * 5.5;                          // a quick follow-up
+    } else {
+      gap = (12 + this.rnd() * 46) * (1.2 - stormIntensity * 0.85); // a long lull
+    }
+    this.nextEvent = Math.floor(Math.max(1.4, gap) * SR);
   }
 
   process(_inputs, outputs, params) {
@@ -216,75 +225,66 @@ class ThunderProcessor extends AudioWorkletProcessor {
     const running = params.running[0];
 
     const levelTarget = running > 0.5 ? 1 : 0;
-    const levelCoef = Math.exp(-1 / (0.08 * SR));
-    const afterInc = TWO_PI * 0.15 / SR;
 
-    // Rolling-reverb coefficients (k-rate, so per block): farther = longer tail
-    // (more feedback), darker (more damping) and wetter.
-    const revFb = 0.58 + distance * 0.30;     // 0.58 near → ~0.88 far
-    const revDamp = 0.35 + distance * 0.35;   // darker re-circulation when far
-    const revWet = 0.14 + distance * 0.42;    // far storms bloom; near stays dry
+    // rolling-reverb coefficients (per block): far = longer, darker, wetter.
+    const revFb = 0.58 + distance * 0.30;
+    const revDamp = 0.35 + distance * 0.35;
+    const revWet = 0.12 + distance * 0.4;
+
+    // silent + faded out: emit zeros cheaply.
+    if (running < 0.5 && this.level < 0.0006 && this.pending.length === 0) {
+      let anyActive = false;
+      for (let j = 0; j < this.voices.length; j++) if (this.voices[j].active) { anyActive = true; break; }
+      if (!anyActive) { L.fill(0); if (R !== L) R.fill(0); return true; }
+    }
 
     for (let i = 0; i < n; i++) {
       this.elapsed++;
       if (running > 0.5 && --this.nextEvent <= 0) this.scheduleEvent(stormIntensity, rumbleAmt, distance, crack);
 
-      // fire any claps whose scheduled time has arrived
-      if (this.pendingClaps.length) {
-        for (let p = this.pendingClaps.length - 1; p >= 0; p--) {
-          if (this.pendingClaps[p].at <= this.elapsed) {
-            const pc = this.pendingClaps[p];
+      // fire queued voice triggers whose time has arrived
+      if (this.pending.length) {
+        for (let p = this.pending.length - 1; p >= 0; p--) {
+          if (this.pending[p].at <= this.elapsed) {
+            const o = this.pending[p];
             let v = null;
-            for (let j = 0; j < this.claps.length; j++) if (!this.claps[j].active) { v = this.claps[j]; break; }
-            if (v) v.trigger(pc.f, pc.q, pc.peak, pc.decayS, pc.pan, pc.lpHz);
-            this.pendingClaps.splice(p, 1);
+            for (let j = 0; j < this.voices.length; j++) if (!this.voices[j].active) { v = this.voices[j]; break; }
+            if (v) v.trigger(o);
+            this.pending.splice(p, 1);
           }
         }
       }
 
       const noise = this.rnd() * 2 - 1;
+      // smoothed flutter noise (~mid-rate buzz) for the crack tear
+      this.flN += 0.22 * ((this.rnd() * 2 - 1) - this.flN);
 
-      // claps (each carries its own pan)
-      let clL = 0, clR = 0;
-      for (let j = 0; j < this.claps.length; j++) {
-        const c = this.claps[j]; if (!c.active) continue;
-        const s = c.sample(noise); clL += s * c.panL; clR += s * c.panR;
+      // sum active voices (each carries its own pan)
+      let vL = 0, vR = 0;
+      for (let j = 0; j < this.voices.length; j++) {
+        const v = this.voices[j]; if (!v.active) continue;
+        const s = v.sample(noise, this.flN);
+        vL += s * v.panL; vR += s * v.panR;
       }
 
-      // rumble
-      this.rumbleSweep *= this.rumbleSweepCoef; if (this.rumbleSweep < 140) this.rumbleSweep = 140;
-      this.rumbleLP.lowpass(this.rumbleSweep, 0.7);
-      const rg = this.rumbleEnv.next();
-      let rum = rg > 0.0001 ? this.rumbleHP.process(this.rumbleLP.process(noise)) * rg : 0;
-
-      // afterimage
-      this.afterLfo += afterInc; if (this.afterLfo > TWO_PI) this.afterLfo -= TWO_PI;
-      const ag = this.afterEnv.next() * (0.7 + 0.3 * Math.sin(this.afterLfo));
-      let aft = ag > 0.0001 ? this.afterBP.process(noise) * ag : 0;
-
-      // deepener
-      const dg = this.deepEnv.next();
-      let dep = dg > 0.0001 ? this.deepHP.process(this.deepLP.process(noise)) * dg * 1.4 : 0;
-
-      // faint distant-rumble bed: a slow random swell of low noise, always
-      // present so the storm keeps a living floor between strikes.
+      // faint distant-rumble floor: a slow random swell of low noise.
       this.bedSwell += (Math.abs(this.rnd() - this.rnd()) - this.bedSwell) * 0.000004;
-      const bedG = (0.018 + stormIntensity * 0.03) * (0.4 + rumbleAmt * 0.7) * (0.5 + this.bedSwell * 2.0);
+      const bedG = (0.014 + stormIntensity * 0.022) * (0.4 + rumbleAmt * 0.7) * (0.5 + this.bedSwell * 2.0);
       const bed = this.bedHP.process(this.bedLP.process(noise)) * bedG;
 
-      // rolling reverb fed by the event transients/bodies (not the steady bed,
-      // which would build up and drone). Two combs per channel → allpass.
-      const revIn = (clL + clR) * 0.5 + rum * 0.45 + dep * 0.4;
+      // rolling reverb fed by the event voices (not the steady bed).
+      const revIn = (vL + vR) * 0.5;
       let wl = (this.combL[0].process(revIn, revFb, revDamp) + this.combL[1].process(revIn, revFb, revDamp)) * 0.5;
       let wr = (this.combR[0].process(revIn, revFb, revDamp) + this.combR[1].process(revIn, revFb, revDamp)) * 0.5;
       wl = this.apL.process(wl); wr = this.apR.process(wr);
 
-      // mix: claps keep their own pan; bodies get a slight event-wide width.
-      const body = rum + aft + bed;
-      let sl = clL + body * (0.55 + this.eventPanL * 0.45) + dep + wl * revWet;
-      let sr = clR + body * (0.55 + this.eventPanR * 0.45) + dep + wr * revWet;
+      let sl = vL + bed + wl * revWet;
+      let sr = vR + bed + wr * revWet;
 
-      this.level = levelTarget + (this.level - levelTarget) * levelCoef;
+      // gentle, asymmetric level ramp: ease in slowly (no sudden onset), fall
+      // a little faster when stopped.
+      const coef = Math.exp(-1 / ((levelTarget > this.level ? 1.4 : 0.3) * SR));
+      this.level = levelTarget + (this.level - levelTarget) * coef;
       sl *= this.level; sr *= this.level;
 
       L[i] = Math.tanh(sl);
