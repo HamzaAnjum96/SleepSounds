@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.16.1
+### 7.17.0
 - **Fine-tune toggle goes full-width, with a gentle reveal.** The "fine-tune
   sliders" disclosure now stretches the full panel width like the chips and
   sliders, with its caret pushed to the right edge. Opening it eases the slider
