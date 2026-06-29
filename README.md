@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.14.1
+### 7.15.0
 - **Variant chips are justified.** The preset chips in the sound editor now grow
   to fill each wrapped line (`flex: 1 1 auto`, centred content), so the rows read
   as justified blocks instead of a ragged right edge — every line spans the full
