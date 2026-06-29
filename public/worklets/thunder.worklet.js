@@ -4,13 +4,11 @@
 // sound from its near and far segments arrives over several seconds, bending
 // and reflecting off cloud and terrain — that staggered arrival is the *roll*.
 // This generator models a strike as a swarm of overlapping low-frequency
-// "swells" spread over time (the roll), an optional sharp fluttering crack only
-// when the storm is close, and a long sub-bass tail felt more than heard.
+// "swells" spread over time (the roll) plus a long sub-bass tail. There is no
+// sharp crack at all: this is soft, distant, rolling rumble for sleep.
 //
-//   roll        4–13 overlapping band-limited noise swells, front-loaded, each
+//   roll        overlapping band-limited noise surges spread over seconds, each
 //               lower and softer than the last (air absorption) — the rumble
-//   crack       click + snap + a deep BOOM + a sparse woody tear — close strikes
-//               only; a distant storm has no crack at all, just roll
 //   deepener    one long sub-bass swell under the roll
 //   reverb      a synthesised rolling tail (damped feedback combs) — no samples
 //
@@ -22,8 +20,7 @@
 // never open with a bang.
 //
 // Controls (k-rate): stormIntensity (how active the storm is), rumble (low-end
-// weight + length), distance (near↔far: crack vs pure roll, brightness, tail),
-// crack (how sharp the strike snaps when it is close).
+// weight + length), distance (near↔far: brightness, roll length, reverb tail).
 
 const SR = sampleRate;
 const TWO_PI = Math.PI * 2;
@@ -43,13 +40,11 @@ class Biquad {
 }
 
 // One band-limited noise swell: a filtered-noise burst with a soft attack and a
-// long decay, panned. Used for the roll, the deepener, and (with a fast attack
-// + flutter) the sharp crack. Flutter is a rapid amplitude tear that turns a
-// plain burst into the ripping sound of a close strike.
+// long decay, panned. Used for the roll surges and the sub-bass deepener.
 class Voice {
   constructor() { this.active = false; this.f = new Biquad();
     this.env = 0; this.atk = 0; this.dec = 0; this.attacking = false; this.peak = 0;
-    this.panL = 0.7; this.panR = 0.7; this.fl = 0; }
+    this.panL = 0.7; this.panR = 0.7; }
   trigger(o) {
     if (o.type === 'highpass') this.f.highpass(o.freq, o.q);
     else if (o.type === 'bandpass') this.f.bandpass(o.freq, o.q);
@@ -61,15 +56,13 @@ class Voice {
     this.peak = o.peak;
     this.panL = Math.cos((o.pan + 1) * Math.PI / 4);
     this.panR = Math.sin((o.pan + 1) * Math.PI / 4);
-    this.fl = o.flutter || 0;
     this.active = true;
   }
-  sample(noise, flN) {
+  sample(noise) {
     const v = this.f.process(noise);
     if (this.attacking) { this.env += this.atk; if (this.env >= 1) { this.env = 1; this.attacking = false; } }
     else { this.env *= this.dec; }
-    let amp = this.env * this.peak;
-    if (this.fl > 0) amp *= (1 - this.fl) + this.fl * (0.5 + 0.5 * flN); // tearing
+    const amp = this.env * this.peak;
     if (!this.attacking && this.env < 0.0003) this.active = false;
     return v * amp;
   }
@@ -100,10 +93,11 @@ class Allpass {
 class ThunderProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
-      { name: 'stormIntensity', defaultValue: 0.4,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'rumble',         defaultValue: 0.55, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'distance',       defaultValue: 0.7,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'crack',          defaultValue: 0.3,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      // Defaults are the "Rolling Storm" character — the sound plays these when
+      // no variant tuning is supplied (the editor exposes only variant presets).
+      { name: 'stormIntensity', defaultValue: 0.18, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'rumble',         defaultValue: 0.6,  minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'distance',       defaultValue: 0.72, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
       { name: 'running',        defaultValue: 1,    minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
@@ -113,11 +107,9 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.seed = 0x51ed ^ 0x7777;
 
     this.voices = []; for (let i = 0; i < 48; i++) this.voices.push(new Voice());
-    this.pending = []; // queued voice triggers: { at, type, freq, q, attackS, decayS, peak, pan, flutter }
+    this.pending = []; // queued voice triggers: { at, type, freq, q, attackS, decayS, peak, pan }
     this.elapsed = 0;
 
-    // flutter noise (smoothed) for the crack tear
-    this.flN = 0;
 
     // two-level timing: a slow storm-activity walk + clustering
     this.activity = 0.3;
@@ -138,65 +130,12 @@ class ThunderProcessor extends AudioWorkletProcessor {
 
   q(at, o) { o.at = at; this.pending.push(o); }
 
-  scheduleEvent(stormIntensity, rumbleAmt, distance, crack) {
+  scheduleEvent(stormIntensity, rumbleAmt, distance) {
     const first = !this.firstDone; this.firstDone = true;
-    const near = 1 - distance;                    // 1 = overhead, 0 = far
     const pan = (this.rnd() * 2 - 1) * (0.2 + distance * 0.5);
     const t0 = this.elapsed;
 
-    // ── crack: a close strike snaps. Three parts make it read as lightning
-    // rather than a noise burst — a bright leading SNAP (the "crack"), a short
-    // low THUMP for body/punch under it, and a granular TEAR (a dense scatter of
-    // tiny clicks that thins out) for the electric rip. Only when close (or the
-    // crack control is up), and never on the first strike (soft far roll first).
-    const crackChance = first ? 0 : Math.min(0.95, near * 0.7 + crack * 0.6);
-    if (this.rnd() < crackChance) {
-      // Brightness is restrained so the crack reads as a woody *CRACK*, not a
-      // bright electric zap. The energy lives mostly in the boom below.
-      const sharp = 0.4 + near * 0.28 + crack * 0.4;
-      // CLICK — a short, mid-weighted tick: the percussive leading edge.
-      this.q(t0, {
-        type: 'bandpass', freq: 820 + this.rnd() * 520, q: 0.6,
-        attackS: 0.0002, decayS: 0.004 + this.rnd() * 0.006,
-        peak: (0.34 + this.rnd() * 0.2) * sharp, pan: pan, flutter: 0,
-      });
-      // SNAP — bright but not piercing (kept under ~3 kHz), short.
-      this.q(t0, {
-        type: 'highpass', freq: 800 + sharp * 1500 + this.rnd() * 400, q: 0.7,
-        attackS: 0.0003, decayS: 0.012 + this.rnd() * 0.03,
-        peak: (0.26 + this.rnd() * 0.18) * sharp, pan: pan, flutter: 0,
-      });
-      // BOOM — an immediate deep impact: this is what turns a "zap" into thunder.
-      // It scales with proximity, so an overhead strike lands a real low punch
-      // right behind the crack (CRACK-boom) rather than a lone electric snap.
-      this.q(t0 + Math.floor((0.008 + this.rnd() * 0.025) * SR), {
-        type: 'lowpass', freq: 62 + this.rnd() * 38, q: 0.8,
-        attackS: 0.004, decayS: 0.5 + this.rnd() * 0.7,
-        peak: (0.7 + this.rnd() * 0.5) * near * (0.6 + rumbleAmt * 0.6), pan: pan * 0.4, flutter: 0,
-      });
-      // THUMP — mid body bridging the snap into the boom.
-      this.q(t0, {
-        type: 'bandpass', freq: 180 + this.rnd() * 170, q: 0.7,
-        attackS: 0.001, decayS: 0.07 + this.rnd() * 0.11,
-        peak: (0.26 + this.rnd() * 0.18) * (0.55 + near * 0.5), pan: pan, flutter: 0,
-      });
-      // TEAR — sparse, lower, woody crackle (NOT a dense bright buzz, which is
-      // what read as a taser). A scatter of distinct pops that thins out.
-      const tearLen = 0.12 + this.rnd() * 0.14 + crack * 0.1;
-      const nClicks = 5 + Math.floor(this.rnd() * (5 + crack * 9));
-      let ct = 0.006 + this.rnd() * 0.012;
-      for (let k = 0; k < nClicks; k++) {
-        const prog = ct / tearLen;
-        if (prog > 1) break;
-        this.q(t0 + Math.floor(ct * SR), {
-          type: 'bandpass', freq: 600 + sharp * 1400 + this.rnd() * 1000, q: 0.8,
-          attackS: 0.0004, decayS: 0.004 + this.rnd() * 0.014,
-          peak: (0.07 + this.rnd() * 0.12) * sharp * (1 - prog * 0.7),
-          pan: pan + (this.rnd() * 2 - 1) * 0.3, flutter: 0,
-        });
-        ct += (0.012 + this.rnd() * 0.03) * (1 + prog * 2);   // sparser, more pop-like
-      }
-    }
+    // No crack: thunder here is purely rolling rumble — soft, distant, sleep-safe.
 
     // ── the roll: a handful of distinct SURGES spread over several seconds, not
     // one fading hump. Each surge (1–3 grains around a centre time) is the sound
@@ -220,7 +159,7 @@ class ThunderProcessor extends AudioWorkletProcessor {
         this.q(t0 + Math.floor(offset * SR), {
           type: 'lowpass', freq: f, q: 0.7,
           attackS: 0.05 + this.rnd() * 0.18, decayS: 0.35 + this.rnd() * 1.1,
-          peak: surge * (0.6 + this.rnd() * 0.5) * 0.55, pan: pan + (this.rnd() * 2 - 1) * 0.32, flutter: 0,
+          peak: surge * (0.6 + this.rnd() * 0.5) * 0.55, pan: pan + (this.rnd() * 2 - 1) * 0.32,
         });
       }
       sc += (0.55 + this.rnd() * 0.9) * (dur / numSurges);            // step to the next surge
@@ -231,7 +170,7 @@ class ThunderProcessor extends AudioWorkletProcessor {
     this.q(t0, {
       type: 'lowpass', freq: 58 + this.rnd() * 26, q: 0.7,
       attackS: 0.25, decayS: (2.5 + this.rnd() * 3.5) * (1 + dist),
-      peak: weight * 0.6, pan: pan * 0.4, flutter: 0,
+      peak: weight * 0.6, pan: pan * 0.4,
     });
 
     // ── next event: two-level, clustered, irregular.
@@ -253,7 +192,6 @@ class ThunderProcessor extends AudioWorkletProcessor {
     const stormIntensity = params.stormIntensity[0];
     const rumbleAmt = params.rumble[0];
     const distance = params.distance[0];
-    const crack = params.crack[0];
     const running = params.running[0];
 
     const levelTarget = running > 0.5 ? 1 : 0;
@@ -272,7 +210,7 @@ class ThunderProcessor extends AudioWorkletProcessor {
 
     for (let i = 0; i < n; i++) {
       this.elapsed++;
-      if (running > 0.5 && --this.nextEvent <= 0) this.scheduleEvent(stormIntensity, rumbleAmt, distance, crack);
+      if (running > 0.5 && --this.nextEvent <= 0) this.scheduleEvent(stormIntensity, rumbleAmt, distance);
 
       // fire queued voice triggers whose time has arrived
       if (this.pending.length) {
@@ -288,14 +226,12 @@ class ThunderProcessor extends AudioWorkletProcessor {
       }
 
       const noise = this.rnd() * 2 - 1;
-      // smoothed flutter noise (~mid-rate buzz) for the crack tear
-      this.flN += 0.22 * ((this.rnd() * 2 - 1) - this.flN);
 
       // sum active voices (each carries its own pan)
       let vL = 0, vR = 0;
       for (let j = 0; j < this.voices.length; j++) {
         const v = this.voices[j]; if (!v.active) continue;
-        const s = v.sample(noise, this.flN);
+        const s = v.sample(noise);
         vL += s * v.panL; vR += s * v.panR;
       }
 

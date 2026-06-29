@@ -111,6 +111,15 @@ npm run preview
 
 ## Changelog
 
+### 7.22.1
+- **Thunder — cracks removed entirely, now chip-only.** Thunder is now pure
+  rolling rumble: the crack synthesis (click/snap/boom/tear) is gone, leaving the
+  staggered low-frequency roll and its long reverb tail — soft, distant and
+  sleep-safe by design. The fine-tune sliders are removed too; thunder is now
+  selected purely from its scene chips. The chip set was refreshed to four
+  crack-free rumble scenes ordered far → near: **Distant Rumble**, **Rolling
+  Storm** (default), **Gathering Storm** and **Heavy Storm**.
+
 ### 7.22.0
 - **"Fan & Rain" scene: fan volume down to 6%.** The fan now sits as a faint
   hush under the rain rather than a prominent layer.

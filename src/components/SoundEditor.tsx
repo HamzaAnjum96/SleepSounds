@@ -79,7 +79,9 @@ export default function SoundEditor({
   const title = soundType.label.toLowerCase();
   // A lone group label would only repeat the panel's own eyebrow.
   const showGroupLabels = soundType.groups.length > 1;
-  const showSliders = !variants || expanded;
+  // Chip-only sounds never reveal sliders or the fine-tune disclosure.
+  const variantsOnly = soundType.variantsOnly ?? false;
+  const showSliders = !variantsOnly && (!variants || expanded);
 
   return (
     <div className="sb-panel">
@@ -140,7 +142,7 @@ export default function SoundEditor({
         </div>
       )}
 
-      {variants && (
+      {variants && !variantsOnly && (
         <button
           type="button"
           className={`sb-finetune${expanded ? ' open' : ''}`}

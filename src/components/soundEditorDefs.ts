@@ -33,6 +33,11 @@ export interface SoundEditorModel {
   /** Character presets (evocative names). The editor leads with these; the
    *  sliders sit behind a "fine-tune" disclosure. */
   variants?: SoundVariant[];
+  /** When set, the editor shows only the variant chips — no fine-tune
+   *  disclosure and no sliders. The `groups` still exist (so the played params,
+   *  WAV fallback, reset, and chip-selection logic keep their defaults), they're
+   *  just never rendered. Used for sounds that are intentionally chip-only. */
+  variantsOnly?: boolean;
 }
 
 const FIRE_PARAM_GROUPS: ParamGroup[] = [
@@ -240,18 +245,20 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Babbling Brook', {}],
     ['Rushing Creek',  { flow: 0.85, sparkle: 0.60, depth: 0.65 }],
   )},
-  thunder: { label: 'Thunder', mode: 'simple', groups: shapeGroup(
-    { key: 'stormIntensity', label: 'storm intensity', def: 0.16 },
-    { key: 'rumble',         label: 'rumble',          def: 0.52 },
+  // Thunder is chip-only: no cracks, no sliders — just a few rolling-rumble
+  // scenes. The groups stay (they feed the played params, the WAV fallback and
+  // chip selection) but `variantsOnly` keeps them out of the UI.
+  thunder: { label: 'Thunder', mode: 'simple', variantsOnly: true, groups: shapeGroup(
+    { key: 'stormIntensity', label: 'storm intensity', def: 0.18 },
+    { key: 'rumble',         label: 'rumble',          def: 0.60 },
     { key: 'distance',       label: 'distance',        def: 0.72 },
-    { key: 'crack',          label: 'crack',           def: 0.30 },
   ), variants: vlist(
-    // The report's ideal sleep thunder: a deep, far, rolling rumble with almost
-    // no sharp crack — the reverb tail blooms long at this distance.
-    ['Distant Rumble', { stormIntensity: 0.12, rumble: 0.72, distance: 0.92, crack: 0.06 }],
-    ['Far Off',        { stormIntensity: 0.30, rumble: 0.55, distance: 0.80, crack: 0.16 }],
+    // All crack-free: pure rolling rumble for sleep. Ordered far → near
+    // (the position bar reads as a gentle intensity ramp).
+    ['Distant Rumble',  { stormIntensity: 0.12, rumble: 0.72, distance: 0.92 }],
     ['Rolling Storm', {}],
-    ['Overhead',       { stormIntensity: 0.80, rumble: 0.75, distance: 0.15, crack: 0.85 }],
+    ['Gathering Storm', { stormIntensity: 0.35, rumble: 0.66, distance: 0.52 }],
+    ['Heavy Storm',     { stormIntensity: 0.58, rumble: 0.82, distance: 0.34 }],
   )},
   fan: { label: 'Fan', mode: 'simple', groups: shapeGroup(
     { key: 'speed', label: 'speed', def: 0.08 },
