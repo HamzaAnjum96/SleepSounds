@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.18.1
+### 7.19.0
 - **Thunder reworked for realism (and it no longer opens with a bang).** The
   generator was rebuilt around how real thunder actually sounds: a lightning
   channel is kilometres long, so its sound arrives over several seconds and
