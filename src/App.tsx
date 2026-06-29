@@ -21,6 +21,7 @@ import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
 import { SOUND_ICONS } from './lib/soundIcons';
 import { haptic } from './lib/haptics';
 import { primeBackgroundAudio, setKeepAlive } from './lib/backgroundAudio';
+import { setAudioInterruptionHandler, setAudioIntent } from './audio/graph';
 import { SCENES, presetSoundIds } from './lib/scenes';
 import { formatCountdown } from './lib/time';
 
@@ -389,10 +390,19 @@ export default function App() {
   }, [activeSounds.length]);
 
   // Keep the silent background-audio element in sync with playback, so iOS
-  // keeps the session alive and the lock-screen player reflects true state.
+  // keeps the session alive and the lock-screen player reflects true state. The
+  // same intent drives the interruption guard (so an OS auto-resume after another
+  // app finishes is pushed back down while we're paused).
   useEffect(() => {
     setKeepAlive(isPlaying);
+    setAudioIntent(isPlaying);
   }, [isPlaying]);
+
+  // When another app takes audio focus (a call, a video, music), pause our mix
+  // and leave it paused — the user resumes with a tap, it never restarts itself.
+  useEffect(() => {
+    setAudioInterruptionHandler(() => { pauseAll(); setIsPaused(true); });
+  }, [pauseAll]);
 
   // Latch the first real playback — it releases the held-back prompts.
   useEffect(() => {

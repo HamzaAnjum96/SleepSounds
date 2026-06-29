@@ -11,10 +11,58 @@ export const dbToGain = (db: number): number => Math.pow(10, db / 20);
 
 let ctx: AudioContext | null = null;
 
+// Audio-focus / interruption state. iOS exposes a non-standard `'interrupted'`
+// AudioContext state when another app takes audio focus (a call, a video, music)
+// and then *auto-resumes* the context when that interruption ends — which is the
+// behaviour a sleep mixer must not have (it would restart itself behind another
+// app). We track our own intent so we can (a) pause the mix the moment another
+// app interrupts us, and (b) push the context back down if the OS tries to bring
+// it back on its own. The user has to press play to resume — nothing else.
+let intendRunning = false;
+let sawInterruption = false;
+let onInterruption: (() => void) | null = null;
+
 /** The one AudioContext for the whole engine (worklets + WAV loops). */
 export function getAudioContext(): AudioContext {
-  if (!ctx) ctx = new AudioContext();
+  if (!ctx) {
+    ctx = new AudioContext();
+    ctx.addEventListener('statechange', handleStateChange);
+  }
   return ctx;
+}
+
+function handleStateChange(): void {
+  if (!ctx) return;
+  // `'interrupted'` is iOS-only and not in the lib DOM union, hence the cast.
+  const state = ctx.state as AudioContextState | 'interrupted';
+  if (state === 'interrupted') {
+    // Another app grabbed audio focus. Treat it exactly like a manual pause and
+    // remember it, so we don't auto-resume when the interruption clears.
+    sawInterruption = true;
+    if (intendRunning) {
+      intendRunning = false;
+      onInterruption?.();
+    }
+  } else if (state === 'running') {
+    if (sawInterruption && !intendRunning) {
+      // The OS auto-resumed us after an interruption while we want to stay
+      // paused — suspend again so the mix doesn't come back on its own.
+      void ctx.suspend().catch(() => { /* ignore */ });
+    }
+    sawInterruption = false;
+  }
+}
+
+/** Register the callback fired when another app interrupts our audio (so the UI
+ *  can reflect the pause). Called once at startup. */
+export function setAudioInterruptionHandler(fn: () => void): void {
+  onInterruption = fn;
+}
+
+/** Tell the engine whether playback is *meant* to be running. Drives the
+ *  interruption guard: when false, an OS auto-resume is pushed back down. */
+export function setAudioIntent(running: boolean): void {
+  intendRunning = running;
 }
 
 export interface MasterBus {
@@ -125,8 +173,11 @@ export function setMasterSleepSafe(on: boolean): void {
   b.shelf.gain.setTargetAtTime(on ? -2.5 : -0.5, getAudioContext().currentTime, 0.2);
 }
 
-/** Resume the shared context (call from a user gesture / on play). */
+/** Resume the shared context (call from a user gesture / on play). Marks intent
+ *  as running so the interruption guard knows an OS resume is wanted here. */
 export async function resumeAudio(): Promise<void> {
+  intendRunning = true;
+  sawInterruption = false;
   try { await getAudioContext().resume(); } catch { /* not yet allowed */ }
 }
 

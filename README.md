@@ -111,6 +111,16 @@ npm run preview
 
 ## Changelog
 
+### 7.24.1
+- **Audio interruptions now pause for good — no self-restart.** When another app
+  takes audio focus (a phone call, a video, music), the mix pauses and *stays*
+  paused; it only resumes on a deliberate tap. Previously iOS would mark the
+  AudioContext `interrupted` and then auto-resume it when the other app finished
+  (and the looping keep-alive element would restart itself), so the sound came
+  back on its own — unwanted in a sleep app. The engine now treats an
+  interruption exactly like a manual pause and pushes any OS auto-resume back
+  down while paused.
+
 ### 7.24.0
 - **Fire — roar pulled well back everywhere.** The continuous roar/body bed is
   much quieter by default and across every fire scene (Embers, Hearth, Campfire,

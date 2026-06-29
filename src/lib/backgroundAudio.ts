@@ -24,6 +24,10 @@
  */
 
 let silent: HTMLAudioElement | null = null;
+// Whether we *want* the keep-alive running. Used to spot an OS auto-resume after
+// an audio interruption (another app finished) and push it back down, so a paused
+// mix never restarts itself.
+let keepAliveIntended = false;
 
 /** Build a 15-second mono WAV at the noise floor (≈-62 dBFS) as a blob URL. */
 function silentWavUrl(): string {
@@ -53,6 +57,9 @@ function ensureSilent(): HTMLAudioElement {
   el.loop = true;
   el.preload = 'auto';
   el.setAttribute('playsinline', '');
+  // If the OS auto-resumes the keep-alive after an interruption while we want it
+  // stopped, pause it straight back — the mix should only restart on a tap.
+  el.addEventListener('play', () => { if (!keepAliveIntended) el.pause(); });
   silent = el;
   return el;
 }
@@ -67,6 +74,7 @@ export function setAudioSessionPlayback() {
 
 /** Play/pause the silent keep-alive element in sync with the mix. */
 export function setKeepAlive(active: boolean) {
+  keepAliveIntended = active;
   const el = ensureSilent();
   if (active) void el.play().catch(() => { /* will retry on next gesture */ });
   else el.pause();
