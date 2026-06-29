@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.22.1
+### 7.23.0
 - **Thunder — cracks removed entirely, now chip-only.** Thunder is now pure
   rolling rumble: the crack synthesis (click/snap/boom/tear) is gone, leaving the
   staggered low-frequency roll and its long reverb tail — soft, distant and
