@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.17.1
+### 7.18.0
 - **Thunder — rolling reverb + a crack control (from the thunder research
   report, kept fully procedural).** The report's biggest realism levers were a
   reverb/echo stage and a crack-sharpness control; both are now synthesised in
