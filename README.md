@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.20.1
+### 7.21.0
 - **Thunder — killed the constant fizz, fixed the "taser zap".** Two issues: a
   faint band-limited noise *floor* ran the whole time on every variant (a
   persistent fizz), and an overhead strike read as a single electric zap. The
