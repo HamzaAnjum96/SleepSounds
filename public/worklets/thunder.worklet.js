@@ -148,21 +148,47 @@ class ThunderProcessor extends AudioWorkletProcessor {
     const pan = (this.rnd() * 2 - 1) * (0.2 + distance * 0.5);
     const t0 = this.elapsed;
 
-    // ── crack: only when close (or crack is high), and never on the first
-    // strike — the storm should reveal itself with a soft far roll first.
+    // ── crack: a close strike snaps. Three parts make it read as lightning
+    // rather than a noise burst — a bright leading SNAP (the "crack"), a short
+    // low THUMP for body/punch under it, and a granular TEAR (a dense scatter of
+    // tiny clicks that thins out) for the electric rip. Only when close (or the
+    // crack control is up), and never on the first strike (soft far roll first).
     const crackChance = first ? 0 : Math.min(0.95, near * 0.7 + crack * 0.6);
     if (this.rnd() < crackChance) {
-      const nC = 1 + (this.rnd() < 0.55 ? 0 : 1) + (this.rnd() < 0.2 ? 1 : 0); // 1–3, the rip
-      const baseBright = 0.4 + near * 0.4 + crack * 0.5;
-      let t = 0;
-      for (let i = 0; i < nC; i++) {
-        this.q(t0 + Math.floor(t * SR), {
-          type: 'highpass', freq: 280 + (near * 0.5 + crack * 0.5) * 2400 + this.rnd() * 700, q: 0.6,
-          attackS: 0.0008, decayS: 0.09 + this.rnd() * 0.22,
-          peak: (0.30 + this.rnd() * 0.22) * baseBright * (i === 0 ? 1 : 0.6),
-          pan: pan + (this.rnd() * 2 - 1) * 0.12, flutter: 0.45 + crack * 0.4,
+      const sharp = 0.5 + near * 0.35 + crack * 0.5;            // brightness/energy
+      // CLICK — a near-instantaneous broadband tick: the percussive leading edge
+      // that makes it read as a *crack* rather than a whoosh of noise.
+      this.q(t0, {
+        type: 'bandpass', freq: 1800 + this.rnd() * 900, q: 0.5,
+        attackS: 0.00015, decayS: 0.004 + this.rnd() * 0.005,
+        peak: (0.5 + this.rnd() * 0.3) * sharp, pan: pan, flutter: 0,
+      });
+      // SNAP — the bright, fast transient right behind the click
+      this.q(t0, {
+        type: 'highpass', freq: 1700 + sharp * 2800 + this.rnd() * 700, q: 0.7,
+        attackS: 0.0002, decayS: 0.01 + this.rnd() * 0.028,
+        peak: (0.4 + this.rnd() * 0.24) * sharp, pan: pan, flutter: 0,
+      });
+      // THUMP — a short low body so the snap has punch, not just hiss
+      this.q(t0, {
+        type: 'bandpass', freq: 280 + this.rnd() * 240, q: 0.8,
+        attackS: 0.0009, decayS: 0.05 + this.rnd() * 0.09,
+        peak: (0.3 + this.rnd() * 0.22) * (0.6 + near * 0.5), pan: pan, flutter: 0,
+      });
+      // TEAR — dense granular crackle thinning out over ~150–300 ms (the rip)
+      const tearLen = 0.13 + this.rnd() * 0.16 + crack * 0.12;
+      const nClicks = 12 + Math.floor(this.rnd() * (10 + crack * 16));
+      let ct = 0.002 + this.rnd() * 0.005;
+      for (let k = 0; k < nClicks; k++) {
+        const prog = ct / tearLen;
+        if (prog > 1) break;
+        this.q(t0 + Math.floor(ct * SR), {
+          type: 'highpass', freq: 1400 + sharp * 2800 + this.rnd() * 1800, q: 0.6,
+          attackS: 0.0002, decayS: 0.0022 + this.rnd() * 0.009,
+          peak: (0.1 + this.rnd() * 0.16) * sharp * (1 - prog * 0.7),
+          pan: pan + (this.rnd() * 2 - 1) * 0.28, flutter: 0,
         });
-        t += 0.018 + this.rnd() * 0.08;
+        ct += (0.004 + this.rnd() * 0.013) * (1 + prog * 2.2);  // sparser as it thins
       }
     }
 

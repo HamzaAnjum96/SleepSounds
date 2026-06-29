@@ -111,6 +111,17 @@ npm run preview
 
 ## Changelog
 
+### 7.19.1
+- **Thunder crack made convincing.** The close-strike crack was a smooth,
+  buzzy noise burst; it is now built like a real lightning snap: a
+  near-instantaneous broadband **click** (the percussive leading edge), a bright
+  fast **snap** right behind it, a short low **thump** for body/punch, and a
+  dense **granular tear** — a scatter of tiny clicks that thins out over ~150-300
+  ms (the electric rip), replacing the old flutter. Measured: a sharp onset
+  (crest ~3-4) and ~8-9 distinct micro-transients in the tear (was 1-4), NaN-free
+  and non-clipping even at close/max-everything. Still procedural, distant storms
+  still skip the crack entirely. 71 unit + 15 e2e, typecheck, lint, build green.
+
 ### 7.19.0
 - **Thunder reworked for realism (and it no longer opens with a bang).** The
   generator was rebuilt around how real thunder actually sounds: a lightning
