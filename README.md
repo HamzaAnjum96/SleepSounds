@@ -124,6 +124,12 @@ npm run preview
 
 ## Changelog
 
+### 8.0.1
+- **Impact site verification.** Added the impact.com site-ownership proof to
+  `index.html` — both their `<head>` meta tag and the literal verification text
+  segment in the body (visually hidden) — so it's served in the static HTML at
+  the site root for their crawler.
+
 ### 8.0.0 — Maintenance milestone
 A consolidation release closing out a cleanup / documentation / refactor /
 bug-fix pass. No user-facing feature changes beyond the timer fix; the codebase
