@@ -111,6 +111,14 @@ npm run preview
 
 ## Changelog
 
+### 7.26.1
+- **No more faint static after turning every sound off.** Toggling a sound off
+  (or pausing) used to re-prime the background keep-alive — the near-silent
+  element that holds the media session — so emptying the mix could leave its
+  faint noise-floor murmur playing with no player bar. Priming is now gated to
+  playback actions only, so when the last layer goes the keep-alive stops with
+  it. (Background audio while a mix *is* playing is unchanged.)
+
 ### 7.26.0
 - **Android: another app (or the notification pause) now actually pauses the
   mix.** On Android the media notification and audio-focus are driven by the

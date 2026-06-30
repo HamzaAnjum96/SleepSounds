@@ -331,11 +331,13 @@ export default function App() {
 
   const handleMasterToggle = useCallback(async () => {
     haptic(10);
-    primeBackgroundAudio();
     if (isPlaying) {
       pauseAll();
       setIsPaused(true);
     } else if (activeSounds.length > 0) {
+      // Prime only on the play path (inside the gesture, before the await) — never
+      // when pausing, or the keep-alive can be left murmuring after the mix stops.
+      primeBackgroundAudio();
       await playAllActive();
       setIsPaused(false);
     }
@@ -358,12 +360,14 @@ export default function App() {
   const handlePlayPreset = useCallback((preset: Preset) => {
     dismissHint();
     haptic(10);
-    primeBackgroundAudio();
     if (activeMixId === preset.id && activeSounds.length > 0) {
-      // Tapping the playing scene pauses/resumes it.
+      // Tapping the playing scene pauses/resumes it — handleMasterToggle primes
+      // on its own play path, so don't prime here (it might be a pause).
       void handleMasterToggle();
       return;
     }
+    // About to play a fresh preset — prime within the gesture.
+    primeBackgroundAudio();
     restoreMixerState(enrichPresetState(preset.state), preset.masterVolume, true);
     // Sync each layer's editor values to what the preset actually plays, so the
     // sound editor shows the real variant (e.g. rain's "At a Window") instead of
@@ -481,12 +485,15 @@ export default function App() {
 
   const handleSoundToggle = useCallback(async (soundId: string) => {
     haptic(8);
-    primeBackgroundAudio();
     dismissHint();
     // A hand-edited mix is its own thing; the scene badge comes off.
     setActiveMixId(null);
     const wasEnabled = soundState[soundId]?.enabled;
     if (!wasEnabled) {
+      // Only prime when we're about to *play* — priming on a toggle-off would
+      // start the keep-alive just as the mix empties, and the race between that
+      // play() and the effect's pause() can leave it murmuring with no player.
+      primeBackgroundAudio();
       // Starting a sound on its own: restore its global editor config, clearing
       // any lingering preset override (e.g. the reduced rain bed from Fan & Rain).
       if (WORKLET_SOUND_IDS.has(soundId)) setSoundTuning(soundId, editorValuesBySound[soundId]);
