@@ -124,6 +124,24 @@ npm run preview
 
 ## Changelog
 
+### 8.0.0 — Maintenance milestone
+A consolidation release closing out a cleanup / documentation / refactor /
+bug-fix pass. No user-facing feature changes beyond the timer fix; the codebase
+is leaner, better documented, and better tested.
+- **Docs.** New [`ARCHITECTURE.md`](ARCHITECTURE.md) maps the runtime (audio
+  sources, master bus, masking, backgrounding & interruption handling, storage
+  migrations, the PWA self-update flow, and the testing strategy). README
+  project-structure tree refreshed; stray research reports moved to
+  `docs/research/`.
+- **Refactor.** Sleep-timer logic extracted from `App.tsx` into a self-contained,
+  documented `hooks/useSleepTimer.ts` (App.tsx ~66 lines lighter).
+- **Bug fix.** Extending the sleep timer during the final-90s wind-down no longer
+  leaves the mix stuck quiet — the fade now derives from time-remaining
+  unconditionally (`windDownFade`), covered by a unit test.
+- **Cleanup.** Removed dead exports (`generators.ts` re-export block, `dsp.ts`'s
+  `panMonoInto` and `SECS` export).
+- **Tests.** 100 unit tests + 15 e2e green; added the wind-down fade test.
+
 ### 7.30.1
 - **Cleanup: removed dead code.** Dropped `generators.ts`'s unused
   individual-generator re-export block (only `regenerateSound` is the public
