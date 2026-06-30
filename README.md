@@ -111,7 +111,7 @@ npm run preview
 
 ## Changelog
 
-### 7.26.1
+### 7.27.0
 - **No more faint static after turning every sound off.** Toggling a sound off
   (or pausing) used to re-prime the background keep-alive — the near-silent
   element that holds the media session — so emptying the mix could leave its
