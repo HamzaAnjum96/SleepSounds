@@ -36,6 +36,9 @@ synthesised live via AudioWorklet (event-based); the rest are procedural WAV loo
 
 ## Project Structure
 
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for how these fit together (audio graph,
+interruption handling, storage, PWA update flow, testing).
+
 ```txt
 sleep-mixer/
 ├── index.html
@@ -46,34 +49,43 @@ sleep-mixer/
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
+├── docs/research/          # background research reports (reference only)
+├── tests/                  # vitest unit tests + tests/e2e Playwright specs
 └── src/
     ├── App.tsx              # shell: scenes, mixes, library, player state
-    ├── data.ts              # sound library + built-in presets (lazy WAV loader)
-    ├── index.css            # the design system (see DESIGN.md)
+    ├── data.ts             # sound library + built-in presets (lazy WAV loader)
+    ├── index.css           # the design system (see DESIGN.md)
     ├── main.tsx
     ├── types.ts
     ├── audio/
-    │   ├── dsp.ts               # noise sources, filters, WAV encoding
+    │   ├── dsp.ts               # noise sources, filters, loop-conditioning, WAV encoding
     │   ├── generators.ts        # per-sound procedural WAV synthesis (code-split)
+    │   ├── graph.ts             # the shared AudioContext + master bus + interruption guard
+    │   ├── layerMeta.ts         # masking roles + per-layer shaping (anti-fog)
     │   └── sources.ts           # mixer sources: crossfade WAV + worklet w/ fallback
     ├── components/
+    │   ├── CookieNotice.tsx     # one-time storage notice
     │   ├── DriftMode.tsx        # fullscreen night surface (lazy)
+    │   ├── ErrorBoundary.tsx    # last-resort crash guard
     │   ├── InstallPrompt.tsx    # PWA install affordance
     │   ├── MiniPlayer.tsx       # persistent bottom player
+    │   ├── MixControls.tsx      # per-layer mixer (volume, mute/solo, save)
     │   ├── NightSky.tsx         # living canvas starfield
     │   ├── NowPlayingSheet.tsx  # mix control room (lazy)
+    │   ├── SidePanel.tsx        # desktop docked mixer
     │   ├── SoundCard.tsx        # library tile
     │   ├── SoundEditor.tsx      # per-sound parameter editor (lazy)
-    │   └── soundEditorDefs.ts
+    │   ├── Toast.tsx            # forgiving undo snackbar
+    │   └── soundEditorDefs.ts   # editor models: groups, variants, defaults
     ├── hooks/
-    │   └── useAudioMixer.ts     # playback engine wrapper
+    │   └── useAudioMixer.ts     # playback engine wrapper (state ↔ audio sources)
     ├── storage/                 # localStorage keys + load/save + migrations
     ├── platform/                # platform seam (web bridge today)
     ├── config/                  # feature flags
     ├── utils/                   # logger
     └── lib/
         ├── backgroundAudio.ts · categoryIcons.ts · haptics.ts · scenes.ts
-        ├── sliderFill.ts · soundIcons.ts · time.ts
+        ├── sliderFill.ts · soundIcons.ts · time.ts · variantIcons.tsx
 └── public/worklets/             # live AudioWorklet generators (rain, fire, …)
 ```
 
@@ -110,6 +122,14 @@ npm run preview
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 7.27.1
+- **Docs & housekeeping.** Added [`ARCHITECTURE.md`](ARCHITECTURE.md) — a runtime
+  map of the audio engine, master bus, backgrounding/interruption handling,
+  persistence, the PWA self-update flow, and the testing strategy. Refreshed the
+  README's project-structure tree (it was missing `graph.ts`, `layerMeta.ts`,
+  several components, and `tests/`). Moved the two stray background research
+  reports out of the repo root into `docs/research/`.
 
 ### 7.27.0
 - **No more faint static after turning every sound off.** Toggling a sound off
