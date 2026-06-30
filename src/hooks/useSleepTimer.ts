@@ -3,6 +3,17 @@ import { useCallback, useEffect, useState } from 'react';
 /** Seconds before timer end over which the mix gently fades out. */
 const FADE_WINDOW_S = 90;
 
+/** The playback-gain wind-down multiplier for a given time remaining: full level
+ *  (1) with no timer or while still outside the final window, easing toward 0
+ *  over the last `FADE_WINDOW_S` seconds. Returning 1 above the window is what
+ *  restores full volume when a timer is *extended* back out of the fade. */
+export function windDownFade(secondsLeft: number | null): number {
+  if (secondsLeft !== null && secondsLeft <= FADE_WINDOW_S) {
+    return Math.pow(Math.max(0, secondsLeft) / FADE_WINDOW_S, 1.4);
+  }
+  return 1;
+}
+
 /** A sleep-timer duration in plain words, for the screen-reader announcement. */
 function humanizeSecs(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -68,13 +79,11 @@ export function useSleepTimer({ isPlaying, setMasterFade, onExpire, announce }: 
   }, [secondsLeft, onExpire]);
 
   // Wind-down: ease the mix out over the timer's final stretch, so sleep is
-  // never interrupted by an abrupt stop. Playback-gain only.
+  // never interrupted by an abrupt stop. Playback-gain only. Setting the fade
+  // unconditionally (not just inside the window) means extending a timer mid-fade
+  // restores full level instead of leaving the mix stuck quiet.
   useEffect(() => {
-    if (secondsLeft === null) {
-      setMasterFade(1);
-    } else if (secondsLeft <= FADE_WINDOW_S) {
-      setMasterFade(Math.pow(secondsLeft / FADE_WINDOW_S, 1.4));
-    }
+    setMasterFade(windDownFade(secondsLeft));
   }, [secondsLeft, setMasterFade]);
 
   const toggle = useCallback((secs: number) => {

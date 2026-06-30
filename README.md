@@ -124,6 +124,15 @@ npm run preview
 
 ## Changelog
 
+### 7.29.1
+- **Bug fix: extending the sleep timer mid-wind-down no longer leaves the mix
+  quiet.** The wind-down fade only reset to full level when the timer was
+  cleared, never when a running timer was extended back *out* of the final-90s
+  window — so tapping "+30m" while the mix was fading would leave it stuck at the
+  faded-down level for the rest of the (extended) timer. The fade is now derived
+  from the time remaining unconditionally (`windDownFade`), so extending restores
+  full level. Covered by a new unit test.
+
 ### 7.29.0
 - **Refactor: extracted `useSleepTimer`.** The sleep-timer countdown, wind-down
   fade, expiry, and its handlers moved out of `App.tsx` into a self-contained,
