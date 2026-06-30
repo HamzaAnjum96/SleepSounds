@@ -124,7 +124,7 @@ npm run preview
 
 ## Changelog
 
-### 7.29.1
+### 7.30.0
 - **Bug fix: extending the sleep timer mid-wind-down no longer leaves the mix
   quiet.** The wind-down fade only reset to full level when the timer was
   cleared, never when a running timer was extended back *out* of the final-90s
