@@ -78,7 +78,8 @@ sleep-mixer/
     │   ├── Toast.tsx            # forgiving undo snackbar
     │   └── soundEditorDefs.ts   # editor models: groups, variants, defaults
     ├── hooks/
-    │   └── useAudioMixer.ts     # playback engine wrapper (state ↔ audio sources)
+    │   ├── useAudioMixer.ts     # playback engine wrapper (state ↔ audio sources)
+    │   └── useSleepTimer.ts     # sleep-timer countdown, wind-down fade, handlers
     ├── storage/                 # localStorage keys + load/save + migrations
     ├── platform/                # platform seam (web bridge today)
     ├── config/                  # feature flags
@@ -122,6 +123,12 @@ npm run preview
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 7.28.1
+- **Refactor: extracted `useSleepTimer`.** The sleep-timer countdown, wind-down
+  fade, expiry, and its handlers moved out of `App.tsx` into a self-contained,
+  documented `hooks/useSleepTimer.ts` (App.tsx is ~66 lines lighter). Pure
+  behaviour-preserving move — the timer e2e and full suite stay green.
 
 ### 7.28.0
 - **Docs & housekeeping.** Added [`ARCHITECTURE.md`](ARCHITECTURE.md) — a runtime

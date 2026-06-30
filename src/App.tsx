@@ -15,6 +15,7 @@ import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from
 import { platform } from './platform';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
+import { useSleepTimer } from './hooks/useSleepTimer';
 import type { Preset, SoundState } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
@@ -32,24 +33,11 @@ const LazySoundEditor = lazy(() => import('./components/SoundEditor'));
 const LazyNowPlayingSheet = lazy(() => import('./components/NowPlayingSheet'));
 const LazyDriftMode = lazy(() => import('./components/DriftMode'));
 
-/** Seconds before timer end over which the mix gently fades out. */
-const FADE_WINDOW_S = 90;
-
 /** True when the browser can run the moon parallax as a CSS scroll-driven
  *  animation (compositor, off main thread). When so, the JS scroll fallback
  *  stands down. */
 const CSS_SCROLL_TIMELINE =
   typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()');
-
-/** A sleep-timer duration in plain words, for the screen-reader announcement. */
-function humanizeSecs(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.round((secs % 3600) / 60);
-  const parts: string[] = [];
-  if (h) parts.push(`${h} hour${h > 1 ? 's' : ''}`);
-  if (m) parts.push(`${m} minute${m > 1 ? 's' : ''}`);
-  return parts.join(' ') || `${secs} seconds`;
-}
 
 // Saved mixes and "resume your night" persistence live in src/storage, behind
 // migrations that keep bad/old localStorage from ever breaking startup.
@@ -329,6 +317,23 @@ export default function App() {
 
   const isPlaying = activeSounds.length > 0 && !isPaused;
 
+  // Screen-reader status line: playback and timer state are otherwise only
+  // conveyed visually. A polite live region speaks the changes.
+  const [status, setStatus] = useState('');
+  const announce = useCallback((msg: string) => {
+    // Re-set even if identical so repeated actions still announce.
+    setStatus('');
+    requestAnimationFrame(() => setStatus(msg));
+  }, []);
+
+  // Sleep timer — a playing-time countdown that winds the mix down and stops it.
+  const onTimerExpire = useCallback(() => { stopAll(); setIsPaused(false); }, [stopAll]);
+  const { secondsLeft, timerTotal, skyDim, toggle: toggleTimer, extend: extendTimer, clear: clearTimer } =
+    useSleepTimer({ isPlaying, setMasterFade, onExpire: onTimerExpire, announce });
+  const handleTimerSelect = (secs: number) => { haptic(8); toggleTimer(secs); };
+  const handleTimerExtend = (secs: number) => { haptic(8); extendTimer(secs); };
+  const handleTimerClear = () => { haptic(8); clearTimer(); };
+
   const handleMasterToggle = useCallback(async () => {
     haptic(10);
     if (isPlaying) {
@@ -515,37 +520,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleMasterToggle]);
 
-  // Sleep timer — counts down playing-time only (pauses when audio pauses)
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const [timerTotal, setTimerTotal] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!isPlaying || secondsLeft === null) return;
-    const id = window.setInterval(() => {
-      setSecondsLeft((s) => (s !== null && s > 1 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isPlaying, secondsLeft !== null]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (secondsLeft === 0) {
-      stopAll();
-      setIsPaused(false);
-      setSecondsLeft(null);
-      setTimerTotal(null);
-    }
-  }, [secondsLeft, stopAll]);
-
-  // Wind-down: ease the mix out over the timer's final stretch, so sleep is
-  // never interrupted by an abrupt stop. Playback-gain only.
-  useEffect(() => {
-    if (secondsLeft === null) {
-      setMasterFade(1);
-    } else if (secondsLeft <= FADE_WINDOW_S) {
-      setMasterFade(Math.pow(secondsLeft / FADE_WINDOW_S, 1.4));
-    }
-  }, [secondsLeft, setMasterFade]);
-
   // Switch the library filter through a View Transition where supported, so the
   // grid crossfades instead of snapping. Falls back to a plain set otherwise,
   // and reduced-motion users get the instant swap (the CSS zeroes the anim).
@@ -560,34 +534,6 @@ export default function App() {
       setCategory(cat);
     }
   }, [category]);
-
-  const handleTimerSelect = (secs: number) => {
-    haptic(8);
-    if (timerTotal === secs && secondsLeft !== null) {
-      setSecondsLeft(null);
-      setTimerTotal(null);
-      announce('sleep timer off');
-    } else {
-      setSecondsLeft(secs);
-      setTimerTotal(secs);
-      announce(`sleep timer set for ${humanizeSecs(secs)}`);
-    }
-  };
-
-  /** Add time to a running timer (the "+30m" / "+1h" chips). */
-  const handleTimerExtend = (secs: number) => {
-    haptic(8);
-    setSecondsLeft((s) => (s !== null ? s + secs : secs));
-    setTimerTotal((t) => (t !== null ? t + secs : secs));
-    announce(`added ${humanizeSecs(secs)} to the sleep timer`);
-  };
-
-  const handleTimerClear = () => {
-    haptic(8);
-    setSecondsLeft(null);
-    setTimerTotal(null);
-    announce('sleep timer off');
-  };
 
   // Experimental sounds are hidden unless the feature flag opts them in.
   // Memoized so the array identity is stable: a fresh array each render would
@@ -645,9 +591,6 @@ export default function App() {
     const scrollY = (e.target as HTMLDivElement).scrollTop;
     document.documentElement.style.setProperty('--moon-scroll', `${scrollY}px`);
   }, []);
-
-  // The sky settles with the mix over the last five minutes of the timer.
-  const skyDim = secondsLeft !== null ? Math.max(0, Math.min(1, 1 - secondsLeft / 300)) : 0;
 
   // Title of the current mix: the loaded scene's name, or a hand-mix summary.
   const mixTitle = useMemo(() => {
@@ -724,15 +667,6 @@ export default function App() {
     document.addEventListener('visibilitychange', tryReload);
     return () => document.removeEventListener('visibilitychange', tryReload);
   }, [updatePending, activeSounds.length]);
-
-  // Screen-reader status line: playback and timer state are otherwise only
-  // conveyed visually. A polite live region speaks the changes.
-  const [status, setStatus] = useState('');
-  const announce = useCallback((msg: string) => {
-    // Re-set even if identical so repeated actions still announce.
-    setStatus('');
-    requestAnimationFrame(() => setStatus(msg));
-  }, []);
 
   const firstStatusRef = useRef(true);
   useEffect(() => {
