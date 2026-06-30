@@ -124,7 +124,7 @@ npm run preview
 
 ## Changelog
 
-### 7.28.1
+### 7.29.0
 - **Refactor: extracted `useSleepTimer`.** The sleep-timer countdown, wind-down
   fade, expiry, and its handlers moved out of `App.tsx` into a self-contained,
   documented `hooks/useSleepTimer.ts` (App.tsx is ~66 lines lighter). Pure
