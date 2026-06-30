@@ -114,14 +114,6 @@ function genStereo(left: Float32Array, right: Float32Array, gain = 0.7): string 
   return makeWavStereo(left16, right16, SR);
 }
 
-/** Add a mono source into stereo buses at an equal-power pan (-1 = L, +1 = R). */
-function panMonoInto(src: Float32Array, dstL: Float32Array, dstR: Float32Array, pan: number, gain = 1): void {
-  const l = Math.cos((pan + 1) * Math.PI / 4) * gain;
-  const r = Math.sin((pan + 1) * Math.PI / 4) * gain;
-  const n = Math.min(src.length, dstL.length, dstR.length);
-  for (let i = 0; i < n; i++) { dstL[i] += src[i] * l; dstR[i] += src[i] * r; }
-}
-
 /** Widen a mono buffer into a decorrelated stereo pair WITHOUT colouring it.
  *
  *  The low/mid band is kept *shared* between the channels (a common mono centre),
@@ -306,7 +298,7 @@ function pinkNoise(): Float32Array {
 }
 
 export {
-  SR, SECS, N, gen, genStereo, panMonoInto, decorrelateMono,
+  SR, N, gen, genStereo, decorrelateMono,
   lp1, hp1, bp2, smoothRandomLfo, rand, lockFreq, chance, whiteNoise, brownNoise, pinkNoise,
   random, seedRandom, hashSeed,
 };

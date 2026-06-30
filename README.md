@@ -124,6 +124,12 @@ npm run preview
 
 ## Changelog
 
+### 7.30.1
+- **Cleanup: removed dead code.** Dropped `generators.ts`'s unused
+  individual-generator re-export block (only `regenerateSound` is the public
+  API), and `dsp.ts`'s unused `panMonoInto` helper and `SECS` export. No
+  behaviour change; typecheck/lint/tests/build all green.
+
 ### 7.30.0
 - **Bug fix: extending the sleep timer mid-wind-down no longer leaves the mix
   quiet.** The wind-down fade only reset to full level when the timer was

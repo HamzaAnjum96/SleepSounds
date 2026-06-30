@@ -1191,7 +1191,3 @@ function genHeartbeat(params?: Record<string, number>): string {
   lp1(mix, finalLp);
   return gen(mix, 0.6);
 }
-
-export {
-  genForest, genWhite, genBrown, genFan, genPink, genRain, genOcean, genWind, genFire, genBirdsong, genStream, genThunder, genTrain, genUnderwater, genShower, genAirplane, genSpace, genHeartbeat,
-};
