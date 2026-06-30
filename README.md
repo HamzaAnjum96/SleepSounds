@@ -123,7 +123,7 @@ npm run preview
 
 ## Changelog
 
-### 7.27.1
+### 7.28.0
 - **Docs & housekeeping.** Added [`ARCHITECTURE.md`](ARCHITECTURE.md) — a runtime
   map of the audio engine, master bus, backgrounding/interruption handling,
   persistence, the PWA self-update flow, and the testing strategy. Refreshed the
