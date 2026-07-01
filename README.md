@@ -124,7 +124,7 @@ npm run preview
 
 ## Changelog
 
-### 8.1.1
+### 8.2.0
 - **Design/a11y polish pass.** Three fixes from a full-surface browser audit:
   the moon no longer hangs over the desktop side panel's pause button (it now
   offsets past the panel column at ≥1000px) and is `pointer-events: none`, so
