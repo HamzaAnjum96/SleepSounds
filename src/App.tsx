@@ -734,7 +734,9 @@ export default function App() {
         onScroll={handleAppScroll}
       >
         <header>
-          <div className="wordmark">drift away</div>
+          {/* The h1 gives the page its accessible title; visually it's the same
+              wordmark (the preflight reset zeroes heading defaults). */}
+          <h1 className="wordmark">drift away</h1>
           <div className="greeting">{greeting()}</div>
         </header>
 

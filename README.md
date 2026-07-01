@@ -124,6 +124,16 @@ npm run preview
 
 ## Changelog
 
+### 8.1.1
+- **Design/a11y polish pass.** Three fixes from a full-surface browser audit:
+  the moon no longer hangs over the desktop side panel's pause button (it now
+  offsets past the panel column at ≥1000px) and is `pointer-events: none`, so
+  scenery can never swallow a tap; the wordmark is now the page's `<h1>` (screen
+  readers previously landed on "the scenes" with no page title); and the mini
+  player's expand chevron gained a visible keyboard-focus style. Audit also
+  confirmed: token contrast AA-clean, reduced-motion coverage, safe-area
+  insets, and focus-visible styles across all other controls.
+
 ### 8.1.0
 - **Impact site verification.** Added the impact.com site-ownership proof to
   `index.html` — both their `<head>` meta tag and the literal verification text

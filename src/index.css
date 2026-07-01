@@ -221,7 +221,17 @@ button, .material-symbols-rounded {
   right: 4%;
   width: 52px; height: 52px;
   z-index: var(--z-scene);
+  /* Pure scenery: it must never intercept a tap meant for what's under it. */
+  pointer-events: none;
   transform: translateY(calc(var(--moon-scroll, 0px) * -0.7));
+}
+/* On the desktop split the right column is the side panel; `right: 4%` would
+   hang the moon over its pause button. Offset by the centring margin + the
+   panel column + the grid gap so it sits in the content column's sky. */
+@media (min-width: 1000px) {
+  .moon-track {
+    right: calc(max(0px, (100vw - 1180px) / 2) + clamp(340px, 30vw, 400px) + var(--sp-32) * 2);
+  }
 }
 
 @supports (animation-timeline: scroll()) {
@@ -2171,6 +2181,7 @@ body:has(.mini-player) .cookie-notice {
   .mp-expand:hover { color: var(--text-primary);
   }
 }
+.mp-expand:focus-visible { color: var(--text-primary); box-shadow: 0 0 0 2px var(--accent-line); border-radius: var(--radius-control-sm); }
 
 /* Save (bookmark) sits in the player so saving is one obvious tap, not hidden a
    layer deep in the sheet. Quiet by default; warms on hover/focus. */
