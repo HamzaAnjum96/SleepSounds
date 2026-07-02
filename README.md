@@ -124,6 +124,12 @@ npm run preview
 
 ## Changelog
 
+### 9.0.13
+- **Brown Noise: character chips.** Smooth / Rolling / Deep was a depth dial;
+  the set is now **Velvet** (a featureless, fully smoothed floor) ·
+  **Rolling** (default) · **Storm Floor** (heavy, grainy low end). Sliders
+  were already honest (depth / rumble / smoothness) and stay.
+
 ### 9.0.12
 - **Pink Noise: honest labels, real characters.** "focus" is labeled
   **presence** (it brings the midrange band forward — that's all it ever

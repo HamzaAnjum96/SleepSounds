@@ -339,9 +339,11 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'rumble', label: 'rumble', def: 0.20 },
     { key: 'smoothness', label: 'smoothness', def: 0.78 },
   ), variants: vlist(
-    ['Smooth',  { depth: 0.60, rumble: 0.25, smoothness: 0.75 }],
+    // Characters: a featureless velvet floor, the default roll, and a heavy
+    // storm-cellar rumble with real low-end grain.
+    ['Velvet',      { depth: 0.60, rumble: 0.10, smoothness: 0.92 }],
     ['Rolling', {}],
-    ['Deep',    { depth: 0.90, rumble: 0.60, smoothness: 0.40 }],
+    ['Storm Floor', { depth: 0.90, rumble: 0.70, smoothness: 0.35 }],
   )},
   underwater: { label: 'Underwater', mode: 'simple', groups: simpleGroup(
     { key: 'depth', label: 'depth', def: 0.60 },
