@@ -357,12 +357,16 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   )},
   airplane: { label: 'Airplane', mode: 'simple', groups: simpleGroup(
     { key: 'altitude', label: 'altitude', def: 0.50 },
-    { key: 'cabin', label: 'cabin', def: 0.60 },
+    { key: 'cabin', label: 'cabin hush', def: 0.60 },
     { key: 'turbulence', label: 'turbulence', def: 0.30 },
   ), variants: vlist(
-    ['Cabin',     { altitude: 0.40, cabin: 0.80, turbulence: 0.20 }],
+    // Seats and moments, not a turbulence dial: the quiet rear cabin on a
+    // night flight, the default cruise, a seat over the wing where the
+    // engines lead, and a stretch of light chop.
+    ['Night Flight',  { altitude: 0.42, cabin: 0.85, turbulence: 0.08 }],
     ['Cruise', {}],
-    ['Turbulent', { altitude: 0.60, cabin: 0.55, turbulence: 0.70 }],
+    ['Over the Wing', { altitude: 0.75, cabin: 0.35, turbulence: 0.30 }],
+    ['Light Chop',    { altitude: 0.50, cabin: 0.55, turbulence: 0.75 }],
   )},
   heartbeat: { label: 'Heartbeat', mode: 'simple', groups: shapeGroup(
     { key: 'rate', label: 'pace', def: 0.50 },

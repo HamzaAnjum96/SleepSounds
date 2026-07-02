@@ -124,6 +124,14 @@ npm run preview
 
 ## Changelog
 
+### 9.0.10
+- **Airplane chips are seats and moments.** Cabin / Cruise / Turbulent was a
+  dial; the set is now **Night Flight** (the hushed rear cabin, vents leading,
+  almost no rough air) · **Cruise** (default) · **Over the Wing** (the
+  boundary-layer roar and engines lead) · **Light Chop** (a stretch of gentle
+  rough air). The "cabin" slider is labeled **cabin hush** — it always
+  controlled the ventilation bed, not the engines.
+
 ### 9.0.9
 - **Train chips are journeys.** Distant Rails / Steady Carriage / Fast Express
   read as a speed dial; the set is now **Distant Line** (a railway heard
