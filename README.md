@@ -124,6 +124,14 @@ npm run preview
 
 ## Changelog
 
+### 9.0.9
+- **Train chips are journeys.** Distant Rails / Steady Carriage / Fast Express
+  read as a speed dial; the set is now **Distant Line** (a railway heard
+  across the fields, hardly any joint noise) · **Sleeper Car** (the default
+  overnight carriage) · **Old Local** (slow, heavy, riding jointed track — the
+  clackety character) · **Express** (fast and smooth). The "clatter" slider is
+  labeled **rail clatter**.
+
 ### 9.0.8
 - **Windy Forest chips are kinds of woods.** Light Rustle / Breezy Canopy /
   Storm in the Trees was a wind-speed ramp; the set is now **Aspen Shimmer**

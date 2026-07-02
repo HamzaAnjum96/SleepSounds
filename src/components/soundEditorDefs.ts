@@ -293,11 +293,14 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   train: { label: 'Train', mode: 'simple', groups: simpleGroup(
     { key: 'speed', label: 'speed', def: 0.50 },
     { key: 'rumble', label: 'rumble', def: 0.50 },
-    { key: 'clatter', label: 'clatter', def: 0.35 },
+    { key: 'clatter', label: 'rail clatter', def: 0.35 },
   ), variants: vlist(
-    ['Distant Rails',   { speed: 0.30, rumble: 0.40, clatter: 0.20 }],
-    ['Steady Carriage', {}],
-    ['Fast Express',    { speed: 0.80, rumble: 0.60, clatter: 0.60 }],
+    // Journeys, not speed steps: a line heard across the fields, the default
+    // overnight carriage, a slow old local on jointed track, and an express.
+    ['Distant Line', { speed: 0.35, rumble: 0.30, clatter: 0.08 }],
+    ['Sleeper Car', {}],
+    ['Old Local',    { speed: 0.25, rumble: 0.60, clatter: 0.72 }],
+    ['Express',      { speed: 0.85, rumble: 0.55, clatter: 0.45 }],
   )},
   night: { label: 'Night Insects', mode: 'simple', groups: shapeGroup(
     { key: 'cosmic', label: 'shimmer', def: 0.22 },
