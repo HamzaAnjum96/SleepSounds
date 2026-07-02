@@ -279,9 +279,12 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'airflow', label: 'airflow', def: 0.38 },
     { key: 'size', label: 'fan size', def: 0.18 },
   ), variants: vlist(
-    ['Low Hum',    { speed: 0.05, hum: 0.55, airflow: 0.40, size: 0.20 }],
-    ['Steady', {}],
-    ['High Speed', { speed: 0.40, hum: 0.30, airflow: 0.85, size: 0.35 }],
+    // Appliances, not speed steps: a purifier's smooth hiss, the bedside
+    // default, a box fan's fuller drone, and a big workshop machine.
+    ['Air Purifier', { speed: 0.04, hum: 0.22, airflow: 0.52, size: 0.08 }],
+    ['Bedroom Fan', {}],
+    ['Box Fan',      { speed: 0.22, hum: 0.62, airflow: 0.72, size: 0.42 }],
+    ['Shop Fan',     { speed: 0.45, hum: 0.55, airflow: 0.90, size: 0.75 }],
   )},
   train: { label: 'Train', mode: 'simple', groups: simpleGroup(
     { key: 'speed', label: 'speed', def: 0.50 },

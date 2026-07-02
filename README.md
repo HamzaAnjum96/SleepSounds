@@ -124,6 +124,16 @@ npm run preview
 
 ## Changelog
 
+### 9.0.7
+- **Fan chips are appliances now.** The synthesis already models fan acoustics
+  properly (dual airflow bands, casing resonances, blade-amplitude drift from
+  a research pass), so this release replaces the Low Hum / Steady / High Speed
+  intensity tiers with machines you'd actually put in a room: **Air Purifier**
+  (small, smooth, nearly toneless hiss) · **Bedroom Fan** (the default) ·
+  **Box Fan** (fuller drone, more hum) · **Shop Fan** (big, slow-bladed,
+  room-moving air). Sliders were already concrete (speed / hum / airflow /
+  fan size) and stay.
+
 ### 9.0.6
 - **Wind gusts no longer run on rails.** The gusting was three fixed sine
   waves multiplied together, so the same swell pattern repeated every ~26
