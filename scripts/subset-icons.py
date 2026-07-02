@@ -9,7 +9,7 @@ icons, so the subset is ~7 KB. Run this whenever the ICONS list below changes
     python3 scripts/subset-icons.py
 
 It fetches the full font from Google Fonts, keeps only the named icons (and the
-letters their ligatures need), and writes public/fonts/material-7.woff2.
+letters their ligatures need), and writes public/fonts/material-8.woff2.
 Keep ICONS in sync with the glyph names used across src/ (the icon maps in
 src/lib/*Icons.ts and the inline material-symbols-rounded spans).
 """
@@ -81,8 +81,8 @@ def main():
     ss = Subsetter(options=opt)
     ss.populate(glyphs=list(keep), text="".join(set("".join(ICONS))))
     ss.subset(f)
-    f.save("public/fonts/material-7.woff2")
-    print(f"Wrote public/fonts/material-7.woff2 with {len(ICONS)} icons")
+    f.save("public/fonts/material-8.woff2")
+    print(f"Wrote public/fonts/material-8.woff2 with {len(ICONS)} icons")
 
 
 if __name__ == "__main__":

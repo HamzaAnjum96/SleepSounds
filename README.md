@@ -124,6 +124,16 @@ npm run preview
 
 ## Changelog
 
+### 9.0.0
+- **Fixed the missing icons for Cat Purr / Wind Chimes / Ticking Clock on
+  already-installed clients.** The 8.3.0 icon-font re-subset kept the file name
+  `material-7.woff2`, and the service worker's cache version hashes the asset
+  *names*, not their bytes — so installed clients kept serving the old cached
+  font and the three new glyphs (paw, bell, clock) rendered as placeholder
+  text. The font now ships as `material-8.woff2`, which busts the SW precache
+  and any HTTP cache in one move. Starting the 9.x line here; the sound-
+  quality pass that follows ships one sound per patch release.
+
 ### 8.3.0
 - **Three new generated sounds: Cat Purr, Wind Chimes, Ticking Clock.** The
   Cozy family grows from one sound to four, all procedural (nothing sampled):
