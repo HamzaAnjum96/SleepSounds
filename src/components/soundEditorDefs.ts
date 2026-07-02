@@ -379,13 +379,16 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Dancing',       { activity: 0.75, tone: 0.62, sustain: 0.42 }],
   )},
   clock: { label: 'Ticking Clock', mode: 'simple', groups: simpleGroup(
-    { key: 'wood', label: 'wood', def: 0.60 },
-    { key: 'softness', label: 'distance', def: 0.60 },
-    { key: 'room', label: 'room tone', def: 0.35 },
+    { key: 'wood', label: 'wood knock', def: 0.45 },
+    { key: 'softness', label: 'distance', def: 0.45 },
+    { key: 'room', label: 'room tone', def: 0.25 },
   ), variants: vlist(
-    ['Distant Hall', { wood: 0.50, softness: 0.85, room: 0.50 }],
+    // Bare Tick is the naked mechanism (the all-sliders-down character);
+    // Grandfather adds the deep case; Distant Hall is heard from another room.
+    ['Bare Tick',    { wood: 0.08, softness: 0.08, room: 0.05 }],
     ['Mantel', {}],
-    ['Close Tick',   { wood: 0.75, softness: 0.30, room: 0.20 }],
+    ['Grandfather',  { wood: 0.85, softness: 0.55, room: 0.35 }],
+    ['Distant Hall', { wood: 0.55, softness: 0.85, room: 0.50 }],
   )},
 };
 

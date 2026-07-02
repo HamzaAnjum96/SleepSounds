@@ -1397,54 +1397,64 @@ function genChimes(params?: Record<string, number>): string {
 
 function genClock(params?: Record<string, number>): string {
   // Ticking Clock: a pendulum clock at rest — one beat per second, tick and
-  // tock voiced slightly apart (the escapement rocks between two faces), a
-  // wooden case resonance under each click, and a whisper of room tone so the
-  // clock sits in a room rather than a void. 32 beats fit the loop exactly,
-  // so the rhythm never stumbles at the seam.
-  const { wood = 0.6, softness = 0.6, room = 0.35 } = params ?? {};
+  // tock voiced slightly apart (the escapement rocks between two faces). The
+  // bare mechanical click is the heart of the sound and stays crisp; under it,
+  // `wood` adds a *knock* (a short noise burst ringing a damped case
+  // resonance — a tone here reads as a marimba note, not a clock), and `room`
+  // adds only the faintest dark floor. 32 beats fit the loop exactly, so the
+  // rhythm never stumbles at the seam.
+  const { wood = 0.45, softness = 0.45, room = 0.25 } = params ?? {};
 
   const buf = new Float32Array(N);
-  const caseF = 165 + wood * 85;
+  const knockF = 210 + wood * 130;
 
   const beats = Math.floor(N / SR); // one per second, an even count — the
   for (let k = 0; k < beats; k++) { // tick/tock alternation survives the seam
 
     const isTick = k % 2 === 0;
     const at = Math.floor((k + 0.25) * SR + rand(-0.002, 0.002) * SR);
-    const clickF = isTick ? 2250 : 1720;
-    const level = (isTick ? 1 : 0.85) * (0.92 + random() * 0.16);
+    const clickF = isTick ? 2250 : 1780;
+    const level = (isTick ? 1 : 0.86) * (0.92 + random() * 0.16);
 
     // The click: a short damped ring plus a breath of contact noise.
     const clickLen = Math.floor(SR * 0.012);
     for (let i = 0; i < clickLen && at + i < N; i++) {
       const ts = i / SR;
-      const ring = Math.sin(2 * Math.PI * clickF * ts) * Math.exp(-ts / 0.0032);
-      const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0022) * 0.45;
+      const ring = Math.sin(2 * Math.PI * clickF * ts) * Math.exp(-ts / 0.0030);
+      const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0020) * 0.5;
       buf[at + i] += (ring + noise) * level * 0.5;
     }
-    // The case: a low wooden thump that gives the tick its body.
-    const thumpLen = Math.floor(SR * 0.09);
-    for (let i = 0; i < thumpLen && at + i < N; i++) {
-      const ts = i / SR;
-      buf[at + i] += Math.sin(2 * Math.PI * caseF * ts) * Math.exp(-ts / 0.028) * level * wood * 0.42;
+    // The case: a woody knock — a 4 ms noise excitation into a fast-damped
+    // resonator, so it thuds like wood instead of singing like a bar.
+    const knockLen = Math.floor(SR * 0.05);
+    const exciteLen = Math.floor(SR * 0.004);
+    const w = (2 * Math.PI * knockF * (1 + (random() - 0.5) * 0.04)) / SR;
+    const r = Math.exp(-1 / (0.016 * SR));
+    const co = 2 * r * Math.cos(w), r2 = r * r;
+    let y1 = 0, y2 = 0;
+    for (let i = 0; i < knockLen && at + i < N; i++) {
+      const x = i < exciteLen ? (random() * 2 - 1) * (1 - i / exciteLen) : 0;
+      const y = co * y1 - r2 * y2 + x;
+      y2 = y1; y1 = y;
+      buf[at + i] += y * level * wood * 0.16;
     }
     // The escapement's tiny secondary contact right behind the beat.
     const echoAt = at + Math.floor(SR * 0.011);
     const echoLen = Math.floor(SR * 0.006);
     for (let i = 0; i < echoLen && echoAt + i < N; i++) {
       const ts = i / SR;
-      buf[echoAt + i] += (random() * 2 - 1) * Math.exp(-ts / 0.0016) * level * 0.16;
+      buf[echoAt + i] += (random() * 2 - 1) * Math.exp(-ts / 0.0016) * level * 0.14;
     }
   }
 
-  // Distance: softness closes the top end — across the room, not on the
-  // shelf. Two passes, or the click edges stay glassy right up to the top.
-  const dist = 3900 - softness * 2900;
+  // Distance: softness walks the clock across the room. Zero leaves the click
+  // genuinely crisp; the second, gentler pole only shaves the glassy extreme.
+  const dist = 5200 - softness * 3400;
   lp1(buf, dist);
-  lp1(buf, dist * 1.6);
+  lp1(buf, Math.min(9000, dist * 2.5));
 
   const bed = brownNoise();
-  lp1(bed, 130);
-  for (let i = 0; i < N; i++) buf[i] += bed[i] * (0.03 + 0.11 * room);
+  lp1(bed, 90);
+  for (let i = 0; i < N; i++) buf[i] += bed[i] * (0.02 + 0.09 * room);
   return gen(buf, 0.5);
 }

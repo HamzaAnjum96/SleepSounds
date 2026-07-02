@@ -124,6 +124,19 @@ npm run preview
 
 ## Changelog
 
+### 9.0.3
+- **Ticking Clock rebuilt around the bare click.** The feedback was blunt: the
+  only passable setting was every slider at zero — i.e. the naked click. The
+  wooden case "thump" was a pure sine (a marimba note, not a clock case) and
+  the distance filter muddied everything above it. The case is now a *knock* —
+  a 4 ms noise burst ringing a fast-damped resonance, so it thuds like wood
+  instead of singing — the distance range keeps zero genuinely crisp, the
+  room-tone floor is darker and quieter, and defaults pull everything back
+  toward the mechanism (wood 0.45, distance 0.45, room 0.25). The character
+  the feedback liked is now a chip: **Bare Tick** (90% of its loop is true
+  silence). The set: Bare Tick · Mantel · Grandfather · Distant Hall, and the
+  "wood" slider is labeled **wood knock**.
+
 ### 9.0.2
 - **Wind Chimes: the static bed is gone.** The faint pink-noise "breeze" that
   ran under the strikes read as hiss, so it's removed outright — between gusts
