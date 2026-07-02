@@ -124,6 +124,12 @@ npm run preview
 
 ## Changelog
 
+### 9.0.12
+- **Pink Noise: honest labels, real characters.** "focus" is labeled
+  **presence** (it brings the midrange band forward — that's all it ever
+  did). Chips: **Warm Blanket** (pulled over your head) · **Soft Fall**
+  (default) · **Mountain Air** (thin and bright, mids stepping forward).
+
 ### 9.0.11
 - **White Noise: the shimmer came off its rails, and the labels tell the
   truth.** The air band's movement was a fixed 0.065 Hz sine — an audible

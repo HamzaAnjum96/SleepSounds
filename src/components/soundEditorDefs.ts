@@ -325,12 +325,14 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   )},
   'pink-noise': { label: 'Pink Noise', mode: 'simple', groups: simpleGroup(
     { key: 'warmth', label: 'warmth', def: 0.70 },
-    { key: 'focus', label: 'focus', def: 0.35 },
+    { key: 'focus', label: 'presence', def: 0.35 },
     { key: 'air', label: 'air', def: 0.20 },
   ), variants: vlist(
-    ['Warm',     { warmth: 0.80, focus: 0.35, air: 0.25 }],
-    ['Balanced', {}],
-    ['Airy',     { warmth: 0.45, focus: 0.55, air: 0.70 }],
+    // Characters: pulled over your head, the default steady fall, and thin
+    // bright air with the mids stepping forward.
+    ['Warm Blanket', { warmth: 0.88, focus: 0.25, air: 0.10 }],
+    ['Soft Fall', {}],
+    ['Mountain Air', { warmth: 0.45, focus: 0.55, air: 0.75 }],
   )},
   'brown-noise': { label: 'Brown Noise', mode: 'simple', groups: simpleGroup(
     { key: 'depth', label: 'depth', def: 0.72 },
