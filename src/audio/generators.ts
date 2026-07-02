@@ -305,7 +305,9 @@ function genOcean(params?: Record<string, number>): string {
   const waveMin = 5 + waveSize * 5;
   const waveMax = 10 + waveSize * 10;
   const surfLp = 1200 + foam * 1600;
-  const surfMix = 0.2 + foam * 0.36;
+  // Surf follows the wave size too: small waves shouldn't wash as loud as
+  // rollers just because the foam knob matches.
+  const surfMix = (0.14 + foam * 0.32) * (0.6 + 0.4 * waveSize);
   const baseLp = 240 + depth * 240;
   const baseMix = 0.4 + depth * 0.44;
   // Ocean shoreline with the full anatomy of a breaking wave: the undertow
@@ -323,7 +325,7 @@ function genOcean(params?: Record<string, number>): string {
   // The break: brighter, foamier than the wash — only opens as the crest folds.
   const crash = pinkNoise();
   hp1(crash, 650);
-  lp1(crash, 1700 + foam * 2600);
+  lp1(crash, 1400 + foam * 2200);
 
   // The backwash: low, granular water raking back down the slope.
   const wash = pinkNoise();
@@ -354,7 +356,7 @@ function genOcean(params?: Record<string, number>): string {
     // The break rises fast in real time (~120 ms), not as a share of the
     // period, then dies across the wash.
     const crashStart = Math.floor(period * 0.34);
-    const crashAttack = Math.floor(SR * 0.12);
+    const crashAttack = Math.floor(SR * 0.2); // eased fold-over, not a slap
     const crashDecay = Math.max(1, Math.floor(period * 0.30));
     const crashAmp = wAmp * rand(0.55, 1.0);
     for (let i = 0; i < period && wPos + i < N; i++) {
@@ -380,8 +382,10 @@ function genOcean(params?: Record<string, number>): string {
 
   const left = new Float32Array(N);
   const right = new Float32Array(N);
-  const crashMix = 0.10 + foam * 0.5;
-  const washMix = 0.16 + depth * 0.14;
+  // The break rides foam *squared*: at low foam the crest folds almost
+  // soundlessly, so the calm shore scenes stay genuinely calm.
+  const crashMix = 0.05 + foam * foam * 0.6;
+  const washMix = 0.10 + depth * 0.10;
   for (let i = 0; i < N; i++) {
     const wEnv = Math.min(1, waveEnvBuf[i]);
     const wBase = (0.24 + 0.76 * wEnv) * baseMix;
@@ -394,7 +398,11 @@ function genOcean(params?: Record<string, number>): string {
     left[i] = bed.left[i] * wBase + surfS * pl;
     right[i] = bed.right[i] * wBase + surfS * pr;
   }
-  return genStereo(left, right, 0.72);
+  // Encoding is peak-normalised, which would boost a calm render right back
+  // up — so the output gain itself follows the scene's intensity, and the
+  // gentle shores actually play quieter than the storm.
+  const intensity = 0.4 * waveSize + 0.6 * foam;
+  return genStereo(left, right, 0.72 * (0.55 + 0.45 * intensity));
 }
 
 function genWind(params?: Record<string, number>): string {

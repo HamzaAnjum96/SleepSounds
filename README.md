@@ -152,6 +152,19 @@ for the history behind that.
 
 ## Changelog
 
+### 9.1.4
+- **Ocean calmed — the gentle shores are now actually gentle.** Every variant
+  played at roughly the same loudness because the WAV encode is
+  peak-normalised (a calm render just got boosted back up); the output gain
+  now follows the scene's intensity, so Lapping Shore plays ~3 dB under Storm
+  Surf instead of matching it. The break rides **foam squared** (at low foam
+  the crest folds almost soundlessly), its attack eased from 120 ms to 200 ms
+  (a fold-over, not a slap), its top darkened, the surf wash scales with wave
+  size, and the backwash sits lower. Measured: calm scenes now carry 3–4% of
+  their energy above 800 Hz vs the storm's 12% (previously all variants were
+  equally bright and equally loud). Lapping Shore and Distant Surf variant
+  params also ease their foam further.
+
 ### 9.1.3
 - **Cat Purr breathes like a sleeping cat, not a panting one.** The breath
   cycle ran ~2.1 s (≈28 breaths/min) — a listener entrains to a breath rate,

@@ -223,8 +223,8 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Shore scenes, calm → wild: small quick laps, big surf heard from far
     // up the beach, the default rollers, and a heavy storm shore.
-    ['Lapping Shore', { waveSize: 0.10, foam: 0.30, depth: 0.30 }],
-    ['Distant Surf',  { waveSize: 0.65, foam: 0.10, depth: 0.85 }],
+    ['Lapping Shore', { waveSize: 0.10, foam: 0.18, depth: 0.30 }],
+    ['Distant Surf',  { waveSize: 0.65, foam: 0.06, depth: 0.85 }],
     ['Rolling Waves', {}],
     ['Storm Surf',    { waveSize: 0.88, foam: 0.75, depth: 0.70 }],
   )},
