@@ -152,6 +152,13 @@ for the history behind that.
 
 ## Changelog
 
+### 9.1.3
+- **Cat Purr breathes like a sleeping cat, not a panting one.** The breath
+  cycle ran ~2.1 s (≈28 breaths/min) — a listener entrains to a breath rate,
+  and that fast reads as anxious. The default is now ~3.4 s per breath
+  (measured: ≈17/min across the loop, still varying breath to breath); the
+  breathing slider keeps its range, just mapped slower end to end.
+
 ### 9.1.2
 - **The runtime sound sweep is now a tool, not a one-off.**
   `scripts/sweep-sounds.mjs` drives the real app headless, toggles every

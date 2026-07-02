@@ -1262,7 +1262,10 @@ function genPurr(params?: Record<string, number>): string {
   // lengths are drawn per cycle and scaled to close the loop exactly.
   const { rate = 0.45, rumble = 0.6, softness = 0.55 } = params ?? {};
 
-  const idealPeriod = 2.7 - 1.3 * rate;                    // seconds per breath
+  // ~3.4 s per breath at the default (≈18 breaths/min — a settled, sleepy
+  // cat). The first cut ran ~2.1 s (≈28/min), which reads as panting, and a
+  // listener entrains to the breath rate — too fast is actively un-calming.
+  const idealPeriod = 4.4 - 2.2 * rate;                    // seconds per breath
   const cycles = Math.max(1, Math.round(N / SR / idealPeriod));
 
   // Uneven breath lengths that sum exactly to the loop.
