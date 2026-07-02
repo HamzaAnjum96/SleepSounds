@@ -40,6 +40,9 @@ export const LAYER_META: Record<string, LayerMeta> = {
   birdsong:       { role: 'accent', maskGroup: 'detail', defaultWidth: 0.55 },
   night:          { role: 'accent', maskGroup: 'detail', defaultWidth: 0.50 },
   heartbeat:      { role: 'accent', maskGroup: 'low',    defaultWidth: 0.10 },
+  purr:           { role: 'accent', maskGroup: 'low',    defaultWidth: 0.10 },
+  chimes:         { role: 'accent', maskGroup: 'detail', defaultWidth: 0.60 },
+  clock:          { role: 'accent', maskGroup: 'detail', defaultWidth: 0.15 },
 };
 
 const dbToGain = (db: number): number => Math.pow(10, db / 20);

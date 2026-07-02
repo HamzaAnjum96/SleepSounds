@@ -84,6 +84,9 @@ export const SOUND_LIBRARY: Sound[] = [
   wavSound('airplane',      'Airplane',      'Urban'),
   wavSound('night',         'Night Insects', 'Wildlife'),
   wavSound('heartbeat',     'Heartbeat',     'Cozy'),
+  wavSound('purr',          'Cat Purr',      'Cozy'),
+  wavSound('chimes',        'Wind Chimes',   'Cozy'),
+  wavSound('clock',         'Ticking Clock', 'Cozy'),
 ];
 
 /** Ids whose audio is a live worklet (params apply instantly, and persist on the
@@ -147,5 +150,11 @@ export const BUILTIN_PRESETS: Preset[] = [
   { id: 'builtin-windy-forest',  name: 'Windy Forest',      createdAt: '', masterVolume: 0.8,  state: builtinState([['forest', 0.60], ['wind', 0.32]]) },
   { id: 'builtin-ocean-night',   name: 'Ocean Night',       createdAt: '', masterVolume: 0.78, state: builtinState([['ocean', 0.55], ['wind', 0.18], ['night', 0.08]]) },
   { id: 'builtin-underwater',    name: 'Underwater',        createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60]]) },
+  // The purr leads; the rain is the exact "Light Rain" variant (so the editor
+  // shows that name), a thin far-off patter under the breathing.
+  { id: 'builtin-curled-up',     name: 'Curled Up',         createdAt: '', masterVolume: 0.75, state: builtinState([['purr', 0.55], ['rain', 0.24, { intensity: 0.18, heaviness: 0.22, surface: 0.55, bed: 0.50, drops: 0.08, movement: 0.40, space: 0.20, metallic: 0 }]]) },
+  // Chimes over their own quiet air, night insects far back, and the exact
+  // "Breeze" wind variant barely moving underneath.
+  { id: 'builtin-evening-porch', name: 'Evening Porch',     createdAt: '', masterVolume: 0.78, state: builtinState([['chimes', 0.52], ['night', 0.14], ['wind', 0.14, { gusts: 0.25, whistle: 0.15, tone: 0.45 }]]) },
 ];
 

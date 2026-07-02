@@ -911,6 +911,9 @@ const generatorMap: Record<string, (params?: Record<string, number>) => string> 
   airplane: genAirplane,
   birdsong: genBirdsong,
   heartbeat: genHeartbeat,
+  purr: genPurr,
+  chimes: genChimes,
+  clock: genClock,
 };
 
 /** Regenerate a sound's WAV blob URL with the given tuning parameters. The PRNG
@@ -1190,4 +1193,242 @@ function genHeartbeat(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) mix[i] = beats[i] + bed[i] * 0.05;
   lp1(mix, finalLp);
   return gen(mix, 0.6);
+}
+
+function genPurr(params?: Record<string, number>): string {
+  // Cat Purr: a ~25 Hz glottal pulse train that breathes. A real purr runs
+  // through the whole respiratory cycle — a louder, slightly lower exhale
+  // phase, a brief turnaround silence, then a softer, slightly higher inhale —
+  // and it's that slow sway (not the pulse rate) that reads as "cat". The
+  // breath period is snapped so a whole number of breaths fits the loop.
+  const { rate = 0.45, rumble = 0.6, softness = 0.55 } = params ?? {};
+
+  const idealPeriod = 2.7 - 1.3 * rate;                    // seconds per breath
+  const cycles = Math.max(1, Math.round(N / SR / idealPeriod));
+  const period = N / cycles;                                // samples per breath
+  // Phase layout within one breath (fractions of the period).
+  const EXHALE_END = 0.52, GAP1_END = 0.585, INHALE_END = 0.94;
+
+  // Breath envelope + pulse frequency for a cycle-local phase u in [0,1).
+  const phase = (u: number): { amp: number; f0: number } => {
+    const ramp = (t: number, len: number, edge: number): number => {
+      const a = Math.min(1, t / edge);
+      const b = Math.min(1, (len - t) / edge);
+      const w = Math.min(a, b);
+      return 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, w)));
+    };
+    const f0Ex = 21.5 + rumble * 4.5;
+    if (u < EXHALE_END) return { amp: ramp(u, EXHALE_END, 0.10), f0: f0Ex };
+    if (u < GAP1_END) return { amp: 0, f0: f0Ex };
+    if (u < INHALE_END) return { amp: 0.62 * ramp(u - GAP1_END, INHALE_END - GAP1_END, 0.11), f0: f0Ex + 3.5 };
+    return { amp: 0, f0: f0Ex };
+  };
+
+  const buf = new Float32Array(N);
+  // Body resonances the pulses ring: chest (~85–145 Hz) plus a softer throat
+  // partial. Each glottal pulse drops one short damped grain into the buffer.
+  const bodyF = 82 + rumble * 62;
+  const throatF = bodyF * 2.3;
+  const grainLen = Math.floor(SR * 0.032);
+  let t = 0;
+  while (t < N) {
+    const u = (t % period) / period;
+    const { amp, f0 } = phase(u);
+    if (amp <= 0.001) { t += Math.floor(SR * 0.004); continue; }
+    const jitter = 1 + (random() - 0.5) * 0.06;
+    const level = amp * (0.85 + random() * 0.3);
+    const attack = Math.floor(SR * 0.0025); // eased onset — no broadband click
+    for (let i = 0; i < grainLen && t + i < N; i++) {
+      const ts = i / SR;
+      const body = Math.sin(2 * Math.PI * bodyF * ts) * Math.exp(-ts / 0.009);
+      const throat = Math.sin(2 * Math.PI * throatF * ts) * Math.exp(-ts / 0.0042) * 0.38;
+      const on = i < attack ? 0.5 - 0.5 * Math.cos(Math.PI * (i / attack)) : 1;
+      buf[t + i] += (body + throat) * level * on * 0.5;
+    }
+    t += Math.max(8, Math.floor((SR / f0) * jitter));
+  }
+
+  // Breath noise: a faint band of air that follows the envelope (a touch more
+  // on the inhale), so the purr sits inside breathing rather than a dry buzz.
+  // One cycle of the envelope is precomputed — phase() per sample is the
+  // render's whole cost otherwise.
+  const perN = Math.ceil(period);
+  const envA = new Float32Array(perN);
+  for (let i = 0; i < perN; i++) {
+    const u = i / period;
+    const inhale = u >= GAP1_END && u < INHALE_END ? 1.5 : 1;
+    envA[i] = phase(u).amp * inhale;
+  }
+  const breath = pinkNoise();
+  hp1(breath, 280);
+  lp1(breath, 1100);
+  for (let i = 0; i < N; i++) {
+    buf[i] += breath[i] * envA[Math.floor(i % period)] * 0.055;
+  }
+
+  // Chest warmth under it all, then the muffle: softness closes the top like
+  // a cat settled against you rather than mic'd up close.
+  const bed = brownNoise();
+  lp1(bed, 55);
+  for (let i = 0; i < N; i++) buf[i] += bed[i] * 0.05;
+  // Two passes (12 dB/oct): one pole leaves enough pulse edge to rasp.
+  const muffle = 980 - softness * 620;
+  lp1(buf, muffle);
+  lp1(buf, muffle * 1.8);
+  return gen(buf, 0.62);
+}
+
+function genChimes(params?: Record<string, number>): string {
+  // Wind Chimes: five low pentatonic tubes (A3–F#4 — deep porch chimes, not
+  // bright bells) struck in gust-driven clusters. Each strike rings the first
+  // four transverse modes of a free tube (1 : 2.76 : 5.40 : 8.93) with the
+  // higher modes dying faster, and each tube hangs at its own point in the
+  // stereo field. Between gusts the chimes genuinely rest — the silences are
+  // as much the character as the notes.
+  const { activity = 0.42, tone = 0.45, breeze = 0.3 } = params ?? {};
+
+  const notes = [220.0, 246.94, 277.18, 329.63, 369.99]; // A pentatonic
+  const pans = [-0.6, -0.28, 0, 0.28, 0.6];
+  const RATIOS = [1, 2.76, 5.40, 8.93];
+  const modeAmps = [1, 0.22 + 0.38 * tone, 0.05 + 0.20 * tone, 0.02 + 0.09 * tone];
+
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  const gust = smoothRandomLfo(0, 1, 2.8, 7.5);
+
+  const strike = (pos: number, tube: number, amp: number): void => {
+    const f = notes[tube] * (1 + (random() - 0.5) * 0.005);
+    const tau1 = 2.6 * Math.pow(300 / f, 0.6) + 0.4;      // fundamental ring time
+    const taus = [tau1, tau1 * 0.32, tau1 * 0.14, tau1 * 0.07];
+    const len = Math.min(Math.floor(SR * tau1 * 4), N - pos);
+    const pl = Math.cos((pans[tube] + 1) * Math.PI / 4);
+    const pr = Math.sin((pans[tube] + 1) * Math.PI / 4);
+    const attack = Math.floor(SR * 0.004);
+    // Each mode is a damped resonator run as a two-tap recurrence
+    // (y[n] = 2r·cos(w)·y[n-1] − r²·y[n-2] ≡ rⁿ·sin(wn)) — the strikes are the
+    // whole render cost, and sin·exp per sample per mode is ~10× slower.
+    const co = new Float64Array(4), r2 = new Float64Array(4);
+    const y1 = new Float64Array(4), y2 = new Float64Array(4);
+    for (let m = 0; m < 4; m++) {
+      const w = (2 * Math.PI * f * RATIOS[m]) / SR;
+      const r = Math.exp(-1 / (taus[m] * SR));
+      co[m] = 2 * r * Math.cos(w);
+      r2[m] = r * r;
+      y1[m] = r * Math.sin(w); // y[1]; y[0] = 0 keeps the onset clickless
+      y2[m] = 0;
+    }
+    for (let i = 1; i < len; i++) {
+      let s = 0;
+      for (let m = 0; m < 4; m++) {
+        s += y1[m] * modeAmps[m];
+        const nxt = co[m] * y1[m] - r2[m] * y2[m];
+        y2[m] = y1[m];
+        y1[m] = nxt;
+      }
+      if (i < attack) s *= 0.5 - 0.5 * Math.cos(Math.PI * (i / attack));
+      s *= amp * 0.30;
+      left[pos + i] += s * pl;
+      right[pos + i] += s * pr;
+    }
+  };
+
+  // Gust-driven scheduling: strike probability rides the square of the gust
+  // level (calm air is truly quiet), and a strike often swings the clapper on
+  // into a neighbouring tube — that little melodic stumble is what separates
+  // chimes from a sequencer. Nothing new fires in the last beat of the loop,
+  // so the seam only ever crossfades ring tails.
+  const hop = Math.floor(SR * 0.02);
+  const lastStart = N - Math.floor(SR * 0.7);
+  const ratePerSec = 0.12 + activity * 1.45;
+  // A lull is part of the character, but a loop can't go dead for ten straight
+  // seconds — when the wind has been quiet too long, one soft lone strike
+  // bridges it (a real set stirs eventually).
+  let sinceStrike = 0;
+  let maxLull = Math.floor(SR * rand(3.5, 6.5));
+  for (let p = Math.floor(SR * 0.3); p < lastStart; p += hop) {
+    const g = gust[p];
+    const forced = sinceStrike > maxLull;
+    if (!forced && !chance((hop / SR) * ratePerSec * g * g)) { sinceStrike += hop; continue; }
+    sinceStrike = 0;
+    maxLull = Math.floor(SR * rand(3.5, 6.5));
+    let tube = Math.floor(random() * 5);
+    let pos = p;
+    let amp = forced ? rand(0.25, 0.45) : rand(0.35, 1.0) * (0.55 + 0.45 * g);
+    strike(pos, tube, amp);
+    if (forced) continue; // a lone stir, not a cluster
+    let swings = 0;
+    while (swings < 3 && chance(0.55)) {
+      pos += Math.floor(SR * rand(0.07, 0.3));
+      if (pos >= lastStart) break;
+      tube = Math.max(0, Math.min(4, tube + (chance(0.5) ? -1 : 1)));
+      amp *= rand(0.6, 0.9);
+      strike(pos, tube, amp);
+      swings++;
+    }
+  }
+
+  // The air the chimes hang in: a faint gust-following breeze, decorrelated so
+  // it fills the space between strikes without pulling the image anywhere.
+  const bedMono = pinkNoise();
+  hp1(bedMono, 350);
+  lp1(bedMono, 1800);
+  for (let i = 0; i < N; i++) bedMono[i] *= (0.5 + 0.5 * gust[i]) * (0.08 + 0.22 * breeze);
+  const bed = decorrelateMono(bedMono);
+  for (let i = 0; i < N; i++) { left[i] += bed.left[i]; right[i] += bed.right[i]; }
+
+  return genStereo(left, right, 0.52);
+}
+
+function genClock(params?: Record<string, number>): string {
+  // Ticking Clock: a pendulum clock at rest — one beat per second, tick and
+  // tock voiced slightly apart (the escapement rocks between two faces), a
+  // wooden case resonance under each click, and a whisper of room tone so the
+  // clock sits in a room rather than a void. 32 beats fit the loop exactly,
+  // so the rhythm never stumbles at the seam.
+  const { wood = 0.6, softness = 0.6, room = 0.35 } = params ?? {};
+
+  const buf = new Float32Array(N);
+  const caseF = 165 + wood * 85;
+
+  const beats = Math.floor(N / SR); // one per second, an even count — the
+  for (let k = 0; k < beats; k++) { // tick/tock alternation survives the seam
+
+    const isTick = k % 2 === 0;
+    const at = Math.floor((k + 0.25) * SR + rand(-0.002, 0.002) * SR);
+    const clickF = isTick ? 2250 : 1720;
+    const level = (isTick ? 1 : 0.85) * (0.92 + random() * 0.16);
+
+    // The click: a short damped ring plus a breath of contact noise.
+    const clickLen = Math.floor(SR * 0.012);
+    for (let i = 0; i < clickLen && at + i < N; i++) {
+      const ts = i / SR;
+      const ring = Math.sin(2 * Math.PI * clickF * ts) * Math.exp(-ts / 0.0032);
+      const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0022) * 0.45;
+      buf[at + i] += (ring + noise) * level * 0.5;
+    }
+    // The case: a low wooden thump that gives the tick its body.
+    const thumpLen = Math.floor(SR * 0.09);
+    for (let i = 0; i < thumpLen && at + i < N; i++) {
+      const ts = i / SR;
+      buf[at + i] += Math.sin(2 * Math.PI * caseF * ts) * Math.exp(-ts / 0.028) * level * wood * 0.42;
+    }
+    // The escapement's tiny secondary contact right behind the beat.
+    const echoAt = at + Math.floor(SR * 0.011);
+    const echoLen = Math.floor(SR * 0.006);
+    for (let i = 0; i < echoLen && echoAt + i < N; i++) {
+      const ts = i / SR;
+      buf[echoAt + i] += (random() * 2 - 1) * Math.exp(-ts / 0.0016) * level * 0.16;
+    }
+  }
+
+  // Distance: softness closes the top end — across the room, not on the
+  // shelf. Two passes, or the click edges stay glassy right up to the top.
+  const dist = 3900 - softness * 2900;
+  lp1(buf, dist);
+  lp1(buf, dist * 1.6);
+
+  const bed = brownNoise();
+  lp1(bed, 130);
+  for (let i = 0; i < N; i++) buf[i] += bed[i] * (0.03 + 0.11 * room);
+  return gen(buf, 0.5);
 }

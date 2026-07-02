@@ -6,14 +6,14 @@
 > - If sound generation changes significantly, bump the saved-mixes key in `src/storage/keys.ts` (`STORAGE_KEYS.savedMixes`, e.g. `-v2` → `-v3`) so stale loops aren't restored.
 
 **drift away** (repo name Sleep Mixer) is a mobile-first ambient sound app for
-relaxation and sleep. All 18 sounds are generated in the browser; nothing is
+relaxation and sleep. All 21 sounds are generated in the browser; nothing is
 streamed or downloaded. Rain, Thunder, Windy Forest, Fire, and Birdsong are
 synthesised live via AudioWorklet (event-based); the rest are procedural WAV loops.
 
 ## Features
 
-- **Scenes**: eight curated mixes as gradient-art cards; tap to play instantly.
-- **The library**: 18 procedurally generated sounds, layered
+- **Scenes**: ten curated mixes as gradient-art cards; tap to play instantly.
+- **The library**: 21 procedurally generated sounds, layered
   freely with per-sound volume and (for select sounds) deep parameter editors.
 - **Mini player + now-playing sheet**: persistent player bar; the sheet holds
   per-layer sliders, master volume, sleep timer, save-mix, and drift mode.
@@ -123,6 +123,42 @@ npm run preview
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 8.3.0
+- **Three new generated sounds: Cat Purr, Wind Chimes, Ticking Clock.** The
+  Cozy family grows from one sound to four, all procedural (nothing sampled):
+  - **Cat Purr** — a ~25 Hz glottal pulse train that actually breathes: a
+    louder, lower exhale phase, a turnaround pause, then a softer, higher
+    inhale, with the breath period snapped to a whole number of cycles per
+    loop. Grains ring chest/throat resonances with eased onsets (no rasp), a
+    faint breath-noise band rides the envelope, and a double lowpass keeps
+    ~97% of the energy below 200 Hz. Editors: breathing / rumble / softness;
+    variants Dozing · Content · Deep Rumble.
+  - **Wind Chimes** — five low pentatonic tubes (A3–F#4) struck in gust-driven
+    clusters, each strike ringing the first four transverse modes of a free
+    tube (1 : 2.76 : 5.40 : 8.93, higher modes decaying faster) via damped-
+    resonator recurrences (~10× faster than sin·exp per sample; renders in
+    line with rain/ocean). A strike often swings on into a neighbouring tube;
+    lulls are bridged by a forced lone soft strike so the loop never goes dead
+    for ten straight seconds, and a faint decorrelated breeze bed fills the
+    air between. Stereo, each tube at its own place in the field. Editors:
+    breeze strength / brightness / air; variants Still Evening · On a Breeze ·
+    Singing.
+  - **Ticking Clock** — a pendulum clock at one beat per second (an even 32
+    per loop, so the tick/tock alternation survives the seam): tick and tock
+    voiced apart, a wooden case thump under each click, the escapement's tiny
+    secondary contact, and a whisper of room tone. Double lowpass keeps the
+    default sleep-soft. Editors: wood / distance / room tone; variants Distant
+    Hall · Mantel · Close Tick.
+- **Two new scenes.** *Curled Up* (a warm purr breathing under the exact
+  "Light Rain" variant) and *Evening Porch* (chimes over night insects and the
+  "Breeze" wind), with their own gradient art.
+- All three verified NaN-free, non-clipping, level-matched against
+  heartbeat/night (waveform + spectrogram probes), covered by the existing
+  generator validity / variant-distinctness / determinism tests plus the
+  stereo width (chimes) and centred-mono (purr, clock) assertions. Icon font
+  re-subset for the paw / bell / clock glyphs. 109 unit + 15 e2e, typecheck,
+  lint, build green; console clean.
 
 ### 8.2.0
 - **Design/a11y polish pass.** Three fixes from a full-surface browser audit:

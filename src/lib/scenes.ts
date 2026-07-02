@@ -67,6 +67,18 @@ const ART: Record<string, { mood: string; art: string }> = {
           radial-gradient(90% 80% at 18% 8%, rgba(45,95,135,0.22) 0%, transparent 64%),
           linear-gradient(165deg, rgba(18,46,60,0.30) 0%, rgba(8,20,28,0.18) 72%)`,
   },
+  'builtin-curled-up': {
+    mood: 'a warm purr breathing under gentle rain',
+    art: `radial-gradient(110% 95% at 20% 100%, rgba(209,166,114,0.32) 0%, transparent 62%),
+          radial-gradient(90% 80% at 85% 8%, rgba(123,167,232,0.18) 0%, transparent 64%),
+          linear-gradient(160deg, rgba(56,42,28,0.30) 0%, rgba(20,14,10,0.18) 72%)`,
+  },
+  'builtin-evening-porch': {
+    mood: 'chimes stirring now and then on a night breeze',
+    art: `radial-gradient(120% 90% at 80% 0%, rgba(209,166,114,0.28) 0%, transparent 62%),
+          radial-gradient(95% 90% at 15% 100%, rgba(143,191,154,0.20) 0%, transparent 64%),
+          linear-gradient(150deg, rgba(52,44,30,0.30) 0%, rgba(18,15,10,0.18) 72%)`,
+  },
 };
 
 const FALLBACK = {

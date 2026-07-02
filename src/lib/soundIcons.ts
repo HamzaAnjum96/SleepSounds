@@ -19,4 +19,7 @@ export const SOUND_ICONS: Record<string, string> = {
   train:           'train',
   heartbeat:       'cardiology',
   shower:          'shower',
+  purr:            'pets',
+  chimes:          'notifications',
+  clock:           'schedule',
 };

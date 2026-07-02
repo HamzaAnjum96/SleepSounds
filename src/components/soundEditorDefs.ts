@@ -357,6 +357,33 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Resting', {}],
     ['Deep', { rate: 0.45, chest: 0.85, muffle: 0.70 }],
   )},
+  purr: { label: 'Cat Purr', mode: 'simple', groups: simpleGroup(
+    { key: 'rate', label: 'breathing', def: 0.45 },
+    { key: 'rumble', label: 'rumble', def: 0.60 },
+    { key: 'softness', label: 'softness', def: 0.55 },
+  ), variants: vlist(
+    ['Dozing',      { rate: 0.28, rumble: 0.48, softness: 0.75 }],
+    ['Content', {}],
+    ['Deep Rumble', { rate: 0.55, rumble: 0.85, softness: 0.40 }],
+  )},
+  chimes: { label: 'Wind Chimes', mode: 'simple', groups: simpleGroup(
+    { key: 'activity', label: 'breeze strength', def: 0.42 },
+    { key: 'tone', label: 'brightness', def: 0.45 },
+    { key: 'breeze', label: 'air', def: 0.30 },
+  ), variants: vlist(
+    ['Still Evening', { activity: 0.22, tone: 0.32, breeze: 0.22 }],
+    ['On a Breeze', {}],
+    ['Singing',       { activity: 0.72, tone: 0.62, breeze: 0.45 }],
+  )},
+  clock: { label: 'Ticking Clock', mode: 'simple', groups: simpleGroup(
+    { key: 'wood', label: 'wood', def: 0.60 },
+    { key: 'softness', label: 'distance', def: 0.60 },
+    { key: 'room', label: 'room tone', def: 0.35 },
+  ), variants: vlist(
+    ['Distant Hall', { wood: 0.50, softness: 0.85, room: 0.50 }],
+    ['Mantel', {}],
+    ['Close Tick',   { wood: 0.75, softness: 0.30, room: 0.20 }],
+  )},
 };
 
 export const EDITABLE_SOUND_IDS = Object.keys(SOUND_EDITOR_MODELS);

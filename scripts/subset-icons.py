@@ -22,8 +22,9 @@ ICONS = [
     # category + sound icon maps
     "air", "apps", "cardiology", "equalizer", "flight", "forest", "graphic_eq",
     "grass", "landscape", "local_fire_department", "location_city", "mode_fan",
-    "music_note", "noise_aware", "rainy", "raven", "scuba_diving", "self_care",
-    "shower", "stream", "thunderstorm", "train", "water_drop", "waves",
+    "music_note", "noise_aware", "notifications", "pets", "rainy", "raven",
+    "schedule", "scuba_diving", "self_care", "shower", "stream", "thunderstorm",
+    "train", "water_drop", "waves",
     # inline UI glyphs
     "arrow_back", "auto_awesome", "bedtime", "bookmark_add", "close",
     "install_mobile", "ios_share", "keyboard_arrow_down", "keyboard_arrow_up",

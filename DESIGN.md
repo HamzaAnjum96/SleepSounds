@@ -191,7 +191,7 @@ the library) plus three layers above it:
   mode and saving the mix. Glass panel, dialog semantics, Esc/backdrop closes.
 - **Drift mode** (`DriftMode.tsx`): the fullscreen night surface (see below).
 
-**Scenes** are the eight built-in presets presented as gradient-art cards in a
+**Scenes** are the ten built-in presets presented as gradient-art cards in a
 snap-scrolling shelf (`scenes.ts` holds the mood line + CSS-generated art per
 scene). Tapping plays instantly; tapping the playing scene pauses. A hand-edit
 of the mix clears the scene badge so it never lies. **Your mixes** are saved

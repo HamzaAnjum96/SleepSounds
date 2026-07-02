@@ -145,7 +145,7 @@ describe('stereo rendering', () => {
   // and heartbeat are intentionally centred, so they're not asserted here.)
   it.each([
     'ocean', 'stream', 'wind', 'shower', 'white-noise', 'pink-noise',
-    'train', 'airplane', 'night',
+    'train', 'airplane', 'night', 'chimes',
   ])(
     '%s is not effectively mono',
     (id) => {
@@ -156,7 +156,7 @@ describe('stereo rendering', () => {
 
   // Compact / non-directional sources must stay centred — guards against
   // accidentally widening them (and the comb artefacts that invites).
-  it.each(['brown-noise', 'heartbeat', 'fan'])(
+  it.each(['brown-noise', 'heartbeat', 'fan', 'purr', 'clock'])(
     '%s stays centred (mono)',
     (id) => {
       const { left, right } = decodeStereo(regenerateSound(id, {})!);
