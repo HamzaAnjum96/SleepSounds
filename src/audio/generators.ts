@@ -1143,56 +1143,74 @@ function genSpace(params?: Record<string, number>): string {
 }
 
 function genHeartbeat(params?: Record<string, number>): string {
-  const { rate = 0.5, chest = 0.6, muffle = 0.5 } = params ?? {};
-  const bpm = 52 + rate * 28;
-  const beatInterval = Math.floor(SR * 60 / bpm);
-  const lubFreq = 40 + chest * 20;
-  const dubFreq = 50 + chest * 25;
-  const noiseLp = 100 + chest * 80;
-  const finalLp = 200 + (1 - muffle) * 600;
+  // Heartbeat: the two heart sounds with real cardiac timing — S1 ("lub") at
+  // the start of systole, a softer, slightly higher S2 ("dub") about a third
+  // of the cycle later, then the long diastolic rest. Each sound is a soft
+  // pressure thump whose pitch *falls* as it decays (a valve closing into
+  // tissue, not a note), and no two beats land identically. `flow` gates a
+  // circulatory rush to the cycle — raise it with the muffle and the beat
+  // becomes the womb heard from inside.
+  const { rate = 0.5, chest = 0.6, muffle = 0.5, flow = 0.15 } = params ?? {};
+  const bpm = 50 + rate * 30;
+  const interval = (SR * 60) / bpm;
 
-  const beats = new Float32Array(N);
-  let beatPos = Math.floor(SR * 0.5);
-  while (beatPos < N) {
-    // Lub
-    const lubLen = Math.floor(SR * rand(0.08, 0.12));
-    for (let i = 0; i < lubLen && beatPos + i < N; i++) {
-      const p = i / lubLen;
-      const env = Math.sin(Math.PI * p);
-      const noise = (random() * 2 - 1) * 0.3;
-      beats[beatPos + i] += (Math.sin(2 * Math.PI * lubFreq * (i / SR)) * 0.7 + noise) * env * 0.25;
+  const buf = new Float32Array(N);
+  const flowEnv = new Float32Array(N);
+
+  const thump = (at: number, f0: number, durS: number, amp: number): void => {
+    const len = Math.floor(SR * durS);
+    let ph = random() * 2 * Math.PI;
+    for (let i = 0; i < len && at + i < N; i++) {
+      const p = i / len;
+      // ~15 ms rise, then an exponential release.
+      const env = p < 0.16 ? 0.5 - 0.5 * Math.cos(Math.PI * (p / 0.16)) : Math.exp(-3.2 * (p - 0.16));
+      const f = f0 * (1.3 - 0.4 * Math.min(1, p * 1.2)); // pitch falls as it decays
+      ph += (2 * Math.PI * f) / SR;
+      const tissue = (random() * 2 - 1) * 0.22;
+      buf[at + i] += (Math.sin(ph) + tissue) * env * amp;
     }
-    // Dub (offset ~200ms)
-    const dubOffset = Math.floor(SR * 0.2);
-    const dubLen = Math.floor(SR * rand(0.06, 0.09));
-    const dubPos = beatPos + dubOffset;
-    for (let i = 0; i < dubLen && dubPos + i < N; i++) {
-      const p = i / dubLen;
-      const env = Math.sin(Math.PI * p);
-      const noise = (random() * 2 - 1) * 0.3;
-      beats[dubPos + i] += (Math.sin(2 * Math.PI * dubFreq * (i / SR)) * 0.7 + noise) * env * 0.25 * 0.6;
+  };
+
+  // Raised-cosine surge into the flow envelope.
+  const surge = (at: number, durS: number, amp: number): void => {
+    const len = Math.floor(SR * durS);
+    for (let i = 0; i < len && at + i < N; i++) {
+      flowEnv[at + i] += amp * 0.5 * (1 - Math.cos((2 * Math.PI * i) / len));
     }
-    // Add brown noise burst for realism at beat position
-    const burstLen = Math.floor(SR * 0.15);
-    for (let i = 0; i < burstLen && beatPos + i < N; i++) {
-      const p = i / burstLen;
-      const env = Math.exp(-5 * p);
-      beats[beatPos + i] += (random() * 2 - 1) * 0.04 * env;
-    }
-    // Slight timing jitter
-    const jitter = Math.floor(rand(-0.01, 0.01) * beatInterval);
-    beatPos += beatInterval + jitter;
+  };
+
+  const s1F = 36 + chest * 16;
+  let beatAt = SR * 0.3;
+  while (beatAt < N) {
+    const s1 = Math.floor(beatAt);
+    const s2 = Math.floor(beatAt + interval * 0.33 * rand(0.94, 1.06));
+    const weight = 0.9 + random() * 0.2;
+    thump(s1, s1F, 0.11, 0.30 * weight);
+    thump(s2, s1F * 1.35, 0.075, 0.17 * weight);
+    // Systolic ejection: the rush swells right after S1; a smaller return
+    // follows S2.
+    surge(s1 + Math.floor(SR * 0.02), (interval / SR) * 0.34, weight);
+    surge(s2 + Math.floor(SR * 0.03), (interval / SR) * 0.22, 0.55 * weight);
+    beatAt += interval * (1 + (random() - 0.5) * 0.045);
   }
-  lp1(beats, noiseLp);
 
-  // Gentle bed
+  // The circulatory bed the beats sit in — silent-ish at low flow, the whole
+  // point of the womb setting at high flow.
+  const rush = brownNoise();
+  hp1(rush, 40);
+  lp1(rush, 330);
+  const flowW = 0.04 + flow * 0.55;
+  for (let i = 0; i < N; i++) buf[i] += rush[i] * (0.10 + flowEnv[i]) * flowW;
+
+  // Chest floor, then the muffle: two poles — heard through a body, not
+  // under a blanket.
   const bed = brownNoise();
-  lp1(bed, 80);
-
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) mix[i] = beats[i] + bed[i] * 0.05;
-  lp1(mix, finalLp);
-  return gen(mix, 0.6);
+  lp1(bed, 65);
+  for (let i = 0; i < N; i++) buf[i] += bed[i] * 0.05;
+  const cut = 900 - muffle * 620;
+  lp1(buf, cut);
+  lp1(buf, cut * 1.9);
+  return gen(buf, 0.6);
 }
 
 function genPurr(params?: Record<string, number>): string {

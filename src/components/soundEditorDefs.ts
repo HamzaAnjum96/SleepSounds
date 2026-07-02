@@ -348,14 +348,18 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Cruise', {}],
     ['Turbulent', { altitude: 0.60, cabin: 0.55, turbulence: 0.70 }],
   )},
-  heartbeat: { label: 'Heartbeat', mode: 'simple', groups: simpleGroup(
-    { key: 'rate', label: 'rate', def: 0.50 },
-    { key: 'chest', label: 'chest', def: 0.60 },
+  heartbeat: { label: 'Heartbeat', mode: 'simple', groups: shapeGroup(
+    { key: 'rate', label: 'pace', def: 0.50 },
+    { key: 'chest', label: 'chest depth', def: 0.60 },
     { key: 'muffle', label: 'muffle', def: 0.50 },
+    { key: 'flow', label: 'blood flow', def: 0.15 },
   ), variants: vlist(
-    ['Calm', { rate: 0.35, chest: 0.60, muffle: 0.55 }],
+    // Characters, not tiers: drifting off, the default rest, an ear on a
+    // chest, and the womb (flow + muffle carry that one).
+    ['Falling Asleep',    { rate: 0.30, chest: 0.55, muffle: 0.60, flow: 0.10 }],
     ['Resting', {}],
-    ['Deep', { rate: 0.45, chest: 0.85, muffle: 0.70 }],
+    ['Against the Chest', { rate: 0.45, chest: 0.85, muffle: 0.72, flow: 0.25 }],
+    ['Womb',              { rate: 0.60, chest: 0.70, muffle: 0.85, flow: 0.90 }],
   )},
   purr: { label: 'Cat Purr', mode: 'simple', groups: simpleGroup(
     { key: 'rate', label: 'breathing', def: 0.45 },

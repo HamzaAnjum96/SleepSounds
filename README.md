@@ -124,6 +124,18 @@ npm run preview
 
 ## Changelog
 
+### 9.0.4
+- **Heartbeat rebuilt with real cardiac timing — and a womb.** The old beat
+  was two fixed sine blips 200 ms apart. Now S1 ("lub") opens systole and a
+  softer, higher S2 ("dub") lands about a third of the cycle later, leaving
+  the long diastolic rest that makes a heart read as *slow* even at the same
+  BPM; each sound is a pressure thump whose pitch falls as it decays (a valve
+  closing into tissue, not a note), and beat timing/weight vary a little every
+  cycle. A new **blood flow** slider gates a circulatory rush to the cycle —
+  raised together with the muffle it becomes the classic womb sound. Sliders:
+  pace · chest depth · muffle · blood flow. Variants are characters, not
+  tiers: **Falling Asleep** · **Resting** · **Against the Chest** · **Womb**.
+
 ### 9.0.3
 - **Ticking Clock rebuilt around the bare click.** The feedback was blunt: the
   only passable setting was every slider at zero — i.e. the naked click. The
