@@ -36,9 +36,8 @@ class BirdsongProcessor extends AudioWorkletProcessor {
     // ── Peep scheduling ──
     this.peepCooldown = Math.floor(sampleRate * 0.8);
 
-    // ── Output smoothing ──
-    this.prevL = 0;
-    this.prevR = 0;
+    // ── Run/stop gate ramp (see process(): the gate is smoothed, not the signal) ──
+    this.gate = 0;
 
     // ── Stereo placement ──
     // A held pan that eases toward a target instead of jittering every sample;
@@ -237,23 +236,25 @@ class BirdsongProcessor extends AudioWorkletProcessor {
       mix = Math.tanh(mix * sat) / Math.tanh(sat);
 
       mix *= gain;
-      // Output headroom (see fire.worklet / data.ts): birdsong is quiet, so lift
-      // it and lower its default volume to match — same loudness by default, more
-      // available at the top of the slider.
-      mix *= 1.5;
+      // Level-match the live worklet to its WAV fallback (genBirdsong renders
+      // peak-normalised): measured at default params, ×6 puts the worklet's
+      // long-run RMS at the fallback's (~0.085), so failing over is seamless
+      // and the 0.34 default volume (data.ts) means the same loudness either
+      // way. The old ×1.5 was tuned while the output smoother was burying the
+      // signal (see the gate comment below).
+      mix *= 6.0;
 
       const active = running > 0.01 ? 1 : 0;
+      // Ease the run/stop gate (~7 ms) so starting and stopping never clicks.
+      // The GATE is smoothed, not the signal: smoothing the output samples
+      // (the previous code) was a one-pole lowpass at ~210 Hz that buried the
+      // 2–6 kHz birdsong ~20 dB — the live sound was near-silent for months.
+      this.gate += 0.03 * (active - this.gate);
+
       // Equal-power pan that holds per event and eases between them.
       const pan = this._nextPan();
-      const l = mix * Math.cos((pan + 1) * Math.PI / 4) * active;
-      const r = mix * Math.sin((pan + 1) * Math.PI / 4) * active;
-
-      // Smooth output to avoid clicks
-      this.prevL += 0.03 * (l - this.prevL);
-      this.prevR += 0.03 * (r - this.prevR);
-
-      left[i]  = this.prevL;
-      right[i] = this.prevR;
+      left[i]  = mix * Math.cos((pan + 1) * Math.PI / 4) * this.gate;
+      right[i] = mix * Math.sin((pan + 1) * Math.PI / 4) * this.gate;
     }
 
     return true;

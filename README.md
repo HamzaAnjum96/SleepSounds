@@ -151,6 +151,23 @@ for the history behind that.
 
 ## Changelog
 
+### 9.1.1
+- **Bug fix: live Birdsong was near-silent — for months.** A full-library
+  runtime sweep (play every sound, assert signal at the master bus) caught it:
+  the worklet's output "click smoother" (`prev += 0.03·(x−prev)` per sample)
+  is mathematically a one-pole lowpass at ~210 Hz, applied to the whole
+  signal — and birdsong lives at 2–6 kHz, so the live sound was buried ~20 dB
+  (peak 0.017 where its own WAV fallback renders 0.93; an earlier "birdsong is
+  quiet" ×1.5 lift had compensated the symptom without finding this). The fix
+  smooths the run/stop **gate**, not the signal, and level-matches the worklet
+  to its fallback (long-run RMS 0.084 vs 0.085 at identical default params) —
+  so failing over is seamless and the 0.34 default volume means the same
+  loudness on either route. In-app: first call now registers at ~5 s where the
+  old build showed zero signal for 25 s. Also confirmed no other worklet
+  shares the pattern (fire's one-pole is its intentional roar-brightness
+  filter), and Thunder's silent opening is by design (first strike held back
+  9–21 s).
+
 ### 9.1.0 — Cleanup, docs & cache-correctness milestone
 A maintenance release closing out the 9.0.x sound pass.
 - **Bug-class fix: in-place `public/` asset updates now reach installed

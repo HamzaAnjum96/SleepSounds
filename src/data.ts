@@ -112,9 +112,11 @@ export function releasableSounds(includeExperimental: boolean): Sound[] {
 export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
 export type Category = typeof CATEGORIES[number];
 
-/** Per-sound starting volume. Fire and birdsong are synthesized +1.5x louder
- *  for headroom, so their defaults are lowered by the same factor: what you
- *  hear by default is unchanged, but their sliders can now reach louder. */
+/** Per-sound starting volume. Fire is synthesized +1.5x louder for headroom,
+ *  so its default is lowered by the same factor: what you hear by default is
+ *  unchanged, but the slider can reach louder. Birdsong's live worklet is
+ *  level-matched to its peak-normalised WAV fallback (which runs hot), so the
+ *  lowered default keeps both routes at a normal loudness. */
 const DEFAULT_VOLUME: Record<string, number> = { fire: 0.34, birdsong: 0.34 };
 export const defaultVolumeFor = (id: string): number => DEFAULT_VOLUME[id] ?? 0.5;
 
