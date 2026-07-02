@@ -328,7 +328,7 @@ returns a gain trim **and** spectral targets per active layer: beds/motion duck
 for same-group neighbours, and when more than two broadband/water beds stack the
 non-accent ones move out of each other's way — darker lowpass, high-shelf cut,
 extra trim — applied on each layer bus (`useAudioMixer` recomputes on every
-active-set change). (`layeringTrim` remains as the gain-only predecessor.)
+active-set change).
 
 Per layer, **mute (M)** and **solo (S)** gate a layer's gain without removing it
 (folded into the level, fade-safe). A **sleep-safe** toggle (default on,

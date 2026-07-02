@@ -44,9 +44,12 @@ self.addEventListener('install', (event) => {
   // Atomic precache: addAll rejects if ANY file fails, so a flaky network can't
   // leave a half-filled cache. If it fails, this worker never activates and the
   // previous (working) version keeps serving — the app is never left broken.
+  // `cache: 'reload'` bypasses the HTTP cache, so a new build always precaches
+  // fresh bytes — without it, stable-named files edited in place (fonts.css,
+  // the icon font, worklets) could be re-cached from a stale HTTP cache.
   event.waitUntil(
     caches.open(CACHE)
-      .then((c) => c.addAll(PRECACHE))
+      .then((c) => c.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting()),
   );
 });

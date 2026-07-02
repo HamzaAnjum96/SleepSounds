@@ -13,54 +13,34 @@ export type MaskGroup = 'broad' | 'water' | 'low' | 'detail';
 export interface LayerMeta {
   role: LayerRole;
   maskGroup: MaskGroup;
-  /** 0..1 hint of how wide the layer should sit (reserved for per-layer panning
-   *  once WAV playback moves onto the Web Audio graph). */
-  defaultWidth: number;
 }
 
 export const LAYER_META: Record<string, LayerMeta> = {
   // Beds — own the spectral floor; trimmed when they collide with their kin.
-  fan:            { role: 'bed',    maskGroup: 'broad',  defaultWidth: 0.15 },
-  'white-noise':  { role: 'bed',    maskGroup: 'broad',  defaultWidth: 0.30 },
-  'pink-noise':   { role: 'bed',    maskGroup: 'broad',  defaultWidth: 0.30 },
-  'brown-noise':  { role: 'bed',    maskGroup: 'low',    defaultWidth: 0.05 },
-  train:          { role: 'bed',    maskGroup: 'broad',  defaultWidth: 0.40 },
-  airplane:       { role: 'bed',    maskGroup: 'broad',  defaultWidth: 0.40 },
-  underwater:     { role: 'bed',    maskGroup: 'low',    defaultWidth: 0.20 },
+  fan:            { role: 'bed',    maskGroup: 'broad' },
+  'white-noise':  { role: 'bed',    maskGroup: 'broad' },
+  'pink-noise':   { role: 'bed',    maskGroup: 'broad' },
+  'brown-noise':  { role: 'bed',    maskGroup: 'low' },
+  train:          { role: 'bed',    maskGroup: 'broad' },
+  airplane:       { role: 'bed',    maskGroup: 'broad' },
+  underwater:     { role: 'bed',    maskGroup: 'low' },
   // Motion — move over the bed.
-  rain:           { role: 'motion', maskGroup: 'water',  defaultWidth: 0.45 },
-  ocean:          { role: 'motion', maskGroup: 'water',  defaultWidth: 0.65 },
-  stream:         { role: 'motion', maskGroup: 'water',  defaultWidth: 0.55 },
-  shower:         { role: 'motion', maskGroup: 'water',  defaultWidth: 0.50 },
-  wind:           { role: 'motion', maskGroup: 'broad',  defaultWidth: 0.60 },
-  forest:         { role: 'motion', maskGroup: 'broad',  defaultWidth: 0.55 },
+  rain:           { role: 'motion', maskGroup: 'water' },
+  ocean:          { role: 'motion', maskGroup: 'water' },
+  stream:         { role: 'motion', maskGroup: 'water' },
+  shower:         { role: 'motion', maskGroup: 'water' },
+  wind:           { role: 'motion', maskGroup: 'broad' },
+  forest:         { role: 'motion', maskGroup: 'broad' },
   // Accents — sparse or localised; left alone.
-  thunder:        { role: 'accent', maskGroup: 'low',    defaultWidth: 0.70 },
-  fire:           { role: 'accent', maskGroup: 'detail', defaultWidth: 0.25 },
-  birdsong:       { role: 'accent', maskGroup: 'detail', defaultWidth: 0.55 },
-  night:          { role: 'accent', maskGroup: 'detail', defaultWidth: 0.50 },
-  heartbeat:      { role: 'accent', maskGroup: 'low',    defaultWidth: 0.10 },
-  purr:           { role: 'accent', maskGroup: 'low',    defaultWidth: 0.10 },
-  chimes:         { role: 'accent', maskGroup: 'detail', defaultWidth: 0.60 },
-  clock:          { role: 'accent', maskGroup: 'detail', defaultWidth: 0.15 },
+  thunder:        { role: 'accent', maskGroup: 'low' },
+  fire:           { role: 'accent', maskGroup: 'detail' },
+  birdsong:       { role: 'accent', maskGroup: 'detail' },
+  night:          { role: 'accent', maskGroup: 'detail' },
+  heartbeat:      { role: 'accent', maskGroup: 'low' },
+  purr:           { role: 'accent', maskGroup: 'low' },
+  chimes:         { role: 'accent', maskGroup: 'detail' },
+  clock:          { role: 'accent', maskGroup: 'detail' },
 };
-
-const dbToGain = (db: number): number => Math.pow(10, db / 20);
-
-/** A gentle level trim for a sound given everything else currently playing, so
- *  stacked beds and piled-up motion layers don't fog the mix. Beds duck a touch
- *  for each same-group neighbour; a crowd of same-group motion layers ducks the
- *  extras; accents are never trimmed. Returns a multiplier in (0, 1]. */
-export function layeringTrim(activeIds: string[], soundId: string): number {
-  const self = LAYER_META[soundId];
-  if (!self) return 1;
-  const sameGroup = activeIds.filter(
-    (id) => id !== soundId && LAYER_META[id]?.maskGroup === self.maskGroup,
-  ).length;
-  if (self.role === 'bed' && sameGroup > 0) return dbToGain(-1.5 * sameGroup);
-  if (self.role === 'motion' && sameGroup > 1) return dbToGain(-1.0 * (sameGroup - 1));
-  return 1;
-}
 
 export interface LayerShaping {
   /** Level trim in dB (≤ 0). */
@@ -74,8 +54,9 @@ export interface LayerShaping {
 const TRANSPARENT: LayerShaping = { gainDb: 0, lpHz: 20000, shelfDb: 0 };
 
 /** Spectral slotting for a layer given everything else playing. A solo sound and
- *  small mixes stay transparent. The level trim from {@link layeringTrim} still
- *  applies (beds/motion), and beyond that, when **more than two** broadband or
+ *  small mixes stay transparent. Beds duck a touch for each same-group
+ *  neighbour and crowded motion layers duck the extras (the gainDb term);
+ *  beyond that, when **more than two** broadband or
  *  water beds pile up, the non-accent ones move out of each other's way: the
  *  extras get a darker top (lowpass), a high-shelf cut, and a small extra trim —
  *  the busiest layer keeps the spectrum, the rest recede. Annoyance tracks

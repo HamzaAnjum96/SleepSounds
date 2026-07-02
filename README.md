@@ -3,7 +3,8 @@
 > **For anyone making changes (human or AI):**
 > - Bump the version in `package.json` with every change.
 > - Add an entry to the `## Changelog` section at the bottom of this file describing what changed and why.
-> - If sound generation changes significantly, bump the saved-mixes key in `src/storage/keys.ts` (`STORAGE_KEYS.savedMixes`, e.g. `-v2` → `-v3`) so stale loops aren't restored.
+> - Saved mixes store only *parameter state* (never audio — loops re-render fresh every session), and `storage/migrations.ts` drops unknown sound ids and unknown-shaped data safely. So retuning a sound or renaming a param never needs a storage change. Bump the saved-mixes key in `src/storage/keys.ts` (`STORAGE_KEYS.savedMixes`, e.g. `-v2` → `-v3`) **only** if a kept param key changes *meaning* incompatibly (same key, different effect) — and know that bumping discards users' saved mixes, so prefer a migration.
+> - If you add or change an icon glyph, follow **Icons: the Material Symbols subset** below — new glyph names must be added to the subset font or they render as text.
 
 **drift away** (repo name Sleep Mixer) is a mobile-first ambient sound app for
 relaxation and sleep. All 21 sounds are generated in the browser; nothing is
@@ -116,13 +117,68 @@ npm run build
 npm run preview
 ```
 
+## Icons: the Material Symbols subset
+
+The UI's icons are Google's **Material Symbols Rounded**, self-hosted as a
+~7 KB subset (`public/fonts/material-8.woff2`) of the ~510 KB full font, so
+icons work offline and no request leaves the device. It's a *ligature* font:
+markup contains the icon's name as text (`<span
+class="material-symbols-rounded">pets</span>`) and the font maps that letter
+sequence to the glyph.
+
+**Whenever you reference a new glyph name anywhere in `src/`** — the icon maps
+in `src/lib/soundIcons.ts` / `src/lib/categoryIcons.ts`, or an inline
+`material-symbols-rounded` span — you must add it to the `ICONS` list in
+`scripts/subset-icons.py` and re-run the subset:
+
+```bash
+pip install fonttools brotli
+python3 scripts/subset-icons.py
+```
+
+A glyph missing from the subset renders as its raw name in text (the word
+"pets", not tofu), so eyeball any new icon. The script fails loudly on a
+typo'd name. In-place font updates are cache-safe: the service-worker build id
+hashes every precached file's bytes (`scripts/inject-precache.mjs`) and the SW
+installs with `cache: 'reload'` (`public/sw.js`) — see the script's docstring
+for the history behind that.
+
 ## Notes
 
-- All audio loops are procedurally synthesized in `src/audio/` (`generators.ts` over the `dsp.ts` helpers) and encoded to WAV blobs at runtime (two-channel 16-bit PCM; a few non-directional sources stay centred). Stereo width is baked in at generation — broad beds via decorrelated opposite time-shifts (no comb filtering), discrete events via equal-power panning — and layering is masking-aware (`layerMeta.ts` roles + `layeringTrim`). The generator module is code-split, so it loads on a sound's first play rather than at startup.
+- All audio loops are procedurally synthesized in `src/audio/` (`generators.ts` over the `dsp.ts` helpers) and encoded to WAV blobs at runtime (two-channel 16-bit PCM; a few non-directional sources stay centred). Stereo width is baked in at generation — broad beds via decorrelated opposite time-shifts (no comb filtering), discrete events via equal-power panning — and layering is masking-aware (`layerMeta.ts` roles + `layerShaping`). The generator module is code-split, so it loads on a sound's first play rather than at startup.
 - No backend is required.
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 9.1.0 — Cleanup, docs & cache-correctness milestone
+A maintenance release closing out the 9.0.x sound pass.
+- **Bug-class fix: in-place `public/` asset updates now reach installed
+  clients.** The SW build id previously hashed only the precached file
+  *names*, so any stable-named asset edited in place — a re-subset icon font,
+  and notably **every audio worklet** (rain, fire, thunder, birdsong, windy
+  forest all shipped in-place retunes over their history) — could leave
+  installed clients running old bytes. The build id now hashes every
+  precached file's **contents** (`scripts/inject-precache.mjs`), and the SW
+  install precaches with `cache: 'reload'` requests so a new build can't
+  re-cache stale bytes out of the HTTP cache (`public/sw.js`). Verified: a
+  single flipped byte in the icon font changes the build id.
+- **The icon-subset process is now documented** in three places: a full
+  docstring in `scripts/subset-icons.py` (what a ligature font is, when to
+  re-run, the failure mode — a missing glyph renders as its raw name in text —
+  and the cache-safety story), a new **"Icons: the Material Symbols subset"**
+  section in this README, and a **"Fonts & icons"** section in
+  `ARCHITECTURE.md`.
+- **Dead code removed.** `layeringTrim` (superseded by `layerShaping`, which
+  the mixer actually uses — its invariant tests now target `layerShaping`
+  directly) and the never-consumed `defaultWidth` field on every `LAYER_META`
+  entry (stereo width has been baked into generation since v4).
+- **Docs de-drifted.** The maintenance note at the top of this README no
+  longer tells you to bump the saved-mixes key for generation changes (loops
+  re-render every session; bumping would discard user mixes — it's only for
+  incompatible param-*meaning* changes), `DESIGN.md` no longer references the
+  removed `layeringTrim`, and `ARCHITECTURE.md` documents the PWA
+  cache-correctness rules above.
 
 ### 9.0.13
 - **Brown Noise: character chips.** Smooth / Rolling / Deep was a depth dial;

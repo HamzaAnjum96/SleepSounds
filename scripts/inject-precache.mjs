@@ -28,9 +28,25 @@ const assets = [
   ...listDir('worklets'),
 ];
 
-// Build id: a short hash over the precached file names, so the cache version
-// changes exactly when the asset set changes.
-const version = createHash('sha256').update(assets.sort().join('|')).digest('hex').slice(0, 10);
+// The stable-named shell files the SW also precaches (see PRECACHE in
+// public/sw.js; './' is index.html). They must be part of the build id too.
+const shellFiles = [
+  'index.html', 'manifest.json', 'privacy.html', 'favicon.svg',
+  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'fonts.css',
+];
+
+// Build id: a hash over every precached file's name AND bytes. Hashing names
+// alone (the original scheme) meant an asset edited *in place* — a re-subset
+// icon font, a retuned audio worklet — didn't change the cache version, so
+// installed clients kept serving the old bytes (the 8.3.0 missing-icons bug).
+// Content in the hash makes every byte-level change a new cache.
+const hash = createHash('sha256');
+for (const rel of [...assets.map((a) => a.slice(2)), ...shellFiles].sort()) {
+  hash.update(rel);
+  hash.update('\0');
+  try { hash.update(readFileSync(join(DIST, rel))); } catch { /* absent shell file: name still counted */ }
+}
+const version = hash.digest('hex').slice(0, 10);
 
 const literal = assets.map((p) => `  '${p}',`).join('\n');
 const appVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;

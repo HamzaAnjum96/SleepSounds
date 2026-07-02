@@ -109,6 +109,28 @@ for its build version; if a newer one is cached, it silently reloads — but onl
 while **nothing is playing**, online, and foregrounded, and at most once per
 session — so an update can never cut off a mix.
 
+**Cache correctness for stable-named assets.** Vite content-hashes JS/CSS, but
+everything under `public/` ships with a stable name — the fonts, the icon
+subset, and *all the audio worklets*. Two mechanisms make in-place edits to
+those reach installed clients: the SW build id is a hash over every precached
+file's **bytes** (not just names), so any byte-level change installs a fresh
+cache; and the install step precaches with `cache: 'reload'` requests, so those
+fetches bypass the HTTP cache rather than re-caching stale bytes. (The 8.3.0
+release demonstrated the failure mode: a re-subset icon font under an unchanged
+name never reached installed clients.)
+
+## Fonts & icons
+
+Type (Inter, Cormorant) and icons (Material Symbols Rounded) are self-hosted
+woff2 subsets in `public/fonts/` — nothing is fetched from Google at runtime.
+The icon font is a **ligature font** (markup carries the icon's *name* as
+text), subset from ~510 KB down to ~7 KB by `scripts/subset-icons.py`, which
+resolves each name in its `ICONS` list through the font's ligature table and
+keeps only those glyphs. Any new glyph referenced in `src/` must be added to
+that list and the script re-run, or the icon renders as its raw name in text.
+The full process is documented in the script's docstring and the README's
+"Icons" section.
+
 ## Testing
 
 - **`tests/*.test.ts`** (vitest, node env): generator validity (no NaN, audible,

@@ -1,17 +1,37 @@
 #!/usr/bin/env python3
 """Subset the Material Symbols icon font to just the icons the app uses.
 
-The full variable-instance woff2 from Google is ~510 KB; the app uses ~40
-icons, so the subset is ~7 KB. Run this whenever the ICONS list below changes
-(i.e. you reference a new `material-symbols-rounded` glyph in the UI):
+Why: the full variable-instance woff2 from Google is ~510 KB; the app uses
+~40 icons, so the subset is ~7 KB — and the app self-hosts it so no request
+ever leaves the device for type or icons (see public/fonts.css).
+
+How it works: Material Symbols is a *ligature* font — the markup contains the
+icon's name as text (<span class="material-symbols-rounded">pets</span>) and
+the font's GSUB ligature table maps that letter sequence to the glyph. This
+script fetches the full font from Google Fonts, resolves each name in ICONS
+through the ligature table, keeps only those glyphs (plus the letter glyphs
+the ligatures need to trigger), and writes public/fonts/material-8.woff2.
+
+When to run it — any time a new glyph name is referenced anywhere in src/:
+the sound/category icon maps (src/lib/soundIcons.ts, src/lib/categoryIcons.ts)
+or an inline material-symbols-rounded span. A glyph missing from the subset
+renders as its raw ligature text (e.g. the word "pets"), not as tofu, so it's
+easy to miss in a quick glance — check any new icon visually.
 
     pip install fonttools brotli
     python3 scripts/subset-icons.py
 
-It fetches the full font from Google Fonts, keeps only the named icons (and the
-letters their ligatures need), and writes public/fonts/material-8.woff2.
-Keep ICONS in sync with the glyph names used across src/ (the icon maps in
-src/lib/*Icons.ts and the inline material-symbols-rounded spans).
+The script FAILS if any name in ICONS can't be resolved, so a typo'd glyph
+name is caught here rather than shipping as text.
+
+Cache-safety: the font keeps a stable filename, which is only safe because
+the service-worker build id hashes every precached file's *bytes*
+(scripts/inject-precache.mjs) and the SW installs with cache:'reload'
+(public/sw.js) — so an in-place re-subset reaches installed clients on the
+next deploy. (Before those two fixes, an in-place update kept serving the old
+cached font — the 8.3.0 missing-icons bug; 9.0.0 shipped the rename to
+material-8 as the immediate fix.) If you ever regress those, bump the
+filename here and in public/fonts.css instead.
 """
 import re
 import urllib.request
