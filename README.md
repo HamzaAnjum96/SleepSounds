@@ -124,6 +124,14 @@ npm run preview
 
 ## Changelog
 
+### 9.0.8
+- **Windy Forest chips are kinds of woods.** Light Rustle / Breezy Canopy /
+  Storm in the Trees was a wind-speed ramp; the set is now **Aspen Shimmer**
+  (leaves trembling in barely any wind) · **Breezy Canopy** (default) ·
+  **Deep Woods** (close old-growth, branch creak and twig detail leading) ·
+  **Before the Storm** (the whole forest heaving). The presets drive the live
+  AudioWorklet and the WAV fallback identically.
+
 ### 9.0.7
 - **Fan chips are appliances now.** The synthesis already models fan acoustics
   properly (dual airflow bands, casing resonances, blade-amplitude drift from

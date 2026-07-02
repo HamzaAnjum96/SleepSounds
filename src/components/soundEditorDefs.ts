@@ -245,9 +245,13 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'twigs', label: 'branch detail', def: 0.12 },
     { key: 'breeze', label: 'wind speed', def: 0.34 },
   ), variants: vlist(
-    ['Light Rustle',       { leaves: 0.45, twigs: 0.20, breeze: 0.30 }],
+    // Kinds of woods, not wind steps: trembling leaves in barely any wind,
+    // the default canopy, close old-growth with creaking detail, and the
+    // whole forest heaving before weather arrives.
+    ['Aspen Shimmer',    { leaves: 0.72, twigs: 0.04, breeze: 0.20 }],
     ['Breezy Canopy', {}],
-    ['Storm in the Trees', { leaves: 0.90, twigs: 0.60, breeze: 0.80 }],
+    ['Deep Woods',       { leaves: 0.42, twigs: 0.58, breeze: 0.38 }],
+    ['Before the Storm', { leaves: 0.85, twigs: 0.45, breeze: 0.85 }],
   )},
   stream: { label: 'Stream', mode: 'simple', groups: simpleGroup(
     { key: 'flow', label: 'flow', def: 0.46 },
