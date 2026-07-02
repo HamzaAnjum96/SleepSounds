@@ -153,8 +153,8 @@ export const BUILTIN_PRESETS: Preset[] = [
   // The purr leads; the rain is the exact "Light Rain" variant (so the editor
   // shows that name), a thin far-off patter under the breathing.
   { id: 'builtin-curled-up',     name: 'Curled Up',         createdAt: '', masterVolume: 0.75, state: builtinState([['purr', 0.55], ['rain', 0.24, { intensity: 0.18, heaviness: 0.22, surface: 0.55, bed: 0.50, drops: 0.08, movement: 0.40, space: 0.20, metallic: 0 }]]) },
-  // Chimes over their own quiet air, night insects far back, and the exact
-  // "Breeze" wind variant barely moving underneath.
-  { id: 'builtin-evening-porch', name: 'Evening Porch',     createdAt: '', masterVolume: 0.78, state: builtinState([['chimes', 0.52], ['night', 0.14], ['wind', 0.14, { gusts: 0.25, whistle: 0.15, tone: 0.45 }]]) },
+  // Chimes over night insects, and the exact "Night Breeze" wind variant
+  // barely moving underneath (so the editor shows that name).
+  { id: 'builtin-evening-porch', name: 'Evening Porch',     createdAt: '', masterVolume: 0.78, state: builtinState([['chimes', 0.52], ['night', 0.14], ['wind', 0.14, { gusts: 0.22, whistle: 0.04, tone: 0.32 }]]) },
 ];
 

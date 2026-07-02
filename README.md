@@ -124,6 +124,19 @@ npm run preview
 
 ## Changelog
 
+### 9.0.6
+- **Wind gusts no longer run on rails.** The gusting was three fixed sine
+  waves multiplied together, so the same swell pattern repeated every ~26
+  seconds — exactly the kind of cycle a half-asleep ear latches onto. Gusts
+  now arrive on irregular, loop-closed random walks with fast micro-flutter
+  inside them. The edge-tone whistles also behave physically now: they only
+  sing when the wind is actually up (gated by the gust level) and their pitch
+  follows the **brightness** slider (renamed from the vague "tone"). Variants
+  are places, not levels: **Night Breeze** · **Open Hillside** · **Around the
+  Eaves** (whistle-led, wind heard around a building) · **Winter Gale**. The
+  Evening Porch scene's wind layer now matches the Night Breeze variant
+  exactly, so its editor shows the name.
+
 ### 9.0.5
 - **Ocean waves now break.** The old wave was one noise band swelling and
   fading — surf with no surf. Each wave now carries the full shoreline

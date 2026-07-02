@@ -400,16 +400,19 @@ function genWind(params?: Record<string, number>): string {
   const gustDepth = 0.2 + gusts * 0.6;
   const whistleMixLevel = whistle * 0.28;
   const bodyLp = 600 + tone * 800;
-  // Wind: gust-driven turbulence with drifting resonant edge tones
+  // Wind: gust-driven turbulence with drifting resonant edge tones. Gusts
+  // arrive irregularly (loop-closed random walks) — the previous triple-sine
+  // pattern repeated audibly every ~26 s, which is exactly the kind of cycle
+  // the half-asleep ear latches onto.
   const buf = pinkNoise();
   hp1(buf, 90);
   lp1(buf, bodyLp + 400); lp1(buf, bodyLp);
-  const drift = smoothRandomLfo(0.84, 1.14, 1.8, 5.2);
+  const gust = smoothRandomLfo(0, 1, 2.4, 7.0);       // where the gusts live
+  const flutter = smoothRandomLfo(0.82, 1.12, 0.22, 0.8); // fast micro-turbulence
+  const drift = smoothRandomLfo(0.9, 1.1, 1.8, 5.2);
   for (let i = 0; i < N; i++) {
-    const g1 = (1 - gustDepth) + gustDepth * Math.abs(Math.sin((2 * Math.PI * 0.038 * i) / SR));
-    const g2 = 0.72 + 0.28 * Math.sin((2 * Math.PI * 0.11 * i) / SR + 1.3);
-    const g3 = 0.88 + 0.12 * Math.sin((2 * Math.PI * 0.23 * i) / SR + 0.6);
-    buf[i] *= g1 * g2 * g3 * drift[i];
+    const g = (1 - gustDepth) + gustDepth * (0.18 + 0.82 * gust[i] * gust[i]);
+    buf[i] *= g * flutter[i] * drift[i];
   }
   // Gust bed: wind's whoosh is low/mid-band (rolled off ~1–1.4 kHz), so the
   // default 800 Hz crossover would spread the body itself and the gust reads as
@@ -417,12 +420,15 @@ function genWind(params?: Record<string, number>): string {
   // crossover above its content; width comes from the panned edge tones below.
   const bed = decorrelateMono(buf, 13, 1600);
   // Edge tones each sit at their own place across the stereo field, so the
-  // whistles read as located resonances rather than a centred chorus.
+  // whistles read as located resonances rather than a centred chorus. Their
+  // pitch follows the brightness control, and they only really sing when the
+  // wind is actually up — an edge tone in a lull is wrong.
+  const whistleShift = 0.72 + tone * 0.56;
   const whistleStrips = [
-    { fc: 360,  q: 4.0, pan: -0.55 },
-    { fc: 620,  q: 4.5, pan:  0.40 },
-    { fc: 960,  q: 4.2, pan: -0.30 },
-    { fc: 1380, q: 5.0, pan:  0.62 },
+    { fc: 360 * whistleShift,  q: 4.0, pan: -0.55 },
+    { fc: 620 * whistleShift,  q: 4.5, pan:  0.40 },
+    { fc: 960 * whistleShift,  q: 4.2, pan: -0.30 },
+    { fc: 1380 * whistleShift, q: 5.0, pan:  0.62 },
   ];
   const whistleL = new Float32Array(N);
   const whistleR = new Float32Array(N);
@@ -433,7 +439,7 @@ function genWind(params?: Record<string, number>): string {
     const pl = Math.cos((s.pan + 1) * Math.PI / 4);
     const pr = Math.sin((s.pan + 1) * Math.PI / 4);
     for (let i = 0; i < N; i++) {
-      const v = stripNoise[i] * stripLfo[i] * 0.25;
+      const v = stripNoise[i] * stripLfo[i] * (0.30 + 0.70 * gust[i]) * 0.25;
       whistleL[i] += v * pl; whistleR[i] += v * pr;
     }
   }

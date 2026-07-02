@@ -231,11 +231,14 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   wind: { label: 'Wind', mode: 'simple', groups: simpleGroup(
     { key: 'gusts', label: 'gusts', def: 0.35 },
     { key: 'whistle', label: 'whistle', def: 0.08 },
-    { key: 'tone', label: 'tone', def: 0.40 },
+    { key: 'tone', label: 'brightness', def: 0.40 },
   ), variants: vlist(
-    ['Breeze',       { gusts: 0.25, whistle: 0.15, tone: 0.45 }],
-    ['Gusty', {}],
-    ['Howling Gale', { gusts: 0.85, whistle: 0.60, tone: 0.60 }],
+    // Places, not levels: a soft night airing, the default open ground, wind
+    // heard whistling around a building, and a hard winter blow.
+    ['Night Breeze',     { gusts: 0.22, whistle: 0.04, tone: 0.32 }],
+    ['Open Hillside', {}],
+    ['Around the Eaves', { gusts: 0.55, whistle: 0.62, tone: 0.42 }],
+    ['Winter Gale',      { gusts: 0.85, whistle: 0.35, tone: 0.68 }],
   )},
   forest: { label: 'Windy Forest', mode: 'simple', groups: simpleGroup(
     { key: 'leaves', label: 'leaf rustle', def: 0.52 },
