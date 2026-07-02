@@ -152,6 +152,23 @@ for the history behind that.
 
 ## Changelog
 
+### 9.1.7
+- **Every variant that depicts something now has a drawn mark.** The crafted
+  16px chip marks (previously only rain's roof/window/tin and fire's flames)
+  now cover ten sounds — 39 new marks: ocean's ripples / horizon surf /
+  cresting roller / storm spray; wind's starlit streamline / hillside / roof
+  eaves / stacked gale; the four fans as their actual appliances; the woods
+  (trembling leaves, tree crown, twin pines, a pine bent into the wind);
+  train's receding rails / lit sleeper carriage / jointed rail / express
+  nose; airplane's crescent-and-plane / level cruise / swept wing / bumpy
+  flight line; heartbeat's drifting heart / heart / filled heart / heart held
+  in a circle (Womb); the clock as pendulum / mantel arch / tall case /
+  tick-through-a-doorway; the chime sets hanging still, long, leaning, and
+  thrown wide; and three cat faces for the purr (eyes closed, settled, rumble
+  radiating). All inherit the chip's category accent via `currentColor`; the
+  noise family keeps position bars deliberately — a spectral tier *is* that
+  family's honest character axis.
+
 ### 9.1.6
 - **Train no longer sounds like overpowering static.** The continuous floor's
   broadband bands (rolling noise, rail mid, wheel top, aero hiss) sat on top

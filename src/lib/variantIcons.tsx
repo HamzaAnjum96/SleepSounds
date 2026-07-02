@@ -204,6 +204,407 @@ function Crackling() {
   );
 }
 
+// ── ocean (shore scenes) ─────────────────────────────────────────────────────
+function Lap() {
+  // two small ripple lines, barely moving
+  return (
+    <Svg>
+      <path d="M2.5 7.5 q1.8 -1.4 3.6 0 t3.6 0 t3.6 0" />
+      <path d="M3.5 11 q1.7 -1.2 3.4 0 t3.4 0" opacity={0.55} />
+    </Svg>
+  );
+}
+function FarSurf() {
+  // a flat horizon with small surf far below it
+  return (
+    <Svg>
+      <path d="M2 5.5 H14" />
+      <path d="M3.5 10.5 q1.6 -1.3 3.2 0 t3.2 0 t3.2 0" opacity={0.7} />
+    </Svg>
+  );
+}
+function Roller() {
+  // one cresting curl over the waterline
+  return (
+    <Svg>
+      <path d="M2.5 12 C 2.5 6.6, 8.4 5.4, 10.8 7.6 C 12.2 8.9, 11.4 11, 9.4 10.6" />
+      <path d="M2.5 12.6 H13.5" opacity={0.6} />
+    </Svg>
+  );
+}
+function StormSurf() {
+  // a heavy curl throwing spray
+  return (
+    <Svg>
+      <path d="M2 12.4 C 2 6, 9 4.4, 11.8 7 C 13.4 8.5, 12.4 11.2, 10 10.6" />
+      <circle cx="12.9" cy="4.4" r="0.8" {...fill} />
+      <circle cx="10.9" cy="3.2" r="0.6" {...fill} opacity={0.8} />
+    </Svg>
+  );
+}
+
+// ── wind (places) ────────────────────────────────────────────────────────────
+function NightBreeze() {
+  // one soft streamline under a star
+  return (
+    <Svg>
+      <path d="M2.5 9.5 q4.5 -2 8 0 q1.8 1 0.4 1.9" />
+      <circle cx="12.4" cy="4.2" r="0.9" {...fill} opacity={0.85} />
+    </Svg>
+  );
+}
+function Hillside() {
+  // wind over an open hill
+  return (
+    <Svg>
+      <path d="M2 13 Q8 7.4 14 13" />
+      <path d="M3.5 6.5 q3 -1.4 6 0" opacity={0.85} />
+      <path d="M5.5 4 q2.4 -1.1 4.8 0" opacity={0.55} />
+    </Svg>
+  );
+}
+function Eaves() {
+  // a roof corner with the wind curling under it
+  return (
+    <Svg>
+      <path d="M3 8.5 L8 3.8 L13 8.5" />
+      <path d="M4.5 12 q3.2 -1.8 6.4 0 q1.4 0.9 0.2 1.6" />
+    </Svg>
+  );
+}
+function Gale() {
+  // hard, stacked streamlines
+  return (
+    <Svg>
+      <path d="M2 5 q4.4 -1.6 8.6 0 q1.8 0.8 0.5 1.6" />
+      <path d="M2 9 q5 -1.8 9.8 0" />
+      <path d="M2 12.4 q3.6 -1.4 7 0" opacity={0.7} />
+    </Svg>
+  );
+}
+
+// ── fan (appliances) ─────────────────────────────────────────────────────────
+function Purifier() {
+  // a slim tower with vent slots
+  return (
+    <Svg>
+      <rect x="5.4" y="2.8" width="5.2" height="10.4" rx="2.2" />
+      <path d="M7.2 6 H8.8 M7.2 8 H8.8 M7.2 10 H8.8" opacity={0.8} />
+    </Svg>
+  );
+}
+function RoundFan() {
+  // the bedside fan head
+  return (
+    <Svg>
+      <circle cx="8" cy="8" r="5.2" />
+      <circle cx="8" cy="8" r="0.9" {...fill} />
+      <path d="M8 6.9 Q9.6 4.8 8.4 3.6 M9 8.6 Q11.4 9.4 12 7.8 M6.9 8.4 Q5.2 10.2 6.2 11.8" opacity={0.85} />
+    </Svg>
+  );
+}
+function BoxFan() {
+  // a square case around the blades
+  return (
+    <Svg>
+      <rect x="2.8" y="2.8" width="10.4" height="10.4" rx="1.6" />
+      <circle cx="8" cy="8" r="3.4" opacity={0.85} />
+      <circle cx="8" cy="8" r="0.8" {...fill} />
+    </Svg>
+  );
+}
+function ShopFan() {
+  // a big head on a stand
+  return (
+    <Svg>
+      <circle cx="8" cy="6.4" r="4.2" />
+      <circle cx="8" cy="6.4" r="0.8" {...fill} />
+      <path d="M8 10.6 V13.2 M5.6 13.2 H10.4" />
+    </Svg>
+  );
+}
+
+// ── windy forest (kinds of woods) ────────────────────────────────────────────
+function Aspen() {
+  // small leaves trembling
+  return (
+    <Svg>
+      <path d={teardrop(5, 3.4, 0.55)} {...fill} />
+      <path d={teardrop(10.6, 5, 0.55)} {...fill} opacity={0.85} />
+      <path d={teardrop(7.4, 8.6, 0.55)} {...fill} opacity={0.7} />
+      <path d="M3.5 12.8 q3.2 -1.3 6.4 0" opacity={0.6} />
+    </Svg>
+  );
+}
+function Canopy() {
+  // a tree crown on its trunk
+  return (
+    <Svg>
+      <path d="M4.5 10.6 Q2.4 10.4 2.8 8.2 Q2 5.6 4.8 5.2 Q5.4 2.6 8.2 3 Q11 2.8 11.4 5.4 Q14 6 13.2 8.4 Q13.6 10.4 11.4 10.6 Z" />
+      <path d="M8 10.6 V13.6" />
+    </Svg>
+  );
+}
+function DeepWoods() {
+  // two close pines
+  return (
+    <Svg>
+      <path d="M2.6 12.6 L5.4 5 L8.2 12.6 Z" />
+      <path d="M8 12.6 L10.6 6.8 L13.2 12.6 Z" opacity={0.75} />
+    </Svg>
+  );
+}
+function StormTrees() {
+  // a pine leaning hard in the wind
+  return (
+    <Svg>
+      <path d="M3.4 13 L7.8 5.4 L9.6 13 Z" />
+      <path d="M8.5 4.5 q3 -1.4 5.4 -0.4" opacity={0.85} />
+      <path d="M10 7.4 q2.4 -1 4 -0.3" opacity={0.6} />
+    </Svg>
+  );
+}
+
+// ── train (journeys) ─────────────────────────────────────────────────────────
+function FarRails() {
+  // rails receding to the horizon
+  return (
+    <Svg>
+      <path d="M6.6 3.6 L3.6 13.2 M9.4 3.6 L12.4 13.2" />
+      <path d="M5.9 7.4 H10.1 M5 10.4 H11" opacity={0.6} />
+    </Svg>
+  );
+}
+function SleeperCar() {
+  // a carriage with lit windows
+  return (
+    <Svg>
+      <rect x="2.6" y="5" width="10.8" height="6.2" rx="1.4" />
+      <path d="M5.4 7.2 H6.8 M9.2 7.2 H10.6" opacity={0.85} />
+      <circle cx="5.4" cy="12.6" r="0.9" {...fill} />
+      <circle cx="10.6" cy="12.6" r="0.9" {...fill} />
+    </Svg>
+  );
+}
+function JointedRail() {
+  // a rail with a joint gap — the clack
+  return (
+    <Svg>
+      <path d="M2 9.4 H6.9 M9.1 9.4 H14" />
+      <path d="M6.9 7.6 V11.2 M9.1 7.6 V11.2" opacity={0.8} />
+      <circle cx="8" cy="4.6" r="0.8" {...fill} opacity={0.85} />
+    </Svg>
+  );
+}
+function Express() {
+  // a streamlined nose with speed lines
+  return (
+    <Svg>
+      <path d="M5 6 H10.2 Q13.6 6 13.6 8.5 Q13.6 11 10.2 11 H5 Z" />
+      <path d="M2 7.2 H4 M2 9.8 H4" opacity={0.7} />
+    </Svg>
+  );
+}
+
+// ── airplane (seats & moments) ───────────────────────────────────────────────
+function NightFlight() {
+  // a crescent with a distant plane
+  return (
+    <Svg>
+      <path d="M10.2 3.2 A4.6 4.6 0 1 0 13.8 9.4 A4 4 0 0 1 10.2 3.2" />
+      <path d="M2.6 11.6 L6.4 10.4 M4.6 9.6 L4.9 12.4" opacity={0.85} />
+    </Svg>
+  );
+}
+function Cruise() {
+  // level flight over a still horizon
+  return (
+    <Svg>
+      <path d="M3 7 L13 7 M8.2 7 L6 3.6 M8.2 7 L6.6 10 M12 7 L13.4 4.9" opacity={0.95} />
+      <path d="M3.5 12.6 H12.5" opacity={0.5} />
+    </Svg>
+  );
+}
+function Wing() {
+  // the view over a swept wing
+  return (
+    <Svg>
+      <path d="M2.4 11.6 L12.8 4.4 L13.6 6.6 L5.4 12.8 Z" />
+      <path d="M9.4 9.2 L12 10.8" opacity={0.7} />
+    </Svg>
+  );
+}
+function Chop() {
+  // the same flight line, gone bumpy
+  return (
+    <Svg>
+      <path d="M3 6.4 L13 6.4 M8.2 6.4 L6 3.2 M8.2 6.4 L6.6 9.2" opacity={0.95} />
+      <path d="M2.6 12 q1.6 -1.6 3.2 0 t3.2 0 t3.2 0" opacity={0.75} />
+    </Svg>
+  );
+}
+
+// ── heartbeat (closeness) ────────────────────────────────────────────────────
+const HEART =
+  'M8 12.4 C 4.4 9.7, 3 6.9, 4.9 5.3 C 6.2 4.2, 7.6 4.9, 8 6 C 8.4 4.9, 9.8 4.2, 11.1 5.3 C 13 6.9, 11.6 9.7, 8 12.4 Z';
+function HeartDrift() {
+  // a heart drifting off
+  return (
+    <Svg>
+      <path d={HEART} transform="translate(-1.2 1.4) scale(0.82)" />
+      <path d="M10.6 3.2 h2.4 l-2.4 2.4 h2.4" opacity={0.8} />
+    </Svg>
+  );
+}
+function HeartRest() {
+  return (
+    <Svg>
+      <path d={HEART} />
+    </Svg>
+  );
+}
+function HeartClose() {
+  // pressed close — the heart, filled
+  return (
+    <Svg>
+      <path d={HEART} {...fill} />
+    </Svg>
+  );
+}
+function Womb() {
+  // a heart held inside
+  return (
+    <Svg>
+      <circle cx="8" cy="8" r="6" />
+      <path d={HEART} transform="translate(2.4 2.6) scale(0.7)" {...fill} opacity={0.9} />
+    </Svg>
+  );
+}
+
+// ── ticking clock (cases) ────────────────────────────────────────────────────
+function Pendulum() {
+  // the naked mechanism
+  return (
+    <Svg>
+      <path d="M8 2.8 V9" />
+      <circle cx="8" cy="10.8" r="1.9" {...fill} />
+      <path d="M4.4 5.4 Q5 7.4 6.4 8.6 M11.6 5.4 Q11 7.4 9.6 8.6" opacity={0.45} />
+    </Svg>
+  );
+}
+function Mantel() {
+  // the arched mantel case
+  return (
+    <Svg>
+      <path d="M3.4 12.8 V8.8 A4.6 4.6 0 0 1 12.6 8.8 V12.8 Z" />
+      <path d="M8 8.6 V6.9 M8 8.6 L9.3 9.3" opacity={0.9} />
+    </Svg>
+  );
+}
+function Grandfather() {
+  // the tall case
+  return (
+    <Svg>
+      <rect x="5.2" y="2.4" width="5.6" height="11.2" rx="1.1" />
+      <circle cx="8" cy="5.4" r="1.7" />
+      <path d="M8 8.4 V11" opacity={0.7} />
+    </Svg>
+  );
+}
+function HallClock() {
+  // heard from another room — the tick, softened by distance
+  return (
+    <Svg>
+      <circle cx="6" cy="8" r="2.9" />
+      <path d="M6 6.7 V8 L7 8.8" opacity={0.9} />
+      <path d="M10.6 5.9 A4.4 4.4 0 0 1 10.6 10.1" opacity={0.6} />
+      <path d="M12.5 4.6 A7 7 0 0 1 12.5 11.4" opacity={0.35} />
+    </Svg>
+  );
+}
+
+// ── wind chimes (sets) ───────────────────────────────────────────────────────
+function chimeBar() {
+  return <path d="M4 3.4 H12" />;
+}
+function ChimesStill() {
+  // tubes hanging dead straight under a star
+  return (
+    <Svg>
+      {chimeBar()}
+      <path d="M5.4 3.4 V9 M8 3.4 V10.6 M10.6 3.4 V8.2" />
+      <circle cx="13.2" cy="5.6" r="0.75" {...fill} opacity={0.8} />
+    </Svg>
+  );
+}
+function ChimesDeep() {
+  // long tubes, tolling low
+  return (
+    <Svg>
+      {chimeBar()}
+      <path d="M5.2 3.4 V13.2 M8 3.4 V12 M10.8 3.4 V13.6" strokeWidth={1.9} />
+    </Svg>
+  );
+}
+function ChimesBreeze() {
+  // tubes leaning together on a breath of air
+  return (
+    <Svg>
+      {chimeBar()}
+      <path d="M5.4 3.4 L6.4 9.4 M8 3.4 L9 10.8 M10.6 3.4 L11.4 8.6" />
+      <path d="M2.2 11.8 q2.6 -1.2 5.2 0" opacity={0.6} />
+    </Svg>
+  );
+}
+function ChimesDance() {
+  // tubes thrown wide, ringing
+  return (
+    <Svg>
+      {chimeBar()}
+      <path d="M5.4 3.4 L3.6 9.6 M8 3.4 L9.8 10.4 M10.6 3.4 L13 8.4" />
+      <path d="M3.2 12.4 q1.2 -0.9 2.4 0 M9.8 12.6 q1.2 -0.9 2.4 0" opacity={0.6} />
+    </Svg>
+  );
+}
+
+// ── cat purr (moods) ─────────────────────────────────────────────────────────
+function catFace(children: ReactNode) {
+  return (
+    <Svg>
+      <path d="M4.4 6.2 L4.6 3.4 L6.8 5.2 M11.6 6.2 L11.4 3.4 L9.2 5.2" />
+      <circle cx="8" cy="8.6" r="4.3" />
+      {children}
+    </Svg>
+  );
+}
+function CatDozing() {
+  // eyes closed
+  return catFace(
+    <>
+      <path d="M5.7 8.4 q0.9 0.9 1.8 0 M8.5 8.4 q0.9 0.9 1.8 0" opacity={0.9} />
+    </>,
+  );
+}
+function CatContent() {
+  // eyes half open, settled
+  return catFace(
+    <>
+      <circle cx="6.5" cy="8.3" r="0.65" {...fill} />
+      <circle cx="9.5" cy="8.3" r="0.65" {...fill} />
+      <path d="M7.3 10.4 q0.7 0.7 1.4 0" opacity={0.9} />
+    </>,
+  );
+}
+function CatDeep() {
+  // the rumble radiating
+  return catFace(
+    <>
+      <path d="M5.7 8.4 q0.9 0.9 1.8 0 M8.5 8.4 q0.9 0.9 1.8 0" opacity={0.9} />
+      <path d="M1.6 10.6 q0.8 -1 0 -2 M14.4 10.6 q-0.8 -1 0 -2" opacity={0.6} />
+    </>,
+  );
+}
+
 const MARKS: Record<string, () => ReactNode> = {
   lvl1: () => <Bars level={1} />,
   lvl2: () => <Bars level={2} />,
@@ -221,6 +622,55 @@ const MARKS: Record<string, () => ReactNode> = {
   blaze: () => <Bonfire />,
   stove: () => <Stove />,
   crackle: () => <Crackling />,
+  // ocean
+  lap: () => <Lap />,
+  farsurf: () => <FarSurf />,
+  roller: () => <Roller />,
+  stormsurf: () => <StormSurf />,
+  // wind
+  nightbreeze: () => <NightBreeze />,
+  hillside: () => <Hillside />,
+  eaves: () => <Eaves />,
+  gale: () => <Gale />,
+  // fan
+  purifier: () => <Purifier />,
+  roundfan: () => <RoundFan />,
+  boxfan: () => <BoxFan />,
+  shopfan: () => <ShopFan />,
+  // windy forest
+  aspen: () => <Aspen />,
+  canopy: () => <Canopy />,
+  deepwoods: () => <DeepWoods />,
+  stormtrees: () => <StormTrees />,
+  // train
+  farrails: () => <FarRails />,
+  sleepercar: () => <SleeperCar />,
+  jointedrail: () => <JointedRail />,
+  express: () => <Express />,
+  // airplane
+  nightflight: () => <NightFlight />,
+  cruise: () => <Cruise />,
+  wing: () => <Wing />,
+  chop: () => <Chop />,
+  // heartbeat
+  heartdrift: () => <HeartDrift />,
+  heartrest: () => <HeartRest />,
+  heartclose: () => <HeartClose />,
+  womb: () => <Womb />,
+  // ticking clock
+  pendulum: () => <Pendulum />,
+  mantel: () => <Mantel />,
+  grandfather: () => <Grandfather />,
+  hallclock: () => <HallClock />,
+  // wind chimes
+  chimestill: () => <ChimesStill />,
+  chimedeep: () => <ChimesDeep />,
+  chimebreeze: () => <ChimesBreeze />,
+  chimedance: () => <ChimesDance />,
+  // cat purr
+  catdozing: () => <CatDozing />,
+  catcontent: () => <CatContent />,
+  catdeep: () => <CatDeep />,
 };
 
 /** The mark token for a variant: its explicit `icon` if set, else a position

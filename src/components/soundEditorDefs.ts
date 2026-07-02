@@ -223,10 +223,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Shore scenes, calm → wild: small quick laps, big surf heard from far
     // up the beach, the default rollers, and a heavy storm shore.
-    ['Lapping Shore', { waveSize: 0.10, foam: 0.18, depth: 0.30 }],
-    ['Distant Surf',  { waveSize: 0.65, foam: 0.06, depth: 0.85 }],
-    ['Rolling Waves', {}],
-    ['Storm Surf',    { waveSize: 0.88, foam: 0.75, depth: 0.70 }],
+    ['Lapping Shore', { waveSize: 0.10, foam: 0.18, depth: 0.30 }, 'lap'],
+    ['Distant Surf',  { waveSize: 0.65, foam: 0.06, depth: 0.85 }, 'farsurf'],
+    ['Rolling Waves', {}, 'roller'],
+    ['Storm Surf',    { waveSize: 0.88, foam: 0.75, depth: 0.70 }, 'stormsurf'],
   )},
   wind: { label: 'Wind', mode: 'simple', groups: simpleGroup(
     { key: 'gusts', label: 'gusts', def: 0.35 },
@@ -235,10 +235,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Places, not levels: a soft night airing, the default open ground, wind
     // heard whistling around a building, and a hard winter blow.
-    ['Night Breeze',     { gusts: 0.22, whistle: 0.04, tone: 0.32 }],
-    ['Open Hillside', {}],
-    ['Around the Eaves', { gusts: 0.55, whistle: 0.62, tone: 0.42 }],
-    ['Winter Gale',      { gusts: 0.85, whistle: 0.35, tone: 0.68 }],
+    ['Night Breeze',     { gusts: 0.22, whistle: 0.04, tone: 0.32 }, 'nightbreeze'],
+    ['Open Hillside', {}, 'hillside'],
+    ['Around the Eaves', { gusts: 0.55, whistle: 0.62, tone: 0.42 }, 'eaves'],
+    ['Winter Gale',      { gusts: 0.85, whistle: 0.35, tone: 0.68 }, 'gale'],
   )},
   forest: { label: 'Windy Forest', mode: 'simple', groups: simpleGroup(
     { key: 'leaves', label: 'leaf rustle', def: 0.52 },
@@ -248,10 +248,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     // Kinds of woods, not wind steps: trembling leaves in barely any wind,
     // the default canopy, close old-growth with creaking detail, and the
     // whole forest heaving before weather arrives.
-    ['Aspen Shimmer',    { leaves: 0.72, twigs: 0.04, breeze: 0.20 }],
-    ['Breezy Canopy', {}],
-    ['Deep Woods',       { leaves: 0.42, twigs: 0.58, breeze: 0.38 }],
-    ['Before the Storm', { leaves: 0.85, twigs: 0.45, breeze: 0.85 }],
+    ['Aspen Shimmer',    { leaves: 0.72, twigs: 0.04, breeze: 0.20 }, 'aspen'],
+    ['Breezy Canopy', {}, 'canopy'],
+    ['Deep Woods',       { leaves: 0.42, twigs: 0.58, breeze: 0.38 }, 'deepwoods'],
+    ['Before the Storm', { leaves: 0.85, twigs: 0.45, breeze: 0.85 }, 'stormtrees'],
   )},
   stream: { label: 'Stream', mode: 'simple', groups: simpleGroup(
     { key: 'flow', label: 'flow', def: 0.46 },
@@ -285,10 +285,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Appliances, not speed steps: a purifier's smooth hiss, the bedside
     // default, a box fan's fuller drone, and a big workshop machine.
-    ['Air Purifier', { speed: 0.04, hum: 0.22, airflow: 0.52, size: 0.08 }],
-    ['Bedroom Fan', {}],
-    ['Box Fan',      { speed: 0.22, hum: 0.62, airflow: 0.72, size: 0.42 }],
-    ['Shop Fan',     { speed: 0.45, hum: 0.55, airflow: 0.90, size: 0.75 }],
+    ['Air Purifier', { speed: 0.04, hum: 0.22, airflow: 0.52, size: 0.08 }, 'purifier'],
+    ['Bedroom Fan', {}, 'roundfan'],
+    ['Box Fan',      { speed: 0.22, hum: 0.62, airflow: 0.72, size: 0.42 }, 'boxfan'],
+    ['Shop Fan',     { speed: 0.45, hum: 0.55, airflow: 0.90, size: 0.75 }, 'shopfan'],
   )},
   train: { label: 'Train', mode: 'simple', groups: simpleGroup(
     { key: 'speed', label: 'speed', def: 0.50 },
@@ -297,10 +297,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Journeys, not speed steps: a line heard across the fields, the default
     // overnight carriage, a slow old local on jointed track, and an express.
-    ['Distant Line', { speed: 0.35, rumble: 0.30, clatter: 0.08 }],
-    ['Sleeper Car', {}],
-    ['Old Local',    { speed: 0.25, rumble: 0.60, clatter: 0.72 }],
-    ['Express',      { speed: 0.85, rumble: 0.55, clatter: 0.45 }],
+    ['Distant Line', { speed: 0.35, rumble: 0.30, clatter: 0.08 }, 'farrails'],
+    ['Sleeper Car', {}, 'sleepercar'],
+    ['Old Local',    { speed: 0.25, rumble: 0.60, clatter: 0.72 }, 'jointedrail'],
+    ['Express',      { speed: 0.85, rumble: 0.55, clatter: 0.45 }, 'express'],
   )},
   night: { label: 'Night Insects', mode: 'simple', groups: shapeGroup(
     { key: 'cosmic', label: 'shimmer', def: 0.22 },
@@ -371,10 +371,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     // Seats and moments, not a turbulence dial: the quiet rear cabin on a
     // night flight, the default cruise, a seat over the wing where the
     // engines lead, and a stretch of light chop.
-    ['Night Flight',  { altitude: 0.42, cabin: 0.85, turbulence: 0.08 }],
-    ['Cruise', {}],
-    ['Over the Wing', { altitude: 0.75, cabin: 0.35, turbulence: 0.30 }],
-    ['Light Chop',    { altitude: 0.50, cabin: 0.55, turbulence: 0.75 }],
+    ['Night Flight',  { altitude: 0.42, cabin: 0.85, turbulence: 0.08 }, 'nightflight'],
+    ['Cruise', {}, 'cruise'],
+    ['Over the Wing', { altitude: 0.75, cabin: 0.35, turbulence: 0.30 }, 'wing'],
+    ['Light Chop',    { altitude: 0.50, cabin: 0.55, turbulence: 0.75 }, 'chop'],
   )},
   heartbeat: { label: 'Heartbeat', mode: 'simple', groups: shapeGroup(
     { key: 'rate', label: 'pace', def: 0.50 },
@@ -384,19 +384,19 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Characters, not tiers: drifting off, the default rest, an ear on a
     // chest, and the womb (flow + muffle carry that one).
-    ['Falling Asleep',    { rate: 0.30, chest: 0.55, muffle: 0.60, flow: 0.10 }],
-    ['Resting', {}],
-    ['Against the Chest', { rate: 0.45, chest: 0.85, muffle: 0.72, flow: 0.25 }],
-    ['Womb',              { rate: 0.60, chest: 0.70, muffle: 0.85, flow: 0.90 }],
+    ['Falling Asleep',    { rate: 0.30, chest: 0.55, muffle: 0.60, flow: 0.10 }, 'heartdrift'],
+    ['Resting', {}, 'heartrest'],
+    ['Against the Chest', { rate: 0.45, chest: 0.85, muffle: 0.72, flow: 0.25 }, 'heartclose'],
+    ['Womb',              { rate: 0.60, chest: 0.70, muffle: 0.85, flow: 0.90 }, 'womb'],
   )},
   purr: { label: 'Cat Purr', mode: 'simple', groups: simpleGroup(
     { key: 'rate', label: 'breathing', def: 0.45 },
     { key: 'rumble', label: 'rumble', def: 0.60 },
     { key: 'softness', label: 'softness', def: 0.55 },
   ), variants: vlist(
-    ['Dozing',      { rate: 0.28, rumble: 0.48, softness: 0.75 }],
-    ['Content', {}],
-    ['Deep Rumble', { rate: 0.55, rumble: 0.85, softness: 0.40 }],
+    ['Dozing',      { rate: 0.28, rumble: 0.48, softness: 0.75 }, 'catdozing'],
+    ['Content', {}, 'catcontent'],
+    ['Deep Rumble', { rate: 0.55, rumble: 0.85, softness: 0.40 }, 'catdeep'],
   )},
   chimes: { label: 'Wind Chimes', mode: 'simple', groups: simpleGroup(
     { key: 'activity', label: 'breeze strength', def: 0.42 },
@@ -405,10 +405,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Four characters, calm → lively: a rare dark stir, long deep tolls,
     // the porch default, and a bright dancing set.
-    ['Still Evening', { activity: 0.20, tone: 0.35, sustain: 0.55 }],
-    ['Deep Tubes',    { activity: 0.30, tone: 0.15, sustain: 0.90 }],
-    ['On a Breeze', {}],
-    ['Dancing',       { activity: 0.75, tone: 0.62, sustain: 0.42 }],
+    ['Still Evening', { activity: 0.20, tone: 0.35, sustain: 0.55 }, 'chimestill'],
+    ['Deep Tubes',    { activity: 0.30, tone: 0.15, sustain: 0.90 }, 'chimedeep'],
+    ['On a Breeze', {}, 'chimebreeze'],
+    ['Dancing',       { activity: 0.75, tone: 0.62, sustain: 0.42 }, 'chimedance'],
   )},
   clock: { label: 'Ticking Clock', mode: 'simple', groups: simpleGroup(
     { key: 'wood', label: 'wood knock', def: 0.45 },
@@ -417,10 +417,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ), variants: vlist(
     // Bare Tick is the naked mechanism (the all-sliders-down character);
     // Grandfather adds the deep case; Distant Hall is heard from another room.
-    ['Bare Tick',    { wood: 0.08, softness: 0.08, room: 0.05 }],
-    ['Mantel', {}],
-    ['Grandfather',  { wood: 0.85, softness: 0.55, room: 0.35 }],
-    ['Distant Hall', { wood: 0.55, softness: 0.85, room: 0.50 }],
+    ['Bare Tick',    { wood: 0.08, softness: 0.08, room: 0.05 }, 'pendulum'],
+    ['Mantel', {}, 'mantel'],
+    ['Grandfather',  { wood: 0.85, softness: 0.55, room: 0.35 }, 'grandfather'],
+    ['Distant Hall', { wood: 0.55, softness: 0.85, room: 0.50 }, 'hallclock'],
   )},
 };
 
