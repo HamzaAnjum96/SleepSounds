@@ -55,10 +55,12 @@ function genWhite(params?: Record<string, number>): string {
   lp1(air, 10800);
 
   const drift = smoothRandomLfo(0.9, 1.1, 1.2, 3.8);
+  // The air band's movement is a loop-closed random walk — the previous fixed
+  // 0.065 Hz sine cycled audibly every ~15 s.
+  const shimmer = smoothRandomLfo(Math.max(0, 1 - shimmerDepth * 2), 1, 2.0, 6.0);
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const shimmer = 1 - shimmerDepth + shimmerDepth * Math.sin((2 * Math.PI * 0.065 * i) / SR);
-    mix[i] = body[i] * (1 - airMix) * drift[i] + air[i] * airMix * shimmer;
+    mix[i] = body[i] * (1 - airMix) * drift[i] + air[i] * airMix * shimmer[i];
   }
   const st = decorrelateMono(mix, 13);
   return genStereo(st.left, st.right, 0.62);

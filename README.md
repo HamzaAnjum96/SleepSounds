@@ -124,6 +124,16 @@ npm run preview
 
 ## Changelog
 
+### 9.0.11
+- **White Noise: the shimmer came off its rails, and the labels tell the
+  truth.** The air band's movement was a fixed 0.065 Hz sine — an audible
+  ~15-second cycle in a sound whose whole job is to be uneventful; it's now a
+  loop-closed random walk. "depth" is labeled **body** (it sets the low
+  floor), "texture" is **shimmer** (it sets how much the air band moves).
+  Four characters: **Warm Hush** (dark masking veil) · **Even Veil**
+  (default) · **Open Air** (living, airy) · **Crisp** (bright full-range
+  static).
+
 ### 9.0.10
 - **Airplane chips are seats and moments.** Cabin / Cruise / Turbulent was a
   dial; the set is now **Night Flight** (the hushed rear cabin, vents leading,

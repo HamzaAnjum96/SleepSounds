@@ -312,12 +312,16 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   )},
   'white-noise': { label: 'White Noise', mode: 'simple', groups: simpleGroup(
     { key: 'brightness', label: 'brightness', def: 0.32 },
-    { key: 'depth', label: 'depth', def: 0.58 },
-    { key: 'texture', label: 'texture', def: 0.22 },
+    { key: 'depth', label: 'body', def: 0.58 },
+    { key: 'texture', label: 'shimmer', def: 0.22 },
   ), variants: vlist(
-    ['Soft',     { brightness: 0.35, depth: 0.60, texture: 0.30 }],
-    ['Balanced', {}],
-    ['Bright',   { brightness: 0.80, depth: 0.40, texture: 0.55 }],
+    // For a texture, the spectrum is the character — but each of these is a
+    // distinct use, not a volume: a dark veil for masking, the default, a
+    // living airy wash, and crisp full-range static.
+    ['Warm Hush',  { brightness: 0.16, depth: 0.75, texture: 0.12 }],
+    ['Even Veil', {}],
+    ['Open Air',   { brightness: 0.58, depth: 0.42, texture: 0.55 }],
+    ['Crisp',      { brightness: 0.88, depth: 0.30, texture: 0.35 }],
   )},
   'pink-noise': { label: 'Pink Noise', mode: 'simple', groups: simpleGroup(
     { key: 'warmth', label: 'warmth', def: 0.70 },
