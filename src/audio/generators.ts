@@ -1197,32 +1197,68 @@ function genHeartbeat(params?: Record<string, number>): string {
 
 function genPurr(params?: Record<string, number>): string {
   // Cat Purr: a ~25 Hz glottal pulse train that breathes. A real purr runs
-  // through the whole respiratory cycle — a louder, slightly lower exhale
-  // phase, a brief turnaround silence, then a softer, slightly higher inhale —
-  // and it's that slow sway (not the pulse rate) that reads as "cat". The
-  // breath period is snapped so a whole number of breaths fits the loop.
+  // through the whole respiratory cycle — a louder, slightly lower exhale, a
+  // brief turnaround, then a softer, slightly higher inhale — and, crucially,
+  // no two breaths are alike: the length, pitch, weight and exhale share all
+  // wander a little, and the pitch settles as each exhale runs out. Breath
+  // lengths are drawn per cycle and scaled to close the loop exactly.
   const { rate = 0.45, rumble = 0.6, softness = 0.55 } = params ?? {};
 
   const idealPeriod = 2.7 - 1.3 * rate;                    // seconds per breath
   const cycles = Math.max(1, Math.round(N / SR / idealPeriod));
-  const period = N / cycles;                                // samples per breath
-  // Phase layout within one breath (fractions of the period).
-  const EXHALE_END = 0.52, GAP1_END = 0.585, INHALE_END = 0.94;
 
-  // Breath envelope + pulse frequency for a cycle-local phase u in [0,1).
-  const phase = (u: number): { amp: number; f0: number } => {
-    const ramp = (t: number, len: number, edge: number): number => {
-      const a = Math.min(1, t / edge);
-      const b = Math.min(1, (len - t) / edge);
-      const w = Math.min(a, b);
-      return 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, w)));
-    };
-    const f0Ex = 21.5 + rumble * 4.5;
-    if (u < EXHALE_END) return { amp: ramp(u, EXHALE_END, 0.10), f0: f0Ex };
-    if (u < GAP1_END) return { amp: 0, f0: f0Ex };
-    if (u < INHALE_END) return { amp: 0.62 * ramp(u - GAP1_END, INHALE_END - GAP1_END, 0.11), f0: f0Ex + 3.5 };
-    return { amp: 0, f0: f0Ex };
+  // Uneven breath lengths that sum exactly to the loop.
+  const weights: number[] = [];
+  let weightSum = 0;
+  for (let c = 0; c < cycles; c++) { const w = 1 + (random() - 0.5) * 0.17; weights.push(w); weightSum += w; }
+  const bounds: number[] = [0];
+  let acc = 0;
+  for (let c = 0; c < cycles; c++) { acc += (weights[c] / weightSum) * N; bounds.push(Math.min(N, Math.round(acc))); }
+  bounds[cycles] = N;
+
+  // Per-breath character.
+  const f0Base = 21.5 + rumble * 4.5;
+  const breathF0: number[] = [], breathLvl: number[] = [], exShare: number[] = [];
+  for (let c = 0; c < cycles; c++) {
+    breathF0.push(f0Base + (random() - 0.5) * 1.7);
+    breathLvl.push(0.9 + random() * 0.16);
+    exShare.push(0.52 + (random() - 0.5) * 0.07);
+  }
+
+  const GAP = 0.065, INHALE_END = 0.94;
+  const ramp = (t: number, len: number, edge: number): number => {
+    const w = Math.min(1, Math.min(t / edge, (len - t) / edge));
+    return w <= 0 ? 0 : 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, w));
   };
+
+  // Per-sample envelope, pulse rate and breath-noise weight for the whole
+  // loop, from the per-breath parameters.
+  const envAmp = new Float32Array(N);
+  const envF0 = new Float32Array(N);
+  const envAir = new Float32Array(N);
+  for (let c = 0; c < cycles; c++) {
+    const b0 = bounds[c], len = bounds[c + 1] - b0;
+    const ex = exShare[c], f0 = breathF0[c], lvl = breathLvl[c];
+    for (let i = 0; i < len; i++) {
+      const u = i / len;
+      let amp = 0, f = f0, air = 1;
+      if (u < ex) {
+        amp = lvl * ramp(u, ex, 0.10);
+        f = f0 * (1.035 - 0.055 * (u / ex));   // settles as the exhale empties
+      } else if (u >= ex + GAP && u < INHALE_END) {
+        amp = 0.62 * lvl * ramp(u - ex - GAP, INHALE_END - ex - GAP, 0.11);
+        f = f0 + 3.5;
+        air = 1.5;                              // breath reads on the intake
+      }
+      envAmp[b0 + i] = amp;
+      envF0[b0 + i] = f;
+      envAir[b0 + i] = amp * air;
+    }
+  }
+
+  // A slow, unsynchronised sway under everything — the cat shifting its
+  // weight, not a machine holding a level.
+  const sway = smoothRandomLfo(0.93, 1.07, 0.9, 2.8);
 
   const buf = new Float32Array(N);
   // Body resonances the pulses ring: chest (~85–145 Hz) plus a softer throat
@@ -1230,14 +1266,13 @@ function genPurr(params?: Record<string, number>): string {
   const bodyF = 82 + rumble * 62;
   const throatF = bodyF * 2.3;
   const grainLen = Math.floor(SR * 0.032);
+  const attack = Math.floor(SR * 0.0025);      // eased onset — no broadband click
   let t = 0;
   while (t < N) {
-    const u = (t % period) / period;
-    const { amp, f0 } = phase(u);
+    const amp = envAmp[t];
     if (amp <= 0.001) { t += Math.floor(SR * 0.004); continue; }
-    const jitter = 1 + (random() - 0.5) * 0.06;
-    const level = amp * (0.85 + random() * 0.3);
-    const attack = Math.floor(SR * 0.0025); // eased onset — no broadband click
+    const jitter = 1 + (random() - 0.5) * 0.09;
+    const level = amp * (0.82 + random() * 0.36) * sway[t];
     for (let i = 0; i < grainLen && t + i < N; i++) {
       const ts = i / SR;
       const body = Math.sin(2 * Math.PI * bodyF * ts) * Math.exp(-ts / 0.009);
@@ -1245,26 +1280,15 @@ function genPurr(params?: Record<string, number>): string {
       const on = i < attack ? 0.5 - 0.5 * Math.cos(Math.PI * (i / attack)) : 1;
       buf[t + i] += (body + throat) * level * on * 0.5;
     }
-    t += Math.max(8, Math.floor((SR / f0) * jitter));
+    t += Math.max(8, Math.floor((SR / envF0[t]) * jitter));
   }
 
   // Breath noise: a faint band of air that follows the envelope (a touch more
   // on the inhale), so the purr sits inside breathing rather than a dry buzz.
-  // One cycle of the envelope is precomputed — phase() per sample is the
-  // render's whole cost otherwise.
-  const perN = Math.ceil(period);
-  const envA = new Float32Array(perN);
-  for (let i = 0; i < perN; i++) {
-    const u = i / period;
-    const inhale = u >= GAP1_END && u < INHALE_END ? 1.5 : 1;
-    envA[i] = phase(u).amp * inhale;
-  }
   const breath = pinkNoise();
   hp1(breath, 280);
   lp1(breath, 1100);
-  for (let i = 0; i < N; i++) {
-    buf[i] += breath[i] * envA[Math.floor(i % period)] * 0.055;
-  }
+  for (let i = 0; i < N; i++) buf[i] += breath[i] * envAir[i] * sway[i] * 0.055;
 
   // Chest warmth under it all, then the muffle: softness closes the top like
   // a cat settled against you rather than mic'd up close.

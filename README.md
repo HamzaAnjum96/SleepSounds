@@ -124,6 +124,17 @@ npm run preview
 
 ## Changelog
 
+### 9.0.1
+- **Cat Purr no longer sounds mechanical.** The first cut repeated one
+  identical breath for the whole loop — same length, same pitch, same weight —
+  which is exactly what a machine does and a cat doesn't. Now every breath is
+  drawn individually (length ±8%, pitch ±0.8 Hz, weight ±8%, exhale share ±3%,
+  all summing exactly to the loop), the pitch settles ~5% as each exhale runs
+  out, pulse timing jitter is wider, and a slow unsynchronised sway sits under
+  everything — the cat shifting its weight, not a machine holding a level.
+  Verified: breath spacing now spreads 0.76–1.37 s across the loop (was
+  constant), spectrum unchanged (~97% of energy below 200 Hz).
+
 ### 9.0.0
 - **Fixed the missing icons for Cat Purr / Wind Chimes / Ticking Clock on
   already-installed clients.** The 8.3.0 icon-font re-subset kept the file name
