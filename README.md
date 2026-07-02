@@ -152,6 +152,16 @@ for the history behind that.
 
 ## Changelog
 
+### 9.1.6
+- **Train no longer sounds like overpowering static.** The continuous floor's
+  broadband bands (rolling noise, rail mid, wheel top, aero hiss) sat on top
+  of the rumble instead of under it. The rolling band is darker (lowpassed
+  ~30% lower with a second pole so it can never read as open hiss), the rail
+  mid / wheel top / aero weights are roughly halved, and the underfloor body
+  leads. Measured on the default Sleeper Car: energy above 1.5 kHz drops from
+  11% to 3.7%, the 0.3–1.5 kHz band from 16% to 10% — the carriage now reads
+  as rumble and joint clacks, not static.
+
 ### 9.1.5
 - **Windy Forest no longer slams in — and every sound now eases in.** Three
   layers to the harsh kick-off: the forest worklet *woke at full wind* (its

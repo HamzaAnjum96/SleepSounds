@@ -848,7 +848,8 @@ function genTrain(params?: Record<string, number>): string {
   // micro-flutter so it never reads as static hiss.
   const rolling = pinkNoise();
   hp1(rolling, 240);
-  lp1(rolling, 1100 + speed * 1500);
+  lp1(rolling, 800 + speed * 1000);
+  lp1(rolling, 2600); // second pole: the band must never read as open hiss
   const roughness = smoothRandomLfo(0.72, 1.28, 0.08, 0.3);
 
   // Rail-dominant middle band (~1 kHz) and wheel brightness (2–5 kHz),
@@ -908,9 +909,11 @@ function genTrain(params?: Record<string, number>): string {
   lp1(clacks, 2400 + clatter * 3800);
   lp1(thumps, 160);
 
+  // The floor is rumble-led: the broadband bands sit *under* the body, or the
+  // whole carriage reads as static instead of a rolling machine.
   const tractionW = 0.12 * (1 - speed * 0.75);
-  const aeroW = 0.05 * speed * speed;
-  const wheelW = (0.015 + speed * 0.05) * (0.5 + clatter * 0.8);
+  const aeroW = 0.03 * speed * speed;
+  const wheelW = (0.007 + speed * 0.028) * (0.5 + clatter * 0.8);
   // Build the continuous rolling floor in mono, then widen it; the joint
   // clatter spreads on its own (wider) so the carriage rolls around you, while
   // the underfloor thumps stay centred (low end is non-directional).
@@ -919,9 +922,9 @@ function genTrain(params?: Record<string, number>): string {
     const humPh = (2 * Math.PI * humF * i) / SR;
     const hum = Math.sin(humPh) * 0.6 + Math.sin(2 * humPh + 0.8) * 0.3;
     floor[i] =
-      body[i] * (0.30 + rumbleParam * 0.26) * sway[i] +
-      rolling[i] * (0.09 + speed * 0.15) * roughness[i] +
-      railMid[i] * (0.04 + speed * 0.05) +
+      body[i] * (0.36 + rumbleParam * 0.30) * sway[i] +
+      rolling[i] * (0.05 + speed * 0.085) * roughness[i] +
+      railMid[i] * (0.022 + speed * 0.03) +
       wheelTop[i] * wheelW * wheelDrift[i] +
       (traction[i] * 0.8 + hum * 0.18) * tractionW +
       aero[i] * aeroW;
