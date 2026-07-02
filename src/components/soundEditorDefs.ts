@@ -218,12 +218,15 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   ) },
   ocean: { label: 'Ocean', mode: 'simple', groups: simpleGroup(
     { key: 'waveSize', label: 'wave size', def: 0.40 },
-    { key: 'foam', label: 'foam', def: 0.28 },
-    { key: 'depth', label: 'depth', def: 0.58 },
+    { key: 'foam', label: 'crash & foam', def: 0.28 },
+    { key: 'depth', label: 'undertow', def: 0.58 },
   ), variants: vlist(
-    ['Calm Shore',    { waveSize: 0.30, foam: 0.35, depth: 0.40 }],
+    // Shore scenes, calm → wild: small quick laps, big surf heard from far
+    // up the beach, the default rollers, and a heavy storm shore.
+    ['Lapping Shore', { waveSize: 0.10, foam: 0.30, depth: 0.30 }],
+    ['Distant Surf',  { waveSize: 0.65, foam: 0.10, depth: 0.85 }],
     ['Rolling Waves', {}],
-    ['Storm Surf',    { waveSize: 0.85, foam: 0.75, depth: 0.70 }],
+    ['Storm Surf',    { waveSize: 0.88, foam: 0.75, depth: 0.70 }],
   )},
   wind: { label: 'Wind', mode: 'simple', groups: simpleGroup(
     { key: 'gusts', label: 'gusts', def: 0.35 },

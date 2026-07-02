@@ -124,6 +124,18 @@ npm run preview
 
 ## Changelog
 
+### 9.0.5
+- **Ocean waves now break.** The old wave was one noise band swelling and
+  fading — surf with no surf. Each wave now carries the full shoreline
+  anatomy: the undertow swell builds, the crest **breaks** (a brighter burst
+  that rises in ~120 ms of real time as the wave folds over, then dies across
+  the wash), and a low granular **backwash** rakes back down the slope before
+  the next wave. The break rides the *crash & foam* slider (renamed from
+  "foam"); "depth" is now labeled **undertow**, which is what it always was.
+  Variants become shore scenes, calm → wild: **Lapping Shore** (small quick
+  laps), **Distant Surf** (big waves heard from far up the beach), **Rolling
+  Waves** and **Storm Surf**.
+
 ### 9.0.4
 - **Heartbeat rebuilt with real cardiac timing — and a womb.** The old beat
   was two fixed sine blips 200 ms apart. Now S1 ("lub") opens systole and a

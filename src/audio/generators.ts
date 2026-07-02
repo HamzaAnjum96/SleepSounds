@@ -306,9 +306,10 @@ function genOcean(params?: Record<string, number>): string {
   const surfMix = 0.2 + foam * 0.36;
   const baseLp = 240 + depth * 240;
   const baseMix = 0.4 + depth * 0.44;
-  // Ocean shoreline: a wide decorrelated undertow body + cresting surf that
-  // blooms on each wave and pans across the image, so waves roll left↔right
-  // instead of pulsing dead-centre.
+  // Ocean shoreline with the full anatomy of a breaking wave: the undertow
+  // body swells, the crest *breaks* (a brighter burst as it folds over), the
+  // wash spreads, and a lower backwash rakes back down the shore before the
+  // next wave. Each wave pans to its own spot so the shore rolls left↔right.
   const base = brownNoise();
   lp1(base, baseLp); lp1(base, baseLp * 0.75);
   const bed = decorrelateMono(base, 16);
@@ -316,6 +317,16 @@ function genOcean(params?: Record<string, number>): string {
   const surf = pinkNoise();
   hp1(surf, 220);
   lp1(surf, surfLp);
+
+  // The break: brighter, foamier than the wash — only opens as the crest folds.
+  const crash = pinkNoise();
+  hp1(crash, 650);
+  lp1(crash, 1700 + foam * 2600);
+
+  // The backwash: low, granular water raking back down the slope.
+  const wash = pinkNoise();
+  hp1(wash, 130);
+  lp1(wash, 650);
 
   // Waves are fitted to the loop: pick whole periods, then scale them so the
   // final wave completes exactly at the buffer edge (no mid-crest seam lurch).
@@ -330,12 +341,20 @@ function genOcean(params?: Record<string, number>): string {
   }
   const fit = N / totalLen;
   const waveEnvBuf = new Float32Array(N);
+  const crashEnvBuf = new Float32Array(N);
+  const washEnvBuf = new Float32Array(N);
   const panBuf = new Float32Array(N);
   let wPos = 0;
   for (const raw of periods) {
     const period = Math.max(1, Math.round(raw * fit));
     const wAmp = rand(0.45, 1.0);
     const pan = rand(-0.5, 0.5);
+    // The break rises fast in real time (~120 ms), not as a share of the
+    // period, then dies across the wash.
+    const crashStart = Math.floor(period * 0.34);
+    const crashAttack = Math.floor(SR * 0.12);
+    const crashDecay = Math.max(1, Math.floor(period * 0.30));
+    const crashAmp = wAmp * rand(0.55, 1.0);
     for (let i = 0; i < period && wPos + i < N; i++) {
       const p = i / period;
       let env: number;
@@ -344,19 +363,32 @@ function genOcean(params?: Record<string, number>): string {
       else env = Math.pow((1 - p) / 0.48, 0.75) * wAmp;
       waveEnvBuf[wPos + i] += env;
       panBuf[wPos + i] = pan;
+      const ci = i - crashStart;
+      if (ci >= 0) {
+        crashEnvBuf[wPos + i] += crashAmp * (ci < crashAttack
+          ? 0.5 - 0.5 * Math.cos(Math.PI * (ci / crashAttack))
+          : Math.exp(-3 * ((ci - crashAttack) / crashDecay)));
+      }
+      if (p >= 0.60) {
+        washEnvBuf[wPos + i] += wAmp * Math.pow(Math.sin(Math.PI * ((p - 0.60) / 0.40)), 1.3);
+      }
     }
     wPos += period;
   }
 
   const left = new Float32Array(N);
   const right = new Float32Array(N);
+  const crashMix = 0.10 + foam * 0.5;
+  const washMix = 0.16 + depth * 0.14;
   for (let i = 0; i < N; i++) {
     const wEnv = Math.min(1, waveEnvBuf[i]);
     const wBase = (0.24 + 0.76 * wEnv) * baseMix;
-    const surfS = surf[i] * (0.08 + 0.92 * Math.pow(wEnv, 1.8)) * surfMix;
     const pan = panBuf[i];
     const pl = Math.cos((pan + 1) * Math.PI / 4);
     const pr = Math.sin((pan + 1) * Math.PI / 4);
+    const surfS = surf[i] * (0.08 + 0.92 * Math.pow(wEnv, 1.8)) * surfMix
+      + crash[i] * Math.min(1.2, crashEnvBuf[i]) * crashMix
+      + wash[i] * Math.min(1, washEnvBuf[i]) * washMix;
     left[i] = bed.left[i] * wBase + surfS * pl;
     right[i] = bed.right[i] * wBase + surfS * pr;
   }
