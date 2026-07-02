@@ -124,6 +124,16 @@ npm run preview
 
 ## Changelog
 
+### 9.0.2
+- **Wind Chimes: the static bed is gone.** The faint pink-noise "breeze" that
+  ran under the strikes read as hiss, so it's removed outright — between gusts
+  the chimes now rest in true silence (~11% of the loop measures fully
+  silent). The orphaned "air" slider became **ring**: it sweeps the tubes'
+  sustain from damped to long-tolling. Variants replace the 3-step intensity
+  ramp with four characters: **Still Evening** (a rare dark stir), **Deep
+  Tubes** (long low tolls), **On a Breeze** (the porch default) and
+  **Dancing** (bright and lively).
+
 ### 9.0.1
 - **Cat Purr no longer sounds mechanical.** The first cut repeated one
   identical breath for the whole loop — same length, same pitch, same weight —

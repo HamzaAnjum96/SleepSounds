@@ -369,11 +369,14 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
   chimes: { label: 'Wind Chimes', mode: 'simple', groups: simpleGroup(
     { key: 'activity', label: 'breeze strength', def: 0.42 },
     { key: 'tone', label: 'brightness', def: 0.45 },
-    { key: 'breeze', label: 'air', def: 0.30 },
+    { key: 'sustain', label: 'ring', def: 0.50 },
   ), variants: vlist(
-    ['Still Evening', { activity: 0.22, tone: 0.32, breeze: 0.22 }],
+    // Four characters, calm → lively: a rare dark stir, long deep tolls,
+    // the porch default, and a bright dancing set.
+    ['Still Evening', { activity: 0.20, tone: 0.35, sustain: 0.55 }],
+    ['Deep Tubes',    { activity: 0.30, tone: 0.15, sustain: 0.90 }],
     ['On a Breeze', {}],
-    ['Singing',       { activity: 0.72, tone: 0.62, breeze: 0.45 }],
+    ['Dancing',       { activity: 0.75, tone: 0.62, sustain: 0.42 }],
   )},
   clock: { label: 'Ticking Clock', mode: 'simple', groups: simpleGroup(
     { key: 'wood', label: 'wood', def: 0.60 },

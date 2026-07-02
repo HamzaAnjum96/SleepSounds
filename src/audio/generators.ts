@@ -1308,8 +1308,8 @@ function genChimes(params?: Record<string, number>): string {
   // four transverse modes of a free tube (1 : 2.76 : 5.40 : 8.93) with the
   // higher modes dying faster, and each tube hangs at its own point in the
   // stereo field. Between gusts the chimes genuinely rest — the silences are
-  // as much the character as the notes.
-  const { activity = 0.42, tone = 0.45, breeze = 0.3 } = params ?? {};
+  // as much the character as the notes: true quiet, no noise bed under them.
+  const { activity = 0.42, tone = 0.45, sustain = 0.5 } = params ?? {};
 
   const notes = [220.0, 246.94, 277.18, 329.63, 369.99]; // A pentatonic
   const pans = [-0.6, -0.28, 0, 0.28, 0.6];
@@ -1322,7 +1322,8 @@ function genChimes(params?: Record<string, number>): string {
 
   const strike = (pos: number, tube: number, amp: number): void => {
     const f = notes[tube] * (1 + (random() - 0.5) * 0.005);
-    const tau1 = 2.6 * Math.pow(300 / f, 0.6) + 0.4;      // fundamental ring time
+    // Fundamental ring time; `sustain` swings it from damped (~½) to long (~1.45×).
+    const tau1 = (2.6 * Math.pow(300 / f, 0.6) + 0.4) * (0.55 + sustain * 0.9);
     const taus = [tau1, tau1 * 0.32, tau1 * 0.14, tau1 * 0.07];
     const len = Math.min(Math.floor(SR * tau1 * 4), N - pos);
     const pl = Math.cos((pans[tube] + 1) * Math.PI / 4);
@@ -1390,15 +1391,6 @@ function genChimes(params?: Record<string, number>): string {
       swings++;
     }
   }
-
-  // The air the chimes hang in: a faint gust-following breeze, decorrelated so
-  // it fills the space between strikes without pulling the image anywhere.
-  const bedMono = pinkNoise();
-  hp1(bedMono, 350);
-  lp1(bedMono, 1800);
-  for (let i = 0; i < N; i++) bedMono[i] *= (0.5 + 0.5 * gust[i]) * (0.08 + 0.22 * breeze);
-  const bed = decorrelateMono(bedMono);
-  for (let i = 0; i < N; i++) { left[i] += bed.left[i]; right[i] += bed.right[i]; }
 
   return genStereo(left, right, 0.52);
 }
