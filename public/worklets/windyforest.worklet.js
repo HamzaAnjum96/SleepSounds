@@ -70,8 +70,11 @@ class WindyForestProcessor extends AudioWorkletProcessor {
 
     this.grains = []; for (let i = 0; i < 96; i++) this.grains.push(new Grain());
 
-    // wind-speed processes (multi-timescale)
-    this.wsSlow = 0.4; this.wsMicro = 0; this.wsSmooth = 0.4;
+    // wind-speed processes (multi-timescale). Start in a *lull*: wsSlow well
+    // under the mean (the slow OU climbs it over a few seconds, so the wind
+    // arrives instead of slamming in), and wsSmooth above it so the gust
+    // detector (ws − wsSmooth) stays quiet until real gusts develop.
+    this.wsSlow = 0.15; this.wsMicro = 0; this.wsSmooth = 0.55;
     this.nextLeaf = 0; this.nextBranch = Math.floor(6 * SR);
     this.level = 0;
   }
@@ -118,7 +121,7 @@ class WindyForestProcessor extends AudioWorkletProcessor {
     const sigmaSlow = Math.sqrt(2 * thetaSlow) * 0.13;   // slow trend std ≈ 0.13
     const sigmaMicro = Math.sqrt(2 * thetaMicro) * 0.22; // turbulence std ≈ 0.22
     const levelTarget = running > 0.5 ? 1 : 0;
-    const levelCoef = Math.exp(-1 / (0.08 * SR));
+    const levelCoef = Math.exp(-1 / (0.5 * SR)); // ~0.5s gate — was 80ms, an abrupt entrance
 
     for (let i = 0; i < n; i++) {
       // wind speed: slow OU around the mean + faster micro turbulence

@@ -152,6 +152,19 @@ for the history behind that.
 
 ## Changelog
 
+### 9.1.5
+- **Windy Forest no longer slams in — and every sound now eases in.** Three
+  layers to the harsh kick-off: the forest worklet *woke at full wind* (its
+  wind-speed state initialised at the mean, its internal gate ramped in 80
+  ms) — it now wakes in a lull (wind state starts low and climbs over a few
+  seconds, the gust detector starts settled, the gate ramps over ~0.5 s) so
+  the wind arrives instead of appearing. And the mixer's fades are now
+  asymmetric: fade-in lengthened from 700 ms to a 1.6 s **quadratic ease**
+  (the first moments swell rather than step — this is what also soothed
+  Ocean's kick-off), while fade-out stays at 700 ms so stopping remains
+  responsive. Measured onset at the master bus: a smooth build over ~3 s for
+  both forest and ocean, no step.
+
 ### 9.1.4
 - **Ocean calmed — the gentle shores are now actually gentle.** Every variant
   played at roughly the same loudness because the WAV encode is

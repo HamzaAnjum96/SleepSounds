@@ -14,7 +14,11 @@ const createInitialState = (sounds: Sound[]) =>
     return acc;
   }, {});
 
-const FADE_MS = 700;
+// Fades are asymmetric on purpose: starting a sound eases in slowly (a harsh
+// kick-off is exactly what a sleep app must not do), while stopping stays
+// responsive.
+const FADE_IN_MS = 1600;
+const FADE_OUT_MS = 700;
 const FADE_STEPS = 28;
 
 export const useAudioMixer = (sounds: Sound[]) => {
@@ -143,9 +147,11 @@ export const useAudioMixer = (sounds: Sound[]) => {
         // Respect a mute/solo set mid-fade, so muting a just-started layer sticks
         // instead of being overridden by the fade ramp.
         const gate = audible(soundId) ? 1 : 0;
-        source.volume = Math.min(1, (step / FADE_STEPS) * targetVol) * gate;
+        const t = step / FADE_STEPS;
+        // Quadratic ease-in: the first moments arrive as a swell, not a step.
+        source.volume = Math.min(1, t * t * targetVol) * gate;
         if (step >= FADE_STEPS) clearFade(soundId);
-      }, FADE_MS / FADE_STEPS);
+      }, FADE_IN_MS / FADE_STEPS);
     },
     [clearFade, audible],
   );
@@ -163,7 +169,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
           clearFade(soundId);
           onDone();
         }
-      }, FADE_MS / FADE_STEPS);
+      }, FADE_OUT_MS / FADE_STEPS);
     },
     [clearFade],
   );
