@@ -50,6 +50,7 @@ sleep-mixer/
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
+├── docs/ADDING-A-SOUND.md  # the checklist for adding a generated sound
 ├── docs/research/          # background research reports (reference only)
 ├── tests/                  # vitest unit tests + tests/e2e Playwright specs
 └── src/
@@ -150,6 +151,25 @@ for the history behind that.
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 9.1.2
+- **The runtime sound sweep is now a tool, not a one-off.**
+  `scripts/sweep-sounds.mjs` drives the real app headless, toggles every
+  library sound, and asserts signal reaches the master bus — the end-to-end
+  check that caught 9.1.1's buried Birdsong while every unit test stayed
+  green. Listen windows are sized per sound (Thunder's deliberate 9–21 s
+  quiet opening gets 30 s).
+- **`docs/ADDING-A-SOUND.md`** — the full checklist for adding a generated
+  sound: the synthesis rules the library lives by (seeded determinism,
+  loop-clean structure, no fixed-frequency LFOs, resonator recurrences over
+  per-sample sin·exp, stereo-with-intent), the seven wiring points and what
+  breaks if each is missed, the verification recipe (numeric probes →
+  spectrograms → runtime sweep), and the variant/label conventions.
+  Referenced from the README tree and ARCHITECTURE.md.
+- **Variant chips: every mark is distinct now.** Position bars were capped at
+  three, so 4-variant sounds drew their last two chips with identical marks;
+  the bar set now sizes itself to the variant count (a 4-chip set draws four
+  ascending bars).
 
 ### 9.1.1
 - **Bug fix: live Birdsong was near-silent — for months.** A full-library

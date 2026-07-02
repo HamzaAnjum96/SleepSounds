@@ -134,7 +134,7 @@ export default function SoundEditor({
               aria-pressed={selected?.name === v.name}
               onClick={() => applyValues(resolve(v))}
             >
-              <VariantMark token={variantToken(v.icon, i)} />
+              <VariantMark token={variantToken(v.icon, i, variants.length)} />
               <span className="sb-variant-label">{v.name}</span>
             </button>
           ))}

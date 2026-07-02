@@ -41,21 +41,26 @@ function teardrop(cx: number, cy: number, s = 1): string {
 
 const fill = { fill: 'currentColor', stroke: 'none' } as const;
 
-// ── intensity: three ascending bars, the first `level` of them filled ────────
-function Bars({ level }: { level: number }) {
-  const bars = [
-    { x: 2.4, y: 9.5, h: 4 },
-    { x: 6.9, y: 6.5, h: 7 },
-    { x: 11.4, y: 3.5, h: 10 },
-  ];
+// ── position: `count` ascending bars, the first `level` of them filled ──────
+// The bars read as "where this character sits on the set's calm → lively
+// ordering", so every chip in a set gets a distinct mark (a 4-chip set draws
+// 4 bars, not 3 with the last two identical).
+function Bars({ level, count = 3 }: { level: number; count?: number }) {
+  const n = Math.max(2, Math.min(count, 5));
+  const w = 2.2;
+  const gap = (16 - 1.6 - n * w) / (n - 1); // spread across the 16px box
+  const bars = Array.from({ length: n }, (_, i) => ({
+    x: 0.8 + i * (w + gap),
+    h: 4 + ((10 - 4) * i) / (n - 1),
+  }));
   return (
     <Svg>
       {bars.map((b, i) => (
         <rect
           key={b.x}
           x={b.x}
-          y={b.y}
-          width={2.2}
+          y={13.5 - b.h}
+          width={w}
           height={b.h}
           rx={1.1}
           fill="currentColor"
@@ -218,13 +223,16 @@ const MARKS: Record<string, () => ReactNode> = {
   crackle: () => <Crackling />,
 };
 
-/** The mark token for a variant: its explicit `icon` if set, else an intensity
- *  bar by position (the simple sounds list their variants low → high). */
-export function variantToken(icon: string | undefined, index: number): string {
+/** The mark token for a variant: its explicit `icon` if set, else a position
+ *  bar (the simple sounds list their variants calm → lively). `count` sizes
+ *  the bar set so a 4-variant sound gets four distinct marks. */
+export function variantToken(icon: string | undefined, index: number, count = 3): string {
   if (icon) return icon;
-  return `lvl${Math.min(index + 1, 3)}`;
+  return `lvl${Math.min(index + 1, count)}of${Math.max(2, Math.min(count, 5))}`;
 }
 
 export function VariantMark({ token }: { token: string }): ReactNode {
+  const pos = /^lvl(\d)of(\d)$/.exec(token);
+  if (pos) return <Bars level={Number(pos[1])} count={Number(pos[2])} />;
   return (MARKS[token] ?? MARKS.lvl2)();
 }

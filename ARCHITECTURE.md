@@ -49,6 +49,11 @@ play rather than at startup. Renders are seeded (a stable PRNG keyed on sound id
 + params), so the same inputs always produce byte-identical audio — which is
 what makes the generators snapshot-testable.
 
+Adding a sound touches seven files in a fixed order (generator → library →
+editor model → layer meta → icons → subset font → tests); the full checklist,
+with the synthesis rules and the verification recipe, is
+[`docs/ADDING-A-SOUND.md`](docs/ADDING-A-SOUND.md).
+
 ## The master bus
 
 All layers feed one `AudioContext` through a single master chain
