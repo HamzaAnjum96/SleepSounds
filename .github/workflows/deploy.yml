@@ -37,7 +37,18 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment-retry.outputs.page_url }}
     steps:
+      # The Pages backend intermittently rejects deployments outright
+      # ("Deployment failed, try again later"), especially when releases land
+      # minutes apart (9.2.0, 9.2.1 and 9.2.4 all hit it). First attempt is
+      # allowed to fail; after a pause we deploy once more for real.
       - uses: actions/deploy-pages@v4
         id: deployment
+        continue-on-error: true
+      - name: Pause before retrying a rejected deployment
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 90
+      - uses: actions/deploy-pages@v4
+        id: deployment-retry
+        if: steps.deployment.outcome == 'failure'

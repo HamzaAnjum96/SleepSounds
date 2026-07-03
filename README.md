@@ -152,6 +152,16 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.6
+- **Pages deploys now retry a backend rejection.** 9.2.4's queue-don't-cancel
+  fix wasn't enough: its own deploy run failed the same way ("Deployment
+  failed, try again later" straight from the Pages API) even without any
+  cancellation in play — the backend just intermittently rejects deployments
+  when several land minutes apart. The deploy job now treats the first
+  attempt as fallible, pauses 90 s, and deploys once more for real before
+  the run is allowed to fail. Between queueing (9.2.4) and this retry, a
+  burst of releases can no longer strand the site on an older build.
+
 ### 9.2.5
 - **The library is ordered by build maturity.** The grid now leads with the
   most convincing synths — Rain and Fire (the flagship worklets), then the
