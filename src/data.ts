@@ -65,28 +65,32 @@ function workletSound(id: string, name: string, category: string, module: string
   return { id, name, category, source, tags: meta.tags ?? [], quality: meta.quality ?? 'good' };
 }
 
+// Ordered by build maturity — how many tuning passes each synth has survived —
+// so the grid leads with the most convincing sounds. Rain and fire are the
+// flagship worklets; fan / birdsong / insects are long-settled; then the rest,
+// newest builds last. The hidden (pulled) sounds close the list.
 export const SOUND_LIBRARY: Sound[] = [
   workletSound('rain',      'Rain',          'Water',    'rain.worklet.js',        'rain-gen'),
   workletSound('fire',      'Fire',          'Fire',     'fire.worklet.js',        'fire-synth'),
   wavSound('fan',           'Fan',           'Air'),
-  wavSound('underwater',    'Underwater',    'Water'),
   workletSound('birdsong',  'Birdsong',      'Wildlife', 'birdsong.worklet.js',    'birdsong-synth'),
-  wavSound('stream',        'Stream',        'Water'),
-  wavSound('ocean',         'Ocean',         'Water'),
-  wavSound('shower',        'Shower',        'Water'),
-  wavSound('wind',          'Wind',          'Air'),
+  wavSound('night',         'Night Insects', 'Wildlife'),
   workletSound('thunder',   'Thunder',       'Air',      'thunder.worklet.js',     'thunder-gen'),
   workletSound('forest',    'Windy Forest',  'Earth',    'windyforest.worklet.js', 'windyforest-gen'),
+  wavSound('ocean',         'Ocean',         'Water'),
+  wavSound('wind',          'Wind',          'Air'),
+  wavSound('underwater',    'Underwater',    'Water'),
   wavSound('white-noise',   'White Noise',   'Noise'),
   wavSound('pink-noise',    'Pink Noise',    'Noise'),
   wavSound('brown-noise',   'Brown Noise',   'Noise'),
   wavSound('train',         'Train',         'Urban'),
   wavSound('airplane',      'Airplane',      'Urban'),
-  wavSound('night',         'Night Insects', 'Wildlife'),
   wavSound('heartbeat',     'Heartbeat',     'Cozy'),
   wavSound('purr',          'Cat Purr',      'Wildlife'),
   wavSound('chimes',        'Wind Chimes',   'Cozy'),
   wavSound('clock',         'Ticking Clock', 'Cozy'),
+  wavSound('stream',        'Stream',        'Water'),
+  wavSound('shower',        'Shower',        'Water'),
 ];
 
 /** Ids whose audio is a live worklet (params apply instantly, and persist on the

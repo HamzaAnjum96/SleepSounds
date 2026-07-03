@@ -152,6 +152,14 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.5
+- **The library is ordered by build maturity.** The grid now leads with the
+  most convincing synths — Rain and Fire (the flagship worklets), then the
+  long-settled Fan / Birdsong / Night Insects, then Thunder, Windy Forest,
+  Ocean, Wind, Underwater, the noise family, Train, Airplane, and the newest
+  builds (Heartbeat, Cat Purr, Wind Chimes, Ticking Clock) last. The hidden
+  sounds close the list, so dev mode appends them at the end.
+
 ### 9.2.4
 - **Fixed the failing GitHub Pages deploys.** The 9.2.0 and 9.2.1 deploy runs
   died with "Deployment failed, try again later" while CI stayed green. Cause:
