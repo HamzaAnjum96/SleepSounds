@@ -865,10 +865,16 @@ function genThunder(params?: Record<string, number>): string {
   lp1(hiss, 5200);
 
   const booms = new Float32Array(N);
-  let pos = Math.floor(SR * rand(1.5, 4.5));
+  // The live worklet holds its first strike back 9–21 s so starting the
+  // sound never startles; the fallback opens with the same lull (loop-safe:
+  // on repeat it reads as a natural pause between strikes) and its first
+  // boom lands softened.
+  let pos = Math.floor(SR * rand(8, 15));
+  let firstBoom = true;
   while (pos < N) {
     const len = Math.floor(SR * rand(0.7, 2.2));
-    const amp = rand(0.12, 0.34);
+    const amp = rand(0.12, 0.34) * (firstBoom ? 0.6 : 1);
+    firstBoom = false;
     const f0 = rand(36, 95);
     let ph = 0;
     for (let i = 0; i < len && pos + i < N; i++) {

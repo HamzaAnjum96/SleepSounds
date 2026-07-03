@@ -152,6 +152,14 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.7
+- **Thunder's WAV fallback opens gently, like the real one.** The live
+  worklet holds its first strike back 9–21 s and softens it — the sleep-safe
+  opening from the 7.19 rework — but the fallback loop could land a full
+  boom 1.5 s after you pressed play. It now opens with the same lull (8–15 s,
+  loop-safe: on repeat it reads as a pause between strikes) and its first
+  boom lands at 60% weight.
+
 ### 9.3.6
 - **Windy Forest's WAV fallback comes off its rails.** The live worklet is
   already a proper gust-field model; the fallback loop (used when the worklet
