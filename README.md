@@ -152,6 +152,15 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.2
+- **Shower: water strikes a surface now.** It was three noise bands — a vent,
+  not a shower. Following the "sound atoms" split from the rain research
+  (background bed + discrete impacts), a dense patter of individual drop
+  impacts now sits under the spray, its rate riding the **pressure** slider,
+  and the occasional heavier hit rings the tub with a fast-damped low
+  resonance. Spray, steam and the room resonance are unchanged. Hidden from
+  the lineup for now — audition it in dev mode.
+
 ### 9.3.1
 - **Stream actually babbles.** The generator was two filtered noise bands —
   which is precisely the "indistinct murmur" failure the liquid-sound

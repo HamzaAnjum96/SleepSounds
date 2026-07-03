@@ -1105,9 +1105,38 @@ function genShower(params?: Record<string, number>): string {
   hp1(steamBuf, 4000 + steam * 2000);
   lp1(steamBuf, 12000);
 
+  // Drop impacts: the patter of individual streams hitting the tub — the
+  // "sound atoms" the rain research calls out (docs/research/
+  // realistic-rain-design.md). A pure noise wash reads as a vent; the dense
+  // but discrete impact layer is what says water striking a surface. Heavier
+  // hits ring the basin faintly (a fast-damped low resonance).
+  const patter = new Float32Array(N);
+  const patterRate = 60 + pressure * 120; // impacts/sec
+  let pPos = Math.floor(SR * 0.01);
+  while (pPos < N) {
+    const len = Math.floor(SR * rand(0.002, 0.006));
+    const amp = rand(0.03, 0.12);
+    for (let i = 0; i < len && pPos + i < N; i++) {
+      patter[pPos + i] += (random() * 2 - 1) * amp * Math.exp(-6 * (i / len));
+    }
+    if (chance(0.05)) {
+      // a heavier hit rings the tub
+      const rf = rand(280, 520);
+      const rl = Math.floor(SR * 0.03);
+      let ph = random() * 2 * Math.PI;
+      for (let i = 0; i < rl && pPos + i < N; i++) {
+        ph += (2 * Math.PI * rf) / SR;
+        patter[pPos + i] += Math.sin(ph) * Math.exp(-i / (SR * 0.008)) * amp * 0.8;
+      }
+    }
+    pPos += Math.max(40, Math.floor(SR / patterRate * rand(0.5, 1.6)));
+  }
+  hp1(patter, 350);
+  lp1(patter, 5200 + pressure * 2800);
+
   const preMix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    preMix[i] = spray[i] * 0.5 + bodyBuf[i] * 0.35 + steamBuf[i] * (0.05 + steam * 0.1);
+    preMix[i] = spray[i] * 0.42 + bodyBuf[i] * 0.33 + patter[i] * 0.5 + steamBuf[i] * (0.05 + steam * 0.1);
   }
   // Spray spreads wide; the room resonance gets a longer, roomier decorrelation
   // so the shower surrounds rather than sits in the centre.
