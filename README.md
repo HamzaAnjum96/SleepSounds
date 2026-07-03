@@ -152,6 +152,15 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.8
+- **Underwater: no more laser guns.** Feedback nailed it — an exposed pure
+  sine chirping 35% from a 2 ms edge reads as a weapon, not a bubble. The
+  bubble voice keeps its physics but is now heard the way water actually
+  delivers it: a ~12 ms eased onset (water blurs attacks), only a hint of
+  up-chirp (8%), lower frequencies (300–900 Hz), roughly half the level,
+  and a sparser population. The glug trains stay, at less than half their
+  old weight.
+
 ### 9.3.7
 - **Thunder's WAV fallback opens gently, like the real one.** The live
   worklet holds its first strike back 9–21 s and softens it — the sleep-safe

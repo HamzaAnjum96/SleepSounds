@@ -1069,14 +1069,18 @@ function genUnderwater(params?: Record<string, number>): string {
   const addBubble = (at: number, f0: number, amp: number, pan: number): void => {
     const tau = (0.045 + 28 / f0) * rand(0.8, 1.25);      // bigger rings longer
     const len = Math.min(Math.floor(SR * tau * 4), N - at);
-    const attack = Math.floor(SR * 0.002);
+    // Water blurs onsets: ~12 ms eased attack, and only a *hint* of the
+    // up-chirp (8%). The first cut chirped 35% from a 2 ms edge, and an
+    // exposed pure sine sweeping that fast reads as a laser, not a bubble.
+    const attack = Math.floor(SR * 0.012);
     const pl = Math.cos((pan + 1) * Math.PI / 4);
     const pr = Math.sin((pan + 1) * Math.PI / 4);
     let ph = random() * 2 * Math.PI;
     for (let i = 0; i < len; i++) {
       const ts = i / SR;
-      const env = (i < attack ? i / attack : 1) * Math.exp(-ts / tau);
-      ph += (2 * Math.PI * f0 * (1 + 0.35 * (ts / tau))) / SR; // the up-chirp
+      const on = i < attack ? 0.5 - 0.5 * Math.cos(Math.PI * (i / attack)) : 1;
+      const env = on * Math.exp(-ts / tau);
+      ph += (2 * Math.PI * f0 * (1 + 0.08 * (ts / tau))) / SR;
       const s = Math.sin(ph) * env * amp;
       bubblesL[at + i] += s * pl;
       bubblesR[at + i] += s * pr;
@@ -1085,10 +1089,10 @@ function genUnderwater(params?: Record<string, number>): string {
   let pos = Math.floor(SR * 0.05);
   while (pos < N) {
     const pan = rand(-0.7, 0.7);
-    if (chance(0.16)) {
+    if (chance(0.12)) {
       // A glug train: a large bubble breaking into smaller, higher ones.
       let f = rand(150, 260);
-      let amp = rand(0.10, 0.17);
+      let amp = rand(0.05, 0.09);
       let at = pos;
       const parts = 2 + Math.floor(random() * 3);
       for (let b = 0; b < parts && at < N; b++) {
@@ -1098,10 +1102,10 @@ function genUnderwater(params?: Record<string, number>): string {
         amp *= rand(0.55, 0.8);
       }
     } else {
-      // A lone small bubble, heard through the water.
-      addBubble(pos, rand(350, 1200), rand(0.02, 0.07), pan);
+      // A lone small bubble, heard darkly through the water.
+      addBubble(pos, rand(300, 900), rand(0.012, 0.04), pan);
     }
-    pos += Math.floor(SR * rand(0.08, 0.5) / (bubbles + 0.2));
+    pos += Math.floor(SR * rand(0.12, 0.6) / (bubbles + 0.2));
   }
   hp1(bubblesL, 150); lp1(bubblesL, 1600);
   hp1(bubblesR, 150); lp1(bubblesR, 1600);
