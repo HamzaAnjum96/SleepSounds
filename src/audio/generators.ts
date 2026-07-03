@@ -1468,47 +1468,42 @@ function genChimes(params?: Record<string, number>): string {
 }
 
 function genClock(params?: Record<string, number>): string {
-  // Ticking Clock: a pendulum clock at rest — one beat per second, tick and
-  // tock voiced slightly apart (the escapement rocks between two faces). The
-  // bare mechanical click is the heart of the sound and stays crisp; under it,
-  // `wood` adds a *knock* (a short noise burst ringing a damped case
-  // resonance — a tone here reads as a marimba note, not a clock), and `room`
-  // adds only the faintest dark floor. 32 beats fit the loop exactly, so the
-  // rhythm never stumbles at the seam.
-  const { wood = 0.45, softness = 0.45, room = 0.25 } = params ?? {};
+  // Ticking Clock: the bare mechanism IS the sound. The base render is the
+  // naked escapement click — crisp ring + a breath of contact noise + the
+  // tiny secondary contact, true silence between beats — which is the
+  // character listeners actually pick when given the sliders. So the sliders
+  // don't bury it under case knocks and room tone any more; they vary real
+  // qualities of the mechanism instead:
+  //   pace       — the beat, a slow 2 s pendulum through the 1 s default to a
+  //                quick ½ s pocket-watch tick (snapped to an even count per
+  //                loop so the tick/tock alternation survives the seam)
+  //   contrast   — how differently the two escapement faces are voiced
+  //                (0 = one even tick, 1 = strongly two-toned)
+  //   brightness — the click's tone, darker to glassier
+  const { pace = 0.5, contrast = 0.5, brightness = 0.5 } = params ?? {};
+
+  const interval = 2.0 * Math.pow(4, -pace);   // seconds per beat
+  const beats = Math.max(2, 2 * Math.round(N / SR / (2 * interval)));
+  const step = N / beats;                       // samples per beat (even count)
+
+  const tickF = 1400 + brightness * 1700;
+  const tockF = tickF * (1 - 0.42 * contrast);
+  const tockLevel = 1 - 0.30 * contrast;
 
   const buf = new Float32Array(N);
-  const knockF = 210 + wood * 130;
-
-  const beats = Math.floor(N / SR); // one per second, an even count — the
-  for (let k = 0; k < beats; k++) { // tick/tock alternation survives the seam
-
+  for (let k = 0; k < beats; k++) {
     const isTick = k % 2 === 0;
-    const at = Math.floor((k + 0.25) * SR + rand(-0.002, 0.002) * SR);
-    const clickF = isTick ? 2250 : 1780;
-    const level = (isTick ? 1 : 0.86) * (0.92 + random() * 0.16);
+    const at = Math.floor((k + 0.25) * step + rand(-0.002, 0.002) * SR);
+    const f = isTick ? tickF : tockF;
+    const level = (isTick ? 1 : tockLevel) * (0.92 + random() * 0.16);
 
     // The click: a short damped ring plus a breath of contact noise.
     const clickLen = Math.floor(SR * 0.012);
     for (let i = 0; i < clickLen && at + i < N; i++) {
       const ts = i / SR;
-      const ring = Math.sin(2 * Math.PI * clickF * ts) * Math.exp(-ts / 0.0030);
+      const ring = Math.sin(2 * Math.PI * f * ts) * Math.exp(-ts / 0.0030);
       const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0020) * 0.5;
       buf[at + i] += (ring + noise) * level * 0.5;
-    }
-    // The case: a woody knock — a 4 ms noise excitation into a fast-damped
-    // resonator, so it thuds like wood instead of singing like a bar.
-    const knockLen = Math.floor(SR * 0.05);
-    const exciteLen = Math.floor(SR * 0.004);
-    const w = (2 * Math.PI * knockF * (1 + (random() - 0.5) * 0.04)) / SR;
-    const r = Math.exp(-1 / (0.016 * SR));
-    const co = 2 * r * Math.cos(w), r2 = r * r;
-    let y1 = 0, y2 = 0;
-    for (let i = 0; i < knockLen && at + i < N; i++) {
-      const x = i < exciteLen ? (random() * 2 - 1) * (1 - i / exciteLen) : 0;
-      const y = co * y1 - r2 * y2 + x;
-      y2 = y1; y1 = y;
-      buf[at + i] += y * level * wood * 0.16;
     }
     // The escapement's tiny secondary contact right behind the beat.
     const echoAt = at + Math.floor(SR * 0.011);
@@ -1519,14 +1514,9 @@ function genClock(params?: Record<string, number>): string {
     }
   }
 
-  // Distance: softness walks the clock across the room. Zero leaves the click
-  // genuinely crisp; the second, gentler pole only shaves the glassy extreme.
-  const dist = 5200 - softness * 3400;
-  lp1(buf, dist);
-  lp1(buf, Math.min(9000, dist * 2.5));
-
-  const bed = brownNoise();
-  lp1(bed, 90);
-  for (let i = 0; i < N; i++) buf[i] += bed[i] * (0.02 + 0.09 * room);
+  // Only the gentle top-safety the bare voicing always had — no distance
+  // muffle, no room-tone floor.
+  lp1(buf, 5200);
+  lp1(buf, 9000);
   return gen(buf, 0.5);
 }

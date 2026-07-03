@@ -152,6 +152,22 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.0
+- **Ticking Clock: the bare tick is the sound now — and the sliders vary the
+  mechanism, not the mud.** Feedback was consistent: it only sounded right
+  with every slider at zero. So that render — the naked escapement click,
+  true silence between beats — is the generator's base voice, and the case
+  knock / distance muffle / room tone controls are gone entirely. The new
+  sliders edit real qualities of the mechanism: **pace** (a slow 2-second
+  pendulum through the 1-second default to a quick ½-second pocket-watch
+  tick, always snapped to an even beat count so the tick/tock alternation
+  survives the loop seam), **tick–tock** (how differently the two escapement
+  faces are voiced, from one even tick to strongly two-toned), and
+  **brightness** (the click's tone). New chips with new marks: **Slow
+  Pendulum** · **Bare Tick** (default) · **Even Beat** · **Pocket Watch**.
+  Measured: default = 32 beats and 93% true silence; Slow Pendulum 18 beats;
+  Pocket Watch 60.
+
 ### 9.1.7
 - **Every variant that depicts something now has a drawn mark.** The crafted
   16px chip marks (previously only rain's roof/window/tin and fire's flames)

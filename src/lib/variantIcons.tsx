@@ -492,33 +492,33 @@ function Pendulum() {
     </Svg>
   );
 }
-function Mantel() {
-  // the arched mantel case
+function Escapement() {
+  // the naked mechanism — an escape wheel
   return (
     <Svg>
-      <path d="M3.4 12.8 V8.8 A4.6 4.6 0 0 1 12.6 8.8 V12.8 Z" />
-      <path d="M8 8.6 V6.9 M8 8.6 L9.3 9.3" opacity={0.9} />
+      <circle cx="8" cy="8.6" r="3.4" />
+      <circle cx="8" cy="8.6" r="0.8" {...fill} />
+      <path d="M8 5.2 V3.4 M11.4 8.6 H13.2 M8 12 V13.8 M4.6 8.6 H2.8" opacity={0.85} />
     </Svg>
   );
 }
-function Grandfather() {
-  // the tall case
+function Metronome() {
+  // one even beat
   return (
     <Svg>
-      <rect x="5.2" y="2.4" width="5.6" height="11.2" rx="1.1" />
-      <circle cx="8" cy="5.4" r="1.7" />
-      <path d="M8 8.4 V11" opacity={0.7} />
+      <path d="M5.6 13 L7.1 3.4 H8.9 L10.4 13 Z" />
+      <path d="M8 11 L10.8 5.6" opacity={0.9} />
+      <circle cx="10.8" cy="5.6" r="0.9" {...fill} />
     </Svg>
   );
 }
-function HallClock() {
-  // heard from another room — the tick, softened by distance
+function PocketWatch() {
+  // a quick delicate tick on a chain
   return (
     <Svg>
-      <circle cx="6" cy="8" r="2.9" />
-      <path d="M6 6.7 V8 L7 8.8" opacity={0.9} />
-      <path d="M10.6 5.9 A4.4 4.4 0 0 1 10.6 10.1" opacity={0.6} />
-      <path d="M12.5 4.6 A7 7 0 0 1 12.5 11.4" opacity={0.35} />
+      <circle cx="8" cy="9.2" r="3.9" />
+      <path d="M8 5.3 V3.9 M6.8 3.9 H9.2" />
+      <path d="M8 9.2 V7.2 M8 9.2 L9.5 10" opacity={0.9} />
     </Svg>
   );
 }
@@ -659,9 +659,9 @@ const MARKS: Record<string, () => ReactNode> = {
   womb: () => <Womb />,
   // ticking clock
   pendulum: () => <Pendulum />,
-  mantel: () => <Mantel />,
-  grandfather: () => <Grandfather />,
-  hallclock: () => <HallClock />,
+  escapement: () => <Escapement />,
+  metronome: () => <Metronome />,
+  pocketwatch: () => <PocketWatch />,
   // wind chimes
   chimestill: () => <ChimesStill />,
   chimedeep: () => <ChimesDeep />,

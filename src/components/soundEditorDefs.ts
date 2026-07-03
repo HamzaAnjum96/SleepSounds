@@ -411,16 +411,16 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Dancing',       { activity: 0.75, tone: 0.62, sustain: 0.42 }, 'chimedance'],
   )},
   clock: { label: 'Ticking Clock', mode: 'simple', groups: simpleGroup(
-    { key: 'wood', label: 'wood knock', def: 0.45 },
-    { key: 'softness', label: 'distance', def: 0.45 },
-    { key: 'room', label: 'room tone', def: 0.25 },
+    { key: 'pace', label: 'pace', def: 0.50 },
+    { key: 'contrast', label: 'tick–tock', def: 0.50 },
+    { key: 'brightness', label: 'brightness', def: 0.50 },
   ), variants: vlist(
-    // Bare Tick is the naked mechanism (the all-sliders-down character);
-    // Grandfather adds the deep case; Distant Hall is heard from another room.
-    ['Bare Tick',    { wood: 0.08, softness: 0.08, room: 0.05 }, 'pendulum'],
-    ['Mantel', {}, 'mantel'],
-    ['Grandfather',  { wood: 0.85, softness: 0.55, room: 0.35 }, 'grandfather'],
-    ['Distant Hall', { wood: 0.55, softness: 0.85, room: 0.50 }, 'hallclock'],
+    // The bare mechanism IS the base sound now; the chips vary the mechanism
+    // itself (beat, voicing, tone) instead of burying it in case and room.
+    ['Slow Pendulum', { pace: 0.06, contrast: 0.70, brightness: 0.35 }, 'pendulum'],
+    ['Bare Tick', {}, 'escapement'],
+    ['Even Beat',     { pace: 0.50, contrast: 0.04, brightness: 0.45 }, 'metronome'],
+    ['Pocket Watch',  { pace: 0.95, contrast: 0.30, brightness: 0.72 }, 'pocketwatch'],
   )},
 };
 

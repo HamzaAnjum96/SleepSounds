@@ -1,7 +1,7 @@
 {
   "name": "sleep-mixer",
   "private": true,
-  "version": "9.1.7",
+  "version": "9.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
