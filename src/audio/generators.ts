@@ -989,26 +989,50 @@ function genUnderwater(params?: Record<string, number>): string {
   const currentDepth = 0.25 + current * 0.5;
 
   // Bubbles rise at scattered positions across the field; pan each one.
+  // Voiced per the bubble-acoustics model (docs/research/water-family-
+  // synthesis.md): near-instant onset, exponential decay, and a pitch that
+  // RISES through the decay — the up-chirp is what reads as water instead of
+  // an electronic blip. Sizes follow a rough Minnaert spread: mostly small
+  // and distant, with occasional low "glug" trains of 2–4 bubbles, each
+  // smaller and higher than the last (air breaking up as it rises).
   const bubblesL = new Float32Array(N);
   const bubblesR = new Float32Array(N);
-  let pos = Math.floor(SR * 0.05);
-  while (pos < N) {
-    const bFreq = rand(200, 800);
-    const bLen = Math.floor(SR * rand(0.008, 0.030));
-    const bAmp = rand(0.02, 0.08);
-    const pan = rand(-0.7, 0.7);
+  const addBubble = (at: number, f0: number, amp: number, pan: number): void => {
+    const tau = (0.045 + 28 / f0) * rand(0.8, 1.25);      // bigger rings longer
+    const len = Math.min(Math.floor(SR * tau * 4), N - at);
+    const attack = Math.floor(SR * 0.002);
     const pl = Math.cos((pan + 1) * Math.PI / 4);
     const pr = Math.sin((pan + 1) * Math.PI / 4);
-    let ph = 0;
-    for (let i = 0; i < bLen && pos + i < N; i++) {
-      const p = i / Math.max(1, bLen);
-      const env = Math.sin(Math.PI * p);
-      const f = bFreq + bFreq * 0.3 * p; // pitch rise
-      ph += (2 * Math.PI * f) / SR;
-      const s = Math.sin(ph) * env * bAmp;
-      bubblesL[pos + i] += s * pl; bubblesR[pos + i] += s * pr;
+    let ph = random() * 2 * Math.PI;
+    for (let i = 0; i < len; i++) {
+      const ts = i / SR;
+      const env = (i < attack ? i / attack : 1) * Math.exp(-ts / tau);
+      ph += (2 * Math.PI * f0 * (1 + 0.35 * (ts / tau))) / SR; // the up-chirp
+      const s = Math.sin(ph) * env * amp;
+      bubblesL[at + i] += s * pl;
+      bubblesR[at + i] += s * pr;
     }
-    pos += Math.floor(SR * rand(0.05, 0.4) / (bubbles + 0.2));
+  };
+  let pos = Math.floor(SR * 0.05);
+  while (pos < N) {
+    const pan = rand(-0.7, 0.7);
+    if (chance(0.16)) {
+      // A glug train: a large bubble breaking into smaller, higher ones.
+      let f = rand(150, 260);
+      let amp = rand(0.10, 0.17);
+      let at = pos;
+      const parts = 2 + Math.floor(random() * 3);
+      for (let b = 0; b < parts && at < N; b++) {
+        addBubble(at, f, amp, pan + rand(-0.1, 0.1));
+        at += Math.floor(SR * rand(0.06, 0.16));
+        f *= rand(1.25, 1.6);
+        amp *= rand(0.55, 0.8);
+      }
+    } else {
+      // A lone small bubble, heard through the water.
+      addBubble(pos, rand(350, 1200), rand(0.02, 0.07), pan);
+    }
+    pos += Math.floor(SR * rand(0.08, 0.5) / (bubbles + 0.2));
   }
   hp1(bubblesL, 150); lp1(bubblesL, 1600);
   hp1(bubblesR, 150); lp1(bubblesR, 1600);

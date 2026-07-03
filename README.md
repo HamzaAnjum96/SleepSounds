@@ -152,6 +152,20 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.0
+- **Underwater: bubbles that obey bubble physics.** Start of a
+  research-grounded pass over the less-worked sounds (notes + sources in
+  `docs/research/water-family-synthesis.md`). Per the Minnaert / van den Doel
+  liquid-sound model, a real bubble is a damped sinusoid with a near-instant
+  onset, an exponential decay that lengthens with bubble size, and a pitch
+  that **rises** through the decay — the old bubbles were symmetric
+  sine-envelope "boops" with none of that, which is exactly the electronic
+  blip the literature warns about. The population is Minnaert-spread too:
+  mostly small distant bubbles heard darkly through the water, with
+  occasional low **glug trains** (a large bubble breaking into 2–4 smaller,
+  higher ones as it rises). The deep pressure bed and current swell are
+  unchanged.
+
 ### 9.2.6
 - **Pages deploys now retry a backend rejection.** 9.2.4's queue-don't-cancel
   fix wasn't enough: its own deploy run failed the same way ("Deployment
