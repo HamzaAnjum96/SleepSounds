@@ -49,6 +49,13 @@ function genWhite(params?: Record<string, number>): string {
   const body = whiteNoise();
   hp1(body, bodyHp);
   lp1(body, bodyLp);
+  // A second, darker copy of the body crossfades in and out on a loop-closed
+  // walk: the spectrum itself breathes a little (never the level alone), so
+  // hours of it stay uneventful without going frozen.
+  const dark = new Float32Array(body);
+  lp1(dark, bodyLp * 0.45);
+  const tilt = smoothRandomLfo(0, 0.35, 4.0, 9.0);
+  for (let i = 0; i < N; i++) body[i] = body[i] * (1 - tilt[i]) + dark[i] * tilt[i];
 
   const air = whiteNoise();
   hp1(air, 2400);

@@ -152,6 +152,14 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.3
+- **White Noise: the spectrum breathes.** Auditory-texture work says realism
+  lives in slowly varying subband statistics, and perfectly stationary noise
+  reads as synthetic and fatiguing over hours. The body now crossfades very
+  gently toward a darker copy of itself on a loop-closed random walk
+  (spectral tilt breathing, never a level pump) on top of the existing
+  drift/shimmer movement. Uneventful, but no longer frozen.
+
 ### 9.3.2
 - **Shower: water strikes a surface now.** It was three noise bands — a vent,
   not a shower. Following the "sound atoms" split from the rain research
