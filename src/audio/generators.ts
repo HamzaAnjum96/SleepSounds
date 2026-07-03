@@ -12,22 +12,29 @@ function genForest(params?: Record<string, number>): string {
   const leavesMix = 0.5 + leaves * 0.5;
   const twigAmpScale = twigsParam * 2.0;
   const twigGapScale = 1.5 - twigsParam;
-  const breezeFreq = 0.024 + breeze * 0.04;
-  // Forest canopy: leafy broadband bed + twig flicks + distant bird-like highs
+  // Forest canopy: leafy broadband bed + twig flicks. The canopy breathes on
+  // a loop-closed random gust walk (the old fixed-frequency |sin| repeated
+  // its swell every ~15–30 s), and the twigs ride the same gusts — branch
+  // noise happens when the wind moves, not on a metronome.
   const buf = pinkNoise();
   hp1(buf, 120);
   lp1(buf, 2200);
-  for (let i = 0; i < N; i++) {
-    const breezeEnv = 0.70 + 0.30 * Math.abs(Math.sin((2 * Math.PI * breezeFreq * i) / SR + 0.4));
-    buf[i] *= breezeEnv;
-  }
+  const gustHold = 2.0 + (1 - breeze) * 2.5;
+  const gust = smoothRandomLfo(0.55, 1.15, gustHold, gustHold * 2.4);
+  for (let i = 0; i < N; i++) buf[i] *= gust[i];
+
   const twigsBuf = new Float32Array(N);
   let twigPos = Math.floor(SR * 0.2);
   while (twigPos < N) {
-    const len = Math.floor(SR * rand(0.004, 0.018));
-    for (let i = 0; i < len && twigPos + i < N; i++) {
-      const env = Math.exp(-7.5 * (i / len));
-      twigsBuf[twigPos + i] += (random() * 2 - 1) * env * rand(0.04, 0.14) * twigAmpScale;
+    // Twigs mostly crack when the canopy is actually moving.
+    const g = (gust[twigPos] - 0.55) / 0.6;
+    if (chance(0.25 + 0.75 * Math.max(0, g))) {
+      const len = Math.floor(SR * rand(0.004, 0.018));
+      const gustAmp = 0.5 + 0.7 * Math.max(0, g);
+      for (let i = 0; i < len && twigPos + i < N; i++) {
+        const env = Math.exp(-7.5 * (i / len));
+        twigsBuf[twigPos + i] += (random() * 2 - 1) * env * rand(0.04, 0.14) * twigAmpScale * gustAmp;
+      }
     }
     twigPos += Math.floor(SR * rand(0.11 * twigGapScale, 0.55 * twigGapScale));
   }

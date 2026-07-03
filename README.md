@@ -152,6 +152,15 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.6
+- **Windy Forest's WAV fallback comes off its rails.** The live worklet is
+  already a proper gust-field model; the fallback loop (used when the worklet
+  can't load) still swelled on a fixed-frequency |sin| (an audible ~15–30 s
+  cycle) with twigs cracking on a metronome regardless of the wind. The
+  canopy now breathes on a loop-closed random gust walk and the twigs ride
+  it — mostly cracking when the canopy is actually moving, harder in strong
+  gusts, mostly silent in lulls.
+
 ### 9.3.5
 - **Brown Noise: a slow, loop-closed swell** (±10%, 5–11 s holds) so the deep
   floor rolls almost imperceptibly instead of holding one frozen level —
