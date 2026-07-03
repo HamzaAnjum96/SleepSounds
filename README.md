@@ -152,6 +152,11 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.3
+- **Category filters reordered.** The elemental families people reach for
+  first lead: Water · Fire · Air · Wildlife, then the indoor/textural ones
+  (Cozy · Earth · Noise · Urban).
+
 ### 9.2.2
 - **Cat Purr moved to Wildlife.** It's an animal, not furniture — it now sits
   with Birdsong and Night Insects (and wears the moss accent), leaving Cozy

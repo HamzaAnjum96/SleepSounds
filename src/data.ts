@@ -112,7 +112,9 @@ export function releasableSounds(includeExperimental: boolean, includeHidden = f
   );
 }
 
-export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Earth', 'Noise', 'Urban', 'Wildlife', 'Cozy'] as const;
+// Filter order: the elemental families people reach for first (water, fire,
+// wind, wildlife), then the indoor/textural ones.
+export const CATEGORIES = ['All', 'Water', 'Fire', 'Air', 'Wildlife', 'Cozy', 'Earth', 'Noise', 'Urban'] as const;
 export type Category = typeof CATEGORIES[number];
 
 /** Per-sound starting volume. Fire is synthesized +1.5x louder for headroom,
