@@ -152,6 +152,11 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.4
+- **Pink Noise: the same gentle spectral breathing as 9.3.3's white** — a
+  loop-closed walk toward a darker copy of itself, so the fall stays
+  uneventful without holding one frozen spectrum for hours.
+
 ### 9.3.3
 - **White Noise: the spectrum breathes.** Auditory-texture work says realism
   lives in slowly varying subband statistics, and perfectly stationary noise

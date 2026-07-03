@@ -197,6 +197,13 @@ function genPink(params?: Record<string, number>): string {
   const pink = pinkNoise();
   hp1(pink, pinkHp);
   lp1(pink, pinkLp);
+  // The spectrum breathes slightly (loop-closed walk toward a darker copy) —
+  // stationary-forever noise reads as synthetic; this stays uneventful
+  // without freezing.
+  const darker = new Float32Array(pink);
+  lp1(darker, pinkLp * 0.4);
+  const tilt = smoothRandomLfo(0, 0.3, 4.5, 10.0);
+  for (let i = 0; i < N; i++) pink[i] = pink[i] * (1 - tilt[i]) + darker[i] * tilt[i];
 
   const warmthBuf = brownNoise();
   hp1(warmthBuf, 24);
