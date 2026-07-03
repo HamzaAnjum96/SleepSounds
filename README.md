@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.4
+- **Fixed the failing GitHub Pages deploys.** The 9.2.0 and 9.2.1 deploy runs
+  died with "Deployment failed, try again later" while CI stayed green. Cause:
+  the deploy workflow used `cancel-in-progress: true`, and cancelling a Pages
+  run mid-deployment leaves its server-side deployment dangling — the next
+  run then collides with it. With releases landing minutes apart, that
+  happened back to back. Deploys now queue instead of cancelling
+  (`cancel-in-progress: false`, per GitHub's own Pages guidance for
+  production deployments). The site itself was never stale for long — each
+  successful deploy publishes the latest main.
+
 ### 9.2.3
 - **Category filters reordered.** The elemental families people reach for
   first lead: Water · Fire · Air · Wildlife, then the indoor/textural ones

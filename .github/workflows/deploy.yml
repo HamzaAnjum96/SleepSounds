@@ -9,9 +9,13 @@ permissions:
   pages: write
   id-token: write
 
+# One deploy at a time, and never cancel one mid-flight: a cancelled Pages
+# run can leave its server-side deployment dangling, and the next run then
+# fails with "Deployment failed, try again later" (bit us on 9.2.0/9.2.1 when
+# releases landed minutes apart). Queued > cancelled for production deploys.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
