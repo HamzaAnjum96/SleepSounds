@@ -141,6 +141,20 @@ export default function App() {
 
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
+  // Dev mode: spam-tap the moon (5 taps inside 3s) to toggle. Session-only by
+  // design — a refresh always lands back in the normal app.
+  const [devMode, setDevMode] = useState(false);
+  const moonTapsRef = useRef<number[]>([]);
+  const handleMoonTap = useCallback(() => {
+    const now = Date.now();
+    const taps = [...moonTapsRef.current.filter((t) => now - t < 3000), now];
+    if (taps.length >= 5) {
+      moonTapsRef.current = [];
+      setDevMode((d) => !d);
+    } else {
+      moonTapsRef.current = taps;
+    }
+  }, []);
   const [openEditorSoundId, setOpenEditorSoundId] = useState<string | null>(null);
   const [driftOpen, setDriftOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -535,10 +549,14 @@ export default function App() {
     }
   }, [category]);
 
-  // Experimental sounds are hidden unless the feature flag opts them in.
+  // Experimental sounds are hidden unless the feature flag opts them in; dev
+  // mode (spam-tap the moon) also reveals the pulled-from-lineup sounds.
   // Memoized so the array identity is stable: a fresh array each render would
   // re-run every effect that depends on the visible list.
-  const library = useMemo(() => releasableSounds(features.experimentalSounds), []);
+  const library = useMemo(
+    () => releasableSounds(features.experimentalSounds || devMode, devMode),
+    [devMode],
+  );
   const visibleSounds = useMemo(
     () => (category === 'All' ? library : library.filter((s) => s.category === category)),
     [library, category],
@@ -726,7 +744,17 @@ export default function App() {
         intensity={Math.min(1, activeSounds.length / 4)}
         dim={skyDim}
       />
-      <div className="moon-track" aria-hidden="true"><div className="moon" /></div>
+      {/* Scenery, but also the dev-mode latch: 5 quick taps toggles it, and
+          the moon wanes to a crescent while it's on. Hidden from the a11y
+          tree and tab order — it's an easter egg, not a control. */}
+      <div className="moon-track" aria-hidden="true">
+        <button
+          type="button"
+          className={`moon${devMode ? ' moon-dev' : ''}`}
+          tabIndex={-1}
+          onClick={handleMoonTap}
+        />
+      </div>
 
       <div className="layout">
       <div
@@ -737,7 +765,7 @@ export default function App() {
           {/* The h1 gives the page its accessible title; visually it's the same
               wordmark (the preflight reset zeroes heading defaults). */}
           <h1 className="wordmark">drift away</h1>
-          <div className="greeting">{greeting()}</div>
+          <div className="greeting">{devMode ? `${greeting()} · in dev mode` : greeting()}</div>
         </header>
 
         <InstallPrompt ready={hasPlayed && storageAck} />

@@ -116,8 +116,9 @@
 
   /* ── Z-index scale ────────────────────────────────────────────── */
   --z-bg:      0;
-  --z-scene:   1;   /* moon                */
+  --z-scene:   1;   /* starfield accents   */
   --z-app:     2;   /* app shell           */
+  --z-moon:    3;   /* the moon: above the shell so the dev-mode latch is tappable */
   --z-overlay: 10;  /* floating chrome     */
   --z-player:  30;  /* mini player         */
   --z-sheet:   40;  /* now-playing sheet   */
@@ -220,8 +221,10 @@ button, .material-symbols-rounded {
   top: 7%;
   right: 4%;
   width: 52px; height: 52px;
-  z-index: var(--z-scene);
-  /* Pure scenery: it must never intercept a tap meant for what's under it. */
+  /* Above the app shell so real taps can reach the disc (it is the dev-mode
+     latch); the track itself stays pointer-transparent, so only the 52px moon
+     catches anything — never a tap meant for content around it. */
+  z-index: var(--z-moon);
   pointer-events: none;
   transform: translateY(calc(var(--moon-scroll, 0px) * -0.7));
 }
@@ -259,6 +262,34 @@ button, .material-symbols-rounded {
     0 0 100px rgba(184,154,106,0.12);
   opacity: 0.92;
   animation: moonDrift 14s ease-in-out infinite;
+  /* It's a <button> now (the dev-mode latch), so undo the control look and
+     re-enable pointer events that .moon-track turns off for the scenery —
+     only the disc itself catches taps. */
+  border: 0;
+  padding: 0;
+  appearance: none;
+  cursor: default;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow var(--dur-4) var(--ease);
+}
+.moon:focus-visible { outline: none; } /* tabIndex=-1; never keyboard-reached */
+
+/* Dev mode: the moon wanes to a crescent. A night-sky disc slides across from
+   the upper-left, carving the lit edge on the lower-right; the glow pulls in. */
+.moon-dev {
+  box-shadow:
+    0 0 14px rgba(210,180,110,0.35),
+    0 0 34px rgba(200,165,100,0.16);
+}
+/* .moon.moon-dev so this outranks the later .moon::before crater rule. */
+.moon.moon-dev::before {
+  background: radial-gradient(circle at 32% 36%, rgba(8,12,20,0.97) 0%, rgba(8,12,20,0.97) 61%, transparent 63%);
+  animation: moonWane 0.5s var(--ease) both;
+}
+@keyframes moonWane {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 .moon::before {
   content: '';

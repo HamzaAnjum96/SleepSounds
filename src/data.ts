@@ -102,10 +102,13 @@ export const WORKLET_SOUND_IDS = new Set(
 export const HIDDEN_SOUND_IDS = new Set(['stream', 'shower']);
 
 /** The library minus hidden sounds, and minus unfinished (experimental) ones
- *  unless the experimentalSounds feature flag is on. */
-export function releasableSounds(includeExperimental: boolean): Sound[] {
+ *  unless the experimentalSounds feature flag is on. `includeHidden` (dev
+ *  mode's moon toggle) brings the pulled sounds back for auditioning. */
+export function releasableSounds(includeExperimental: boolean, includeHidden = false): Sound[] {
   return SOUND_LIBRARY.filter(
-    (s) => !HIDDEN_SOUND_IDS.has(s.id) && (includeExperimental || s.quality !== 'experimental'),
+    (s) =>
+      (includeHidden || !HIDDEN_SOUND_IDS.has(s.id)) &&
+      (includeExperimental || s.quality !== 'experimental'),
   );
 }
 

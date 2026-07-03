@@ -152,6 +152,19 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.1
+- **Dev mode: spam-tap the moon.** Five quick taps on the moon (within 3 s)
+  toggle dev mode; five more — or a refresh — turn it off (session-only by
+  design, nothing persisted). While it's on, the moon **wanes to a crescent**
+  (a night-sky disc slides across, the glow pulls in), the greeting reads
+  "… · in dev mode", and the library reveals the hidden / pulled sounds
+  (Stream, Shower today — anything in `HIDDEN_SOUND_IDS` plus experimental
+  builds). Plumbing: the moon is a real (a11y-hidden, tab-unreachable)
+  button now, and it needed its own z-index step above the app shell — real
+  taps hit the shell, not the scenery, which is also why the old
+  "moon can't swallow taps" rule still holds: only the 52 px disc itself
+  catches anything.
+
 ### 9.2.0
 - **Ticking Clock: the bare tick is the sound now — and the sliders vary the
   mechanism, not the mud.** Feedback was consistent: it only sounded right
