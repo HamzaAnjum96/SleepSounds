@@ -152,6 +152,11 @@ for the history behind that.
 
 ## Changelog
 
+### 9.2.2
+- **Cat Purr moved to Wildlife.** It's an animal, not furniture — it now sits
+  with Birdsong and Night Insects (and wears the moss accent), leaving Cozy
+  to the hearth-side textures: Heartbeat, Wind Chimes, Ticking Clock.
+
 ### 9.2.1
 - **Dev mode: spam-tap the moon.** Five quick taps on the moon (within 3 s)
   toggle dev mode; five more — or a refresh — turn it off (session-only by

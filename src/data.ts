@@ -84,7 +84,7 @@ export const SOUND_LIBRARY: Sound[] = [
   wavSound('airplane',      'Airplane',      'Urban'),
   wavSound('night',         'Night Insects', 'Wildlife'),
   wavSound('heartbeat',     'Heartbeat',     'Cozy'),
-  wavSound('purr',          'Cat Purr',      'Cozy'),
+  wavSound('purr',          'Cat Purr',      'Wildlife'),
   wavSound('chimes',        'Wind Chimes',   'Cozy'),
   wavSound('clock',         'Ticking Clock', 'Cozy'),
 ];
