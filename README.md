@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.1
+- **Stream actually babbles.** The generator was two filtered noise bands —
+  which is precisely the "indistinct murmur" failure the liquid-sound
+  literature describes; a brook's voice is its individual bubble events. A
+  babble layer now rides the flow: a population of damped-sinusoid bubbles
+  with the rising Minnaert chirp (mid-band voices, with the **sparkle**
+  slider governing the bright small-bubble end), each panned to its own spot,
+  their rate surging with the flow. A quiet collective low band (the
+  coupled-bubble hum of dense water) rides the **depth** slider. Hidden from
+  the lineup for now — audition it in dev mode; it's a candidate to return.
+
 ### 9.3.0
 - **Underwater: bubbles that obey bubble physics.** Start of a
   research-grounded pass over the less-worked sounds (notes + sources in

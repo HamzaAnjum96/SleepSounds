@@ -765,6 +765,42 @@ function genStream(params?: Record<string, number>): string {
   lp1(ripples, 7600);
 
   const flowLfo = smoothRandomLfo(lfoMin, lfoMax, 0.5, 2.4);
+
+  // The babble: a population of real bubble events over the flow wash (see
+  // docs/research/water-family-synthesis.md) — damped sinusoids with the
+  // up-chirp, individually panned. This is what separates a brook from
+  // filtered noise: the wash carries the water, the bubbles carry the voice.
+  const babbleL = new Float32Array(N);
+  const babbleR = new Float32Array(N);
+  const babbleRate = 6 + flowParam * 16; // events/sec, surging with the flow
+  let bPos = Math.floor(SR * 0.03);
+  while (bPos < N) {
+    const bright = chance(0.22 + sparkle * 0.38);
+    const f0 = bright ? rand(1100, 2400) : rand(420, 1100);
+    const tau = (0.018 + 9 / f0) * rand(0.75, 1.3);
+    const len = Math.min(Math.floor(SR * tau * 4), N - bPos);
+    const amp = bright ? rand(0.012, 0.035) : rand(0.02, 0.055);
+    const pan = rand(-0.8, 0.8);
+    const pl = Math.cos((pan + 1) * Math.PI / 4);
+    const pr = Math.sin((pan + 1) * Math.PI / 4);
+    const attack = Math.floor(SR * 0.0015);
+    let ph = random() * 2 * Math.PI;
+    for (let i = 0; i < len; i++) {
+      const ts = i / SR;
+      const env = (i < attack ? i / attack : 1) * Math.exp(-ts / tau);
+      ph += (2 * Math.PI * f0 * (1 + 0.4 * (ts / tau))) / SR; // the up-chirp
+      const s = Math.sin(ph) * env * amp;
+      babbleL[bPos + i] += s * pl;
+      babbleR[bPos + i] += s * pr;
+    }
+    bPos += Math.max(60, Math.floor(SR / (babbleRate * (0.4 + flowLfo[Math.min(N - 1, bPos)]))));
+  }
+
+  // Collective low band: a bubble cloud also hums together below its
+  // individual voices (the coupled-bubble emission) — depth sets how much.
+  const collective = brownNoise();
+  lp1(collective, 170);
+
   // Modulate the bed and ripples in mono, then decorrelate each separately:
   // the bright ripples spread wider than the body, so the stream glitters
   // across the image instead of trickling down the centre.
@@ -778,9 +814,11 @@ function genStream(params?: Record<string, number>): string {
   const ripSt = decorrelateMono(ripMod, 9);
   const left = new Float32Array(N);
   const right = new Float32Array(N);
+  const collW = 0.04 + depth * 0.09;
   for (let i = 0; i < N; i++) {
-    left[i]  = bedSt.left[i]  * (1 - rippleMix) + ripSt.left[i]  * rippleMix;
-    right[i] = bedSt.right[i] * (1 - rippleMix) + ripSt.right[i] * rippleMix;
+    const wash = 1 - rippleMix;
+    left[i]  = bedSt.left[i]  * wash + ripSt.left[i]  * rippleMix + babbleL[i] * 0.6 + collective[i] * collW;
+    right[i] = bedSt.right[i] * wash + ripSt.right[i] * rippleMix + babbleR[i] * 0.6 + collective[i] * collW;
   }
   return genStereo(left, right, 0.66);
 }
