@@ -91,6 +91,10 @@ function genBrown(params?: Record<string, number>): string {
   for (let i = 0; i < N; i++) buf[i] = buf[i] * (1 - rumbleMix) + rumbleBuf[i] * rumbleMix;
   // Smoothness LP
   lp1(buf, smoothLp);
+  // A slow swell (loop-closed) so the floor rolls very gently instead of
+  // holding one frozen level for hours.
+  const swell = smoothRandomLfo(0.88, 1.08, 5.0, 11.0);
+  for (let i = 0; i < N; i++) buf[i] *= swell[i];
   // Brown noise is almost all low end, which is non-directional — keep it mono
   // (centred). Stereo width here only invites comb/phase artefacts.
   return gen(buf, 0.65);

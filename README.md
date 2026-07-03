@@ -152,6 +152,12 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.5
+- **Brown Noise: a slow, loop-closed swell** (±10%, 5–11 s holds) so the deep
+  floor rolls almost imperceptibly instead of holding one frozen level —
+  brown is all low end, so it breathes in level where white/pink breathe in
+  tilt.
+
 ### 9.3.4
 - **Pink Noise: the same gentle spectral breathing as 9.3.3's white** — a
   loop-closed walk toward a darker copy of itself, so the fall stays
