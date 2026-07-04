@@ -20,6 +20,8 @@ class Biquad {
     this.b0 = al / a0; this.b1 = 0; this.b2 = -al / a0; this.a1 = -2 * c / a0; this.a2 = (1 - al) / a0; }
   highpass(f, q) { const w = TWO_PI * f / SR, c = Math.cos(w), s = Math.sin(w), al = s / (2 * q), a0 = 1 + al;
     this.b0 = (1 + c) / 2 / a0; this.b1 = -(1 + c) / a0; this.b2 = (1 + c) / 2 / a0; this.a1 = -2 * c / a0; this.a2 = (1 - al) / a0; }
+  lowpass(f, q) { const w = TWO_PI * f / SR, c = Math.cos(w), s = Math.sin(w), al = s / (2 * q), a0 = 1 + al;
+    this.b0 = (1 - c) / 2 / a0; this.b1 = (1 - c) / a0; this.b2 = (1 - c) / 2 / a0; this.a1 = -2 * c / a0; this.a2 = (1 - al) / a0; }
   process(x) { const y = this.b0 * x + this.b1 * this.x1 + this.b2 * this.x2 - this.a1 * this.y1 - this.a2 * this.y2;
     this.x2 = this.x1; this.x1 = x; this.y2 = this.y1; this.y1 = y; return y; }
 }
@@ -60,13 +62,17 @@ class WindyForestProcessor extends AudioWorkletProcessor {
     this.seed = 0x1f0e ^ 0xa5a5;
     // four wind bands (body, mid foliage, upper foliage, whistle) per channel.
     const centres = [180, 450, 950, 2200];
-    const qs = [0.6, 0.8, 1.0, 4.0];
-    this.bandGain = [0.9, 0.8, 0.6, 0.5];
+    const qs = [0.6, 0.8, 1.0, 3.0];       // whistle band Q eased 4.0 → 3.0
+    this.bandGain = [0.9, 0.8, 0.6, 0.38]; // and quieter, so it stops piercing
     this.bandsL = centres.map((f, i) => { const b = new Biquad(); b.bandpass(f, qs[i]); return b; });
     this.bandsR = centres.map((f, i) => { const b = new Biquad(); b.bandpass(f, qs[i]); return b; });
 
     this.masterHP_L = new Biquad(); this.masterHP_R = new Biquad();
     this.masterHP_L.highpass(30, 0.6); this.masterHP_R.highpass(30, 0.6);
+    // A gentle master lowpass tames the top-end sizzle that made the forest
+    // read as harsh — the canopy is soft, not bright.
+    this.masterLP_L = new Biquad(); this.masterLP_R = new Biquad();
+    this.masterLP_L.lowpass(4800, 0.5); this.masterLP_R.lowpass(4800, 0.5);
 
     this.grains = []; for (let i = 0; i < 96; i++) this.grains.push(new Grain());
 
@@ -87,10 +93,12 @@ class WindyForestProcessor extends AudioWorkletProcessor {
 
   spawnLeaf(ws, gust, leaves) {
     const g = this.freeGrain(); if (!g) return;
-    const f = 1500 + this.rnd() * 4500;
+    // Leaf rustle sits ~900–3200 Hz, not 1500–6000: the old top octave was the
+    // harsh, hissy edge. A little softer per grain too.
+    const f = 900 + this.rnd() * 2300;
     const pan = (this.rnd() * 2 - 1) * (0.4 + gust * 0.5);
-    const peak = (0.012 + (ws * 0.4 + gust * 0.8) * 0.05) * (0.4 + leaves);
-    g.trigger(f, 2 + this.rnd() * 4, peak, 0.003, 0.012 + this.rnd() * 0.05, pan);
+    const peak = (0.010 + (ws * 0.4 + gust * 0.8) * 0.04) * (0.4 + leaves);
+    g.trigger(f, 2 + this.rnd() * 4, peak, 0.004, 0.014 + this.rnd() * 0.05, pan);
   }
 
   spawnBranch(ws, twigs) {
@@ -166,8 +174,8 @@ class WindyForestProcessor extends AudioWorkletProcessor {
         const s = gr.sample(noise); gL += s * gr.panL; gR += s * gr.panR;
       }
 
-      let sl = this.masterHP_L.process(bedL + gL);
-      let sr = this.masterHP_R.process(bedR + gR);
+      let sl = this.masterLP_L.process(this.masterHP_L.process(bedL + gL));
+      let sr = this.masterLP_R.process(this.masterHP_R.process(bedR + gR));
 
       this.level = levelTarget + (this.level - levelTarget) * levelCoef;
       sl *= this.level; sr *= this.level;

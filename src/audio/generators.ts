@@ -38,8 +38,8 @@ function genForest(params?: Record<string, number>): string {
     }
     twigPos += Math.floor(SR * rand(0.11 * twigGapScale, 0.55 * twigGapScale));
   }
-  hp1(twigsBuf, 1400);
-  lp1(twigsBuf, 5400);
+  hp1(twigsBuf, 1200);
+  lp1(twigsBuf, 3800); // was 5400 — tame the harsh top octave, matching the worklet
 
   const canopy = new Float32Array(N);
   for (let i = 0; i < N; i++) canopy[i] = buf[i] * leavesMix + twigsBuf[i] * (1 - leavesMix);

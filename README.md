@@ -152,6 +152,18 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.10
+- **Windy Forest is softer.** The harshness was a bright, hissy top: leaf
+  grains reached to 6 kHz, the whistle band was resonant (Q 4), and nothing
+  tamed the top end. Leaf rustle now sits ~900–3200 Hz (the old top octave
+  was the sizzle), each grain a touch quieter; the whistle band is eased
+  (Q 4 → 3, gain 0.5 → 0.38); and a gentle master lowpass (~4.8 kHz) rolls off
+  the canopy's top so it reads as soft, not brittle. The WAV fallback's twigs
+  were darkened to match (top cut 5.4 → 3.8 kHz). *(This pass also added the
+  missing `lowpass` method to the worklet's filter class — the master lowpass
+  needs it; caught before shipping because the runtime sweep flagged the
+  forest going silent.)*
+
 ### 9.3.9
 - **Thunder: the static bed is gone, and the sliders are back.** The live
   worklet already falls to true silence between strikes (measured: 53% of the
