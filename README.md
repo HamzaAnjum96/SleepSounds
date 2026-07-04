@@ -152,6 +152,21 @@ for the history behind that.
 
 ## Changelog
 
+### 9.4.0
+- **A proper social-share card.** Sharing the link (WhatsApp, iMessage,
+  Slack, X…) now previews a generated 1200×630 night scene — the app's
+  textured starfield, the moon, and *drift away* in the Cormorant wordmark
+  with the line "sleep sounds, generated in your browser" — instead of the
+  square app icon in a small card. Built from the app's own visual
+  ingredients by `scripts/og-card/render-og-card.mjs` (generated, not
+  borrowed), shipped as a 46 KB progressive JPEG (well inside WhatsApp's
+  preview size limit), with refreshed `og:` / `twitter:` meta:
+  `summary_large_image`, absolute image URLs (WhatsApp requires them),
+  proper dimensions/alt text, and a description that says what the app
+  actually is — 21 sounds, generated in the browser, free, offline, no
+  tracking. Note: WhatsApp caches link previews aggressively; a fresh image
+  URL (`og-card.jpg`) sidesteps the stale cache.
+
 ### 9.3.11
 - **Heartbeat: no more keyboard-click on the beat.** The blood-rush layer was
   fine; the beat itself ticked. Each thump mixed in **raw broadband white
