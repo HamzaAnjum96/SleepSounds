@@ -18,7 +18,7 @@ function genForest(params?: Record<string, number>): string {
   // noise happens when the wind moves, not on a metronome.
   const buf = pinkNoise();
   hp1(buf, 120);
-  lp1(buf, 2200);
+  lp1(buf, 1800);
   const gustHold = 2.0 + (1 - breeze) * 2.5;
   const gust = smoothRandomLfo(0.55, 1.15, gustHold, gustHold * 2.4);
   for (let i = 0; i < N; i++) buf[i] *= gust[i];
@@ -38,8 +38,8 @@ function genForest(params?: Record<string, number>): string {
     }
     twigPos += Math.floor(SR * rand(0.11 * twigGapScale, 0.55 * twigGapScale));
   }
-  hp1(twigsBuf, 1200);
-  lp1(twigsBuf, 3800); // was 5400 — tame the harsh top octave, matching the worklet
+  hp1(twigsBuf, 1000);
+  lp1(twigsBuf, 3200); // matches the worklet's darker leaf voice
 
   const canopy = new Float32Array(N);
   for (let i = 0; i < N; i++) canopy[i] = buf[i] * leavesMix + twigsBuf[i] * (1 - leavesMix);

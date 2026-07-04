@@ -152,6 +152,16 @@ for the history behind that.
 
 ## Changelog
 
+### 9.4.1
+- **Windy Forest, round two: less harsh, and no longer static-like.** The
+  static character was the constant grain spray — leaves fizzing at a steady
+  base rate regardless of wind. Rustle is now gust-carried: the base rate
+  drops ~60% so lulls genuinely rest, and the density lives in the gust term,
+  arriving as waves of rustle with real pauses. The whole voice also sits
+  lower: leaf grains at 700–2600 Hz (another notch down), the wind's body
+  band leads while the mids and whistle recede, the master lowpass comes down
+  to ~3.4 kHz, and the WAV fallback's bed and twigs are darkened to match.
+
 ### 9.4.0
 - **A proper social-share card.** Sharing the link (WhatsApp, iMessage,
   Slack, X…) now previews a generated 1200×630 night scene — the app's

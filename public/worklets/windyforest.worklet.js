@@ -62,8 +62,8 @@ class WindyForestProcessor extends AudioWorkletProcessor {
     this.seed = 0x1f0e ^ 0xa5a5;
     // four wind bands (body, mid foliage, upper foliage, whistle) per channel.
     const centres = [180, 450, 950, 2200];
-    const qs = [0.6, 0.8, 1.0, 3.0];       // whistle band Q eased 4.0 → 3.0
-    this.bandGain = [0.9, 0.8, 0.6, 0.38]; // and quieter, so it stops piercing
+    const qs = [0.6, 0.8, 1.0, 3.0];        // whistle band Q eased 4.0 → 3.0
+    this.bandGain = [1.05, 0.8, 0.45, 0.3]; // body leads, mids/whistle recede
     this.bandsL = centres.map((f, i) => { const b = new Biquad(); b.bandpass(f, qs[i]); return b; });
     this.bandsR = centres.map((f, i) => { const b = new Biquad(); b.bandpass(f, qs[i]); return b; });
 
@@ -72,7 +72,7 @@ class WindyForestProcessor extends AudioWorkletProcessor {
     // A gentle master lowpass tames the top-end sizzle that made the forest
     // read as harsh — the canopy is soft, not bright.
     this.masterLP_L = new Biquad(); this.masterLP_R = new Biquad();
-    this.masterLP_L.lowpass(4800, 0.5); this.masterLP_R.lowpass(4800, 0.5);
+    this.masterLP_L.lowpass(3400, 0.5); this.masterLP_R.lowpass(3400, 0.5);
 
     this.grains = []; for (let i = 0; i < 96; i++) this.grains.push(new Grain());
 
@@ -95,7 +95,7 @@ class WindyForestProcessor extends AudioWorkletProcessor {
     const g = this.freeGrain(); if (!g) return;
     // Leaf rustle sits ~900–3200 Hz, not 1500–6000: the old top octave was the
     // harsh, hissy edge. A little softer per grain too.
-    const f = 900 + this.rnd() * 2300;
+    const f = 700 + this.rnd() * 1900;
     const pan = (this.rnd() * 2 - 1) * (0.4 + gust * 0.5);
     const peak = (0.010 + (ws * 0.4 + gust * 0.8) * 0.04) * (0.4 + leaves);
     g.trigger(f, 2 + this.rnd() * 4, peak, 0.004, 0.014 + this.rnd() * 0.05, pan);
@@ -143,7 +143,10 @@ class WindyForestProcessor extends AudioWorkletProcessor {
 
       // leaf rustle as a child of the gust field
       if (--this.nextLeaf <= 0) {
-        const rate = (8 + gust * 220 + ws * 30) * (0.3 + leaves);
+        // Rustle is gust-carried: a low base rate so lulls genuinely rest,
+        // with the density living in the gust term — waves of rustle, not a
+        // constant static-like spray.
+        const rate = (3 + gust * 240 + ws * 12) * (0.3 + leaves);
         this.spawnLeaf(ws, gust, leaves);
         this.nextLeaf = this.nextGap(rate);
       }
