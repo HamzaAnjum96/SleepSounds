@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.11
+- **Heartbeat: no more keyboard-click on the beat.** The blood-rush layer was
+  fine; the beat itself ticked. Each thump mixed in **raw broadband white
+  noise** ("tissue," at 0.22), which put a wideband transient spike up to
+  ~2 kHz on top of every low beat — exactly a keyboard-key click on a
+  spectrogram. Real heart sounds are low-frequency, so the murmur is now
+  heavily lowpassed (~180 Hz) and much quieter (felt as body, not heard as a
+  tick), and the thump onset is softened (15 ms → 24 ms rise). Measured: the
+  beat's spectral centroid drops from 382 Hz to 128 Hz and its energy above
+  800 Hz from 9% to 2.5% — the bright click collapses into the thump.
+
 ### 9.3.10
 - **Windy Forest is softer.** The harshness was a bright, hissy top: leaf
   grains reached to 6 kHz, the whistle band was resonant (Q 4), and nothing

@@ -1346,17 +1346,25 @@ function genHeartbeat(params?: Record<string, number>): string {
   const buf = new Float32Array(N);
   const flowEnv = new Float32Array(N);
 
+  // Tissue murmur one-pole state: the previous cut mixed RAW broadband white
+  // noise into every thump, which put a wideband vertical transient — a
+  // keyboard-key "tick" — on top of each low beat. A real heart sound is
+  // low-frequency; the murmur is now heavily lowpassed (~180 Hz) and much
+  // quieter, so it's felt as body, not heard as a click.
+  const aTissue = Math.exp((-2 * Math.PI * 180) / SR);
   const thump = (at: number, f0: number, durS: number, amp: number): void => {
     const len = Math.floor(SR * durS);
     let ph = random() * 2 * Math.PI;
+    let lpT = 0;
     for (let i = 0; i < len && at + i < N; i++) {
       const p = i / len;
-      // ~15 ms rise, then an exponential release.
-      const env = p < 0.16 ? 0.5 - 0.5 * Math.cos(Math.PI * (p / 0.16)) : Math.exp(-3.2 * (p - 0.16));
+      // ~24 ms rise (softer onset), then an exponential release.
+      const env = p < 0.22 ? 0.5 - 0.5 * Math.cos(Math.PI * (p / 0.22)) : Math.exp(-3.0 * (p - 0.22));
       const f = f0 * (1.3 - 0.4 * Math.min(1, p * 1.2)); // pitch falls as it decays
       ph += (2 * Math.PI * f) / SR;
-      const tissue = (random() * 2 - 1) * 0.22;
-      buf[at + i] += (Math.sin(ph) + tissue) * env * amp;
+      lpT = aTissue * lpT + (1 - aTissue) * (random() * 2 - 1);
+      const tissue = lpT * 1.7; // gain back the energy the lowpass removed
+      buf[at + i] += (Math.sin(ph) + tissue * 0.35) * env * amp;
     }
   };
 
