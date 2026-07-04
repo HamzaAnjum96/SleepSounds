@@ -152,6 +152,20 @@ for the history behind that.
 
 ## Changelog
 
+### 9.3.9
+- **Thunder: the static bed is gone, and the sliders are back.** The live
+  worklet already falls to true silence between strikes (measured: 53% of the
+  loop near-zero), so the "static white noise bed" was the **WAV fallback**
+  (served when a device can't load the worklet): it ran a *continuous*
+  brown-noise rumble the whole time. That bed is now gated by a per-strike
+  bloom envelope — the roll swells with each strike and rolls away over
+  several seconds (longer for far storms), fading to silence before the next,
+  matching the worklet's "rolls, then quiet" shape (fallback now measures 54%
+  near-silent, like the worklet). Removed the fallback's leftover pink-noise
+  hiss band in the same pass. And the three sliders — **activity** / rumble /
+  distance — are no longer hidden (`variantsOnly` is off), so you can shape a
+  scene, not just pick one.
+
 ### 9.3.8
 - **Underwater: no more laser guns.** Feedback nailed it — an exposed pure
   sine chirping 35% from a 2 ms edge reads as a weapon, not a bubble. The

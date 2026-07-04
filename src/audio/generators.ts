@@ -854,15 +854,16 @@ function genThunder(params?: Record<string, number>): string {
   const boomGapMax = 6 + (1 - stormIntensity) * 8;
   const rollMix = 0.5 + rumble * 0.48;
   const masterLp = 1200 + (1 - distance) * 6000;
-  const hissMix = 0.06 + (1 - distance) * 0.08;
-  // Distant thunder roll with occasional low booms.
-  const roll = brownNoise();
-  hp1(roll, 24);
-  lp1(roll, 420);
-
-  const hiss = pinkNoise();
-  hp1(hiss, 1800);
-  lp1(hiss, 5200);
+  // Distant thunder roll with occasional low booms. Critically, the roll is
+  // NOT a constant bed: the live worklet falls to true silence between strikes
+  // (7.21 — "no constant noise floor"), and the fallback used to run a
+  // continuous brown-noise rumble that read as a static wash. Now the roll is
+  // gated by a per-strike bloom envelope, so between strikes it decays to near
+  // silence, matching the worklet.
+  const rollSrc = brownNoise();
+  hp1(rollSrc, 24);
+  lp1(rollSrc, 420);
+  const rollEnv = new Float32Array(N); // 0 between strikes, blooms around each
 
   const booms = new Float32Array(N);
   // The live worklet holds its first strike back 9–21 s so starting the
@@ -874,7 +875,6 @@ function genThunder(params?: Record<string, number>): string {
   while (pos < N) {
     const len = Math.floor(SR * rand(0.7, 2.2));
     const amp = rand(0.12, 0.34) * (firstBoom ? 0.6 : 1);
-    firstBoom = false;
     const f0 = rand(36, 95);
     let ph = 0;
     for (let i = 0; i < len && pos + i < N; i++) {
@@ -884,15 +884,27 @@ function genThunder(params?: Record<string, number>): string {
       ph += (2 * Math.PI * f) / SR;
       booms[pos + i] += Math.sin(ph) * env * amp;
     }
+    // The rolling rumble that blooms with this strike and rolls away over
+    // several seconds (longer when the storm is far), fading to silence before
+    // the next one — the "rolls, then quiet" shape, not a constant hum.
+    const rise = Math.floor(SR * rand(0.4, 1.2));
+    const fall = Math.floor(SR * (2.5 + distance * 4) * rand(0.7, 1.3));
+    const bloom = (firstBoom ? 0.6 : 1) * (0.7 + rumble * 0.6);
+    for (let i = -rise; i < fall && pos + i < N; i++) {
+      if (pos + i < 0) continue;
+      const e = i < 0 ? 0.5 - 0.5 * Math.cos(Math.PI * (1 + i / rise)) : Math.exp(-3.0 * (i / fall));
+      if (e > rollEnv[pos + i]) rollEnv[pos + i] = e * bloom;
+    }
+    firstBoom = false;
     pos += Math.floor(SR * rand(boomGapMin, boomGapMax));
   }
   hp1(booms, 24);
   lp1(booms, 240);
 
-  const swell = smoothRandomLfo(0.64, 1.26, 1.4, 6.2);
+  const flutter = smoothRandomLfo(0.8, 1.15, 0.6, 2.2); // micro-variation inside a roll
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    mix[i] = roll[i] * rollMix * swell[i] + hiss[i] * hissMix + booms[i] * 0.16;
+    mix[i] = rollSrc[i] * rollMix * rollEnv[i] * flutter[i] + booms[i] * 0.16;
   }
   lp1(mix, masterLp);
   return gen(mix, 0.7);

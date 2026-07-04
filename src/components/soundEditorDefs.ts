@@ -262,16 +262,15 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     ['Babbling Brook', {}],
     ['Rushing Creek',  { flow: 0.85, sparkle: 0.60, depth: 0.65 }],
   )},
-  // Thunder is chip-only: no cracks, no sliders — just a few rolling-rumble
-  // scenes. The groups stay (they feed the played params, the WAV fallback and
-  // chip selection) but `variantsOnly` keeps them out of the UI.
-  thunder: { label: 'Thunder', mode: 'simple', variantsOnly: true, groups: shapeGroup(
-    { key: 'stormIntensity', label: 'storm intensity', def: 0.18 },
-    { key: 'rumble',         label: 'rumble',          def: 0.60 },
-    { key: 'distance',       label: 'distance',        def: 0.72 },
+  // Thunder is crack-free rolling rumble; the scenes lead, but the three
+  // sliders shape it (they were hidden — `variantsOnly` — but they map to
+  // real, useful qualities, so they're back).
+  thunder: { label: 'Thunder', mode: 'simple', groups: shapeGroup(
+    { key: 'stormIntensity', label: 'activity', def: 0.18 },
+    { key: 'rumble',         label: 'rumble',   def: 0.60 },
+    { key: 'distance',       label: 'distance', def: 0.72 },
   ), variants: vlist(
-    // All crack-free: pure rolling rumble for sleep. Ordered far → near
-    // (the position bar reads as a gentle intensity ramp).
+    // Crack-free rolling rumble for sleep, ordered far → near.
     ['Distant Rumble',  { stormIntensity: 0.12, rumble: 0.72, distance: 0.92 }],
     ['Rolling Storm', {}],
     ['Gathering Storm', { stormIntensity: 0.35, rumble: 0.66, distance: 0.52 }],
