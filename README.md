@@ -152,6 +152,27 @@ for the history behind that.
 
 ## Changelog
 
+### 9.4.2
+- **Two desktop bugs: the click-dead side panel, and the wandering moon.**
+  - *Side panel sometimes unclickable (including play):* the `bg-layer`
+    gradient wash — a fixed, viewport-covering, positioned element — was the
+    one scenery layer without `pointer-events: none`, and the side panel's
+    content was unpositioned, so the invisible background hit-tested **above
+    the entire panel** and swallowed every click (reproduced:
+    `elementFromPoint` over the panel's play button returned `bg-layer`).
+    Fixed both ways: `bg-layer` is now pointer-transparent like the other
+    scenery, and the panel joined the app shell's stacking layer so no
+    scenery can ever sit over it again.
+  - *Moon sliding down as the page grows:* the compositor scroll-parallax
+    mapped progress over the **total scroll height**, so the same scroll
+    offset put the moon lower on longer pages (the JS fallback was
+    pixel-based and didn't drift — the two paths disagreed). The animation
+    now runs over a fixed range (`animation-range: 0 100vh`, the same
+    0.7px-per-px as the fallback) and the resting anchor is `top: 7vh` —
+    viewport units, so nothing about page length can move it. Verified: at
+    the same scroll offset the moon now sits at the identical pixel on a
+    short and a lengthened page.
+
 ### 9.4.1
 - **Windy Forest, round two: less harsh, and no longer static-like.** The
   static character was the constant grain spray — leaves fizzing at a steady

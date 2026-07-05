@@ -194,6 +194,10 @@ button, .material-symbols-rounded {
 
 .bg-layer {
   position: fixed; inset: 0; z-index: var(--z-bg);
+  /* Scenery never intercepts a tap (same rule as .night-sky/.aurora). Without
+     this, the fixed z-0 layer hit-tested ABOVE the desktop side panel and
+     swallowed every click on it. */
+  pointer-events: none;
   background:
     radial-gradient(ellipse 70% 50% at 15% 60%, rgba(60,90,160,0.07) 0%, transparent 100%),
     radial-gradient(ellipse 50% 40% at 85% 25%, rgba(180,150,100,0.05) 0%, transparent 100%),
@@ -218,8 +222,10 @@ button, .material-symbols-rounded {
    never fight. */
 .moon-track {
   position: fixed;
-  top: 7%;
-  right: 4%;
+  /* Viewport units, not %: the moon is anchored to the top of the SCREEN and
+     nothing about page length can move it. */
+  top: 7vh;
+  right: 4vw;
   width: 52px; height: 52px;
   /* Above the app shell so real taps can reach the disc (it is the dev-mode
      latch); the track itself stays pointer-transparent, so only the 52px moon
@@ -245,6 +251,10 @@ button, .material-symbols-rounded {
     transform: none;
     animation: moonParallax linear both;
     animation-timeline: --drift-scroll;
+    /* Fixed range: the rise completes over the first 100vh of scrolling, the
+       same 0.7px-per-px as the JS fallback — NOT over the total scroll height,
+       which made the moon's position depend on how long the page was. */
+    animation-range: 0 100vh;
   }
 }
 @keyframes moonParallax {
@@ -382,6 +392,10 @@ button, .material-symbols-rounded {
   .app .scene-card { flex: none; width: 100%; }
 
   .side-panel {
+    /* Same stacking layer as .app: content always sits above the fixed
+       scenery layers for painting AND hit-testing. */
+    position: relative;
+    z-index: var(--z-app);
     display: flex;
     flex-direction: column;
     min-height: 0;
