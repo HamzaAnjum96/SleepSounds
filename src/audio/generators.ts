@@ -929,18 +929,14 @@ function genTrain(params?: Record<string, number>): string {
   // micro-flutter so it never reads as static hiss.
   const rolling = pinkNoise();
   hp1(rolling, 240);
-  lp1(rolling, 800 + speed * 1000);
-  lp1(rolling, 2600); // second pole: the band must never read as open hiss
+  lp1(rolling, 620 + speed * 780);
+  lp1(rolling, 2000); // second pole: the band must never read as open hiss
   const roughness = smoothRandomLfo(0.72, 1.28, 0.08, 0.3);
 
-  // Rail-dominant middle band (~1 kHz) and wheel brightness (2–5 kHz),
-  // split so the texture changes believably with speed.
+  // Rail-dominant middle band (~1 kHz). (The old wheel-top and aero hiss
+  // sources are deliberately gone — see the floor mix below.)
   const railMid = whiteNoise();
   bp2(railMid, 850 + speed * 350, 1.6);
-  const wheelTop = whiteNoise();
-  hp1(wheelTop, 2300);
-  lp1(wheelTop, 5200);
-  const wheelDrift = smoothRandomLfo(0.6, 1.1, 0.5, 2.0);
 
   // Traction / auxiliaries: motors, compressors, fans. Dominant at low
   // speed, receding as rolling noise takes over.
@@ -948,11 +944,6 @@ function genTrain(params?: Record<string, number>): string {
   hp1(traction, 85);
   lp1(traction, 520);
   const humF = lockFreq(46 + speed * 28);
-
-  // Aerodynamic hiss: only blooms toward the top of the speed range.
-  const aero = whiteNoise();
-  hp1(aero, 1500);
-  lp1(aero, 6400);
 
   // ── Event layer: joints under axle pairs ──────────────────────────
   const mps = (40 + speed * 180) / 3.6;     // 40–220 km/h
@@ -993,22 +984,21 @@ function genTrain(params?: Record<string, number>): string {
   // The floor is rumble-led: the broadband bands sit *under* the body, or the
   // whole carriage reads as static instead of a rolling machine.
   const tractionW = 0.12 * (1 - speed * 0.75);
-  const aeroW = 0.03 * speed * speed;
-  const wheelW = (0.007 + speed * 0.028) * (0.5 + clatter * 0.8);
-  // Build the continuous rolling floor in mono, then widen it; the joint
-  // clatter spreads on its own (wider) so the carriage rolls around you, while
-  // the underfloor thumps stay centred (low end is non-directional).
+  // The wheel-top (2.3–5.2 kHz) and aero (1.5–6.4 kHz) hiss layers are GONE:
+  // at sleep volumes they only ever read as static (feedback said so twice —
+  // 9.1.6 halved them, which wasn't enough). A sleeping carriage is rumble,
+  // sway and joint clacks; any residual brightness belongs to the clatter.
+  // What remains of the mid floor rides the sway/roughness so nothing holds
+  // one frozen level.
   const floor = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const humPh = (2 * Math.PI * humF * i) / SR;
     const hum = Math.sin(humPh) * 0.6 + Math.sin(2 * humPh + 0.8) * 0.3;
     floor[i] =
-      body[i] * (0.36 + rumbleParam * 0.30) * sway[i] +
-      rolling[i] * (0.05 + speed * 0.085) * roughness[i] +
-      railMid[i] * (0.022 + speed * 0.03) +
-      wheelTop[i] * wheelW * wheelDrift[i] +
-      (traction[i] * 0.8 + hum * 0.18) * tractionW +
-      aero[i] * aeroW;
+      body[i] * (0.38 + rumbleParam * 0.32) * sway[i] +
+      rolling[i] * (0.04 + speed * 0.06) * roughness[i] * (0.55 + 0.45 * sway[i]) +
+      railMid[i] * (0.010 + speed * 0.016) * roughness[i] +
+      (traction[i] * 0.8 + hum * 0.18) * tractionW;
   }
   const floorSt = decorrelateMono(floor, 13);
   const clackSt = decorrelateMono(clacks, 9);

@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.4.5
+- **Train: the static layer is removed, not just turned down.** 9.1.6 halved
+  the hiss bands; feedback says halving wasn't the point. The wheel-top
+  (2.3–5.2 kHz) and aero (1.5–6.4 kHz) noise sources are now **deleted** — at
+  sleep volumes they only ever read as static — and the surviving mid floor
+  (rolling band, rail mid) is darker again and rides the carriage sway and
+  roughness flutter, so nothing in the sound holds one frozen level. A
+  sleeping carriage is rumble, sway, and joint clacks; any brightness left
+  belongs to the clatter events. Measured: energy above 1.5 kHz falls to
+  1.1–1.9% across all four scenes (Express was 8.3%).
+
 ### 9.4.4
 - **Underwater: the laser guns are gone — full revert of the bubble
   experiment.** The 9.3.8 softening wasn't enough; the physics voicing was
