@@ -152,6 +152,16 @@ for the history behind that.
 
 ## Changelog
 
+### 9.4.3
+- **Deploy hardening, round two.** 9.4.2's Pages deploy was rejected twice —
+  the 90 s retry wasn't enough, so the backend's bad mood can outlast a short
+  backoff. The deploy job now makes a **third attempt after a 5-minute
+  pause**, and the workflow gained a **`workflow_dispatch`** trigger so a
+  rejected deploy can be re-run from the Actions tab without cutting a
+  release (it always ships the latest main). This release's own push also
+  redelivers 9.4.2's fixes (the click-dead side panel and the moon anchor)
+  to the live site.
+
 ### 9.4.2
 - **Two desktop bugs: the click-dead side panel, and the wandering moon.**
   - *Side panel sometimes unclickable (including play):* the `bg-layer`

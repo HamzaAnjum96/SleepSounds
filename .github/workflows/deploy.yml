@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, master]
+  # Manual redeploy lever: when the Pages backend rejects a deployment (it
+  # happens — "Deployment failed, try again later"), rerun from the Actions
+  # tab instead of cutting a release. Always deploys the latest main.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url || steps.deployment-retry.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment-retry.outputs.page_url || steps.deployment-final.outputs.page_url }}
     steps:
       # The Pages backend intermittently rejects deployments outright
       # ("Deployment failed, try again later"), especially when releases land
@@ -51,4 +55,13 @@ jobs:
         run: sleep 90
       - uses: actions/deploy-pages@v4
         id: deployment-retry
+        continue-on-error: true
         if: steps.deployment.outcome == 'failure'
+      # Second retry with a long pause: 9.4.2's deploy was rejected twice in
+      # ~90s — backend rejections can outlive a short backoff.
+      - name: Long pause before the final attempt
+        if: steps.deployment.outcome == 'failure' && steps.deployment-retry.outcome == 'failure'
+        run: sleep 300
+      - uses: actions/deploy-pages@v4
+        id: deployment-final
+        if: steps.deployment.outcome == 'failure' && steps.deployment-retry.outcome == 'failure'
