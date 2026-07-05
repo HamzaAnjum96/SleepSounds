@@ -1,0 +1,6 @@
+# drift away — everyone is welcome, including AI crawlers.
+# The app is fully client-side; there is nothing behind this page.
+User-agent: *
+Allow: /
+
+Sitemap: https://hamzaanjum96.github.io/SleepSounds/sitemap.xml

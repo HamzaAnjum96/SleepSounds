@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.5.0
+- **SEO fundamentals.** Start of a discoverability/accessibility pass:
+  - **JSON-LD structured data** (`schema.org/WebApplication`) in the page
+    head — name, rich description, category, price (free), feature list,
+    card image and screenshot — the machine-readable summary search engines
+    and AI readers prefer over scraping.
+  - **`robots.txt`** (everyone welcome, AI crawlers included — the app is
+    fully client-side, there's nothing to protect) pointing at a new
+    **`sitemap.xml`** (the app + the privacy page).
+  - Verified: JSON-LD parses in the built output; both files ship in `dist/`.
+
 ### 9.4.5
 - **Train: the static layer is removed, not just turned down.** 9.1.6 halved
   the hiss bands; feedback says halving wasn't the point. The wheel-top
