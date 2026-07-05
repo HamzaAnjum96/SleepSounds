@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.4.4
+- **Underwater: the laser guns are gone — full revert of the bubble
+  experiment.** The 9.3.8 softening wasn't enough; the physics voicing was
+  the problem itself. Its exponentially decaying bubbles ring as *pure tones*
+  for up to ~0.9 s (a 150 Hz "glug" has a long ring time by design), and an
+  exposed pure-tone burst against this dark muffled bed reads as weapon fire
+  no matter how gently it starts. The bubbles are back to the pre-9.3.0
+  voice that was right all along: short soft blips (8–30 ms, sine envelope,
+  mild rise), glug trains deleted. The bubble-physics notes stay in
+  `docs/research/` — the stream's babble keeps that model, where it works.
+
 ### 9.4.3
 - **Deploy hardening, round two.** 9.4.2's Pages deploy was rejected twice —
   the 90 s retry wasn't enough, so the backend's bad mood can outlast a short
