@@ -871,7 +871,7 @@ export default function App() {
         <section className="section" style={{ animationDelay: '0.26s' }}>
           <div className="section-head">
             <h2 className="section-title">the library</h2>
-            <span className="section-meta">{SOUND_LIBRARY.length} generated sounds</span>
+            <span className="section-meta">{library.length} generated sounds</span>
           </div>
 
           <div className="cat-filters">

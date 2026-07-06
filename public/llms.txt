@@ -1,7 +1,7 @@
 # drift away
 
 > A calm, free sleep-sound mixer that runs entirely in the browser. Every one
-> of its 21 ambient sounds is synthesized at runtime — procedural DSP, no
+> of its 19 ambient sounds is synthesized at runtime — procedural DSP, no
 > recordings, no streaming, no server. It works fully offline as an
 > installable PWA, keeps all data on-device, and has no accounts, ads, or
 > tracking.
@@ -12,7 +12,7 @@ the reliable machine-readable descriptions.
 
 ## What it does
 
-- **Library**: 21 generated sounds across Water / Fire / Air / Wildlife /
+- **Library**: 19 generated sounds across Water / Fire / Air / Wildlife /
   Cozy / Earth / Noise / Urban — rain, fire, fan, birdsong, night insects,
   thunder, windy forest, ocean, wind, underwater, white/pink/brown noise,
   train, airplane, heartbeat (including a womb setting), cat purr, wind

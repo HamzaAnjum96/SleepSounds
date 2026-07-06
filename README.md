@@ -5,17 +5,25 @@
 > - Add an entry to the `## Changelog` section at the bottom of this file describing what changed and why.
 > - Saved mixes store only *parameter state* (never audio — loops re-render fresh every session), and `storage/migrations.ts` drops unknown sound ids and unknown-shaped data safely. So retuning a sound or renaming a param never needs a storage change. Bump the saved-mixes key in `src/storage/keys.ts` (`STORAGE_KEYS.savedMixes`, e.g. `-v2` → `-v3`) **only** if a kept param key changes *meaning* incompatibly (same key, different effect) — and know that bumping discards users' saved mixes, so prefer a migration.
 > - If you add or change an icon glyph, follow **Icons: the Material Symbols subset** below — new glyph names must be added to the subset font or they render as text.
+> - If you add/remove a sound or change a headline feature, keep the discoverability surfaces in sync: the meta/OG descriptions and the JSON-LD `featureList` in `index.html`, and `public/llms.txt` (see **Discoverability** below).
+> - UI changes must pass the accessibility gate: `tests/e2e/a11y.spec.ts` fails on any serious/critical axe-core violation across the primary surfaces.
 
 **drift away** (repo name Sleep Mixer) is a mobile-first ambient sound app for
-relaxation and sleep. All 21 sounds are generated in the browser; nothing is
+relaxation and sleep. All 19 sounds are generated in the browser; nothing is
 streamed or downloaded. Rain, Thunder, Windy Forest, Fire, and Birdsong are
-synthesised live via AudioWorklet (event-based); the rest are procedural WAV loops.
+synthesised live via AudioWorklet (event-based); the rest are procedural WAV
+loops. (Two more finished sounds, Stream and Shower, are pulled from the
+lineup for now — `HIDDEN_SOUND_IDS` in `src/data.ts` — and don't count toward
+the public tally.)
 
 ## Features
 
 - **Scenes**: ten curated mixes as gradient-art cards; tap to play instantly.
-- **The library**: 21 procedurally generated sounds, layered
-  freely with per-sound volume and (for select sounds) deep parameter editors.
+- **The library**: 19 procedurally generated sounds across eight categories,
+  layered freely with per-sound volume. All but the noise trio open an editor that leads
+  with named character presets (variant chips with small drawn marks — e.g.
+  ocean's Lapping Shore / Distant Surf / Rolling Waves / Storm Surf) and
+  hides fine-tune sliders behind a toggle.
 - **Mini player + now-playing sheet**: persistent player bar; the sheet holds
   per-layer sliders, master volume, sleep timer, save-mix, and drift mode.
 - **Drift mode**: fullscreen night surface with clock, breathing play orb, and
@@ -118,6 +126,16 @@ npm run build
 npm run preview
 ```
 
+### Developer tips
+
+- **Dev mode**: five quick taps on the moon (within 3 seconds) toggle it —
+  the moon wanes to a crescent, the greeting says so, and the library reveals
+  the hidden / pulled sounds (e.g. Shower, Stream) for auditioning. Five more
+  taps or a refresh turns it off; nothing persists.
+- **Tests**: `npm run test` (vitest units), `npm run test:e2e` (Playwright
+  over the production build — smoke flows plus the axe-core accessibility
+  gate), `npm run lint`.
+
 ## Icons: the Material Symbols subset
 
 The UI's icons are Google's **Material Symbols Rounded**, self-hosted as a
@@ -144,6 +162,23 @@ hashes every precached file's bytes (`scripts/inject-precache.mjs`) and the SW
 installs with `cache: 'reload'` (`public/sw.js`) — see the script's docstring
 for the history behind that.
 
+## Discoverability: SEO, social cards, and AI readers
+
+The app is a client-side React shell, so scrapers that don't run JavaScript
+see nothing in the body. Everything they need lives in explicit surfaces,
+which must be kept in sync by hand when features change:
+
+- **`index.html`** — the meta description, the Open Graph / Twitter card tags
+  (absolute URLs; WhatsApp requires them), and one JSON-LD
+  `schema.org/WebApplication` block (keep it to exactly one entity).
+- **`public/og-card.jpg`** — the 1200×630 social preview, generated from the
+  app's own ingredients (starfield, moon, Cormorant wordmark) by
+  `scripts/og-card/render-og-card.mjs`; re-run it rather than editing the JPEG.
+- **`public/robots.txt` + `public/sitemap.xml`** — everyone welcome, AI
+  crawlers included; the sitemap lists the app and the privacy page.
+- **`public/llms.txt`** — a plain-text summary for AI agents (per the llms.txt
+  convention): what the app is, the feature list, key facts, doc links.
+
 ## Notes
 
 - All audio loops are procedurally synthesized in `src/audio/` (`generators.ts` over the `dsp.ts` helpers) and encoded to WAV blobs at runtime (two-channel 16-bit PCM; a few non-directional sources stay centred). Stereo width is baked in at generation — broad beds via decorrelated opposite time-shifts (no comb filtering), discrete events via equal-power panning — and layering is masking-aware (`layerMeta.ts` roles + `layerShaping`). The generator module is code-split, so it loads on a sound's first play rather than at startup.
@@ -151,6 +186,23 @@ for the history behind that.
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 9.5.3
+- **Documentation refresh + one honest number.** The docs pass, applied to
+  the docs themselves:
+  - The public sound count now tells the truth everywhere: **19** sounds are
+    in the lineup (Stream and Shower are pulled — `HIDDEN_SOUND_IDS`), but
+    the OG/Twitter descriptions, JSON-LD, `llms.txt`, the README, and the
+    in-app library counter all said 21. All now say 19, and the in-app
+    counter is computed from the visible library (so dev mode counts what it
+    actually shows).
+  - README: maintainer notes now cover the two new invariants (keep the
+    discoverability surfaces in sync; UI changes must pass the axe gate), a
+    **Discoverability** section documents the SEO/AI-reader surfaces in one
+    place, developer tips document dev mode and the test commands, and the
+    features list reflects the character-preset editor system.
+  - DESIGN.md's accessibility section records the landmark structure and the
+    axe-core gate added in 9.5.2.
 
 ### 9.5.2
 - **Accessibility: an automated axe-core gate, and landmark fixes.**
