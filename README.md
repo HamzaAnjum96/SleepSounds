@@ -187,6 +187,13 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 9.5.4
+- **Privacy page metadata.** The privacy page is listed in the sitemap but
+  had no meta description or canonical URL; search results would improvise a
+  snippet from whatever text they found. It now carries both, with a
+  description that mirrors what the page actually promises (no accounts, no
+  analytics, nothing leaves the device).
+
 ### 9.5.3
 - **Documentation refresh + one honest number.** The docs pass, applied to
   the docs themselves:
