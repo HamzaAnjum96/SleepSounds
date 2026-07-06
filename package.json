@@ -1,7 +1,7 @@
 {
   "name": "sleep-mixer",
   "private": true,
-  "version": "9.5.1",
+  "version": "9.5.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.60.0",
     "@types/react": "^18.3.12",

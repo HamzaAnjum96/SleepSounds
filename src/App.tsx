@@ -768,12 +768,15 @@ export default function App() {
           <div className="greeting">{devMode ? `${greeting()} · in dev mode` : greeting()}</div>
         </header>
 
+        {/* The main landmark: everything that is the app — the install
+            prompt, first-run hint, scenes, saved mixes, and the library —
+            as opposed to the header above and footer below. */}
+        <main>
         <InstallPrompt ready={hasPlayed && storageAck} />
 
         {showHint && (
           <p className="first-hint">begin with a scene, or layer your own mix below</p>
         )}
-
         <section className="section" style={{ animationDelay: '0.1s' }}>
           <div className="section-head">
             <h2 className="section-title">the scenes</h2>
@@ -945,8 +948,9 @@ export default function App() {
             ))}
           </div>
         </section>
+        </main>
 
-        <div className="app-footer">
+        <footer className="app-footer">
           <div className="footer-rest">rest well</div>
           <div className="footer-meta">
             <span className={`net-badge${online ? '' : ' offline'}`} title={online ? 'Online' : 'Offline — everything still works'}>
@@ -963,7 +967,7 @@ export default function App() {
             <span className="footer-sep" aria-hidden="true">·</span>
             <span className="footer-version">v{version}</span>
           </div>
-        </div>
+        </footer>
       </div>
 
         {isDesktop && (

@@ -146,6 +146,9 @@ The full process is documented in the script's docstring and the README's
 - **`tests/e2e/*.spec.ts`** (Playwright): the real flows — a scene starts, the
   mini player appears, the sheet opens, master volume changes, a timer can be
   set, save/restore survives reload, audio flows through the master bus.
+  `a11y.spec.ts` is an axe-core gate over the same build: no serious or
+  critical violations on the main page, the now-playing sheet, an open sound
+  editor, or the desktop split layout.
 - **Worklets aren't type-checked or unit-tested** (they load as classic scripts
   in the audio thread), so changes to `public/worklets/*` are verified with Node
   DSP probes that load the processor via `new Function(...)` and assert

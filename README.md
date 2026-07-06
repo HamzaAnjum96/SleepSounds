@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.5.2
+- **Accessibility: an automated axe-core gate, and landmark fixes.**
+  - New e2e spec (`tests/e2e/a11y.spec.ts`, via `@axe-core/playwright`):
+    no serious or critical violations allowed on the main page, the
+    now-playing sheet, an open sound editor, or the desktop split layout —
+    so label/ARIA/contrast regressions can't creep in silently.
+  - Landmarks: the app's content now sits in a real `<main>`; the footer is
+    a `<footer>` element; the hidden site-verification text is
+    `aria-hidden`. The page now scans clean at **every** axe impact level,
+    not just the gated ones.
+
 ### 9.5.1
 - **`llms.txt` for AI readers.** A plain-text, agent-oriented summary at the
   site root (per the emerging llms.txt convention): what the app is, the full
