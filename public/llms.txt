@@ -1,0 +1,49 @@
+# drift away
+
+> A calm, free sleep-sound mixer that runs entirely in the browser. Every one
+> of its 21 ambient sounds is synthesized at runtime — procedural DSP, no
+> recordings, no streaming, no server. It works fully offline as an
+> installable PWA, keeps all data on-device, and has no accounts, ads, or
+> tracking.
+
+Important note for agents: this is a client-side React application — fetching
+the HTML yields an empty shell. This file and the JSON-LD in the page head are
+the reliable machine-readable descriptions.
+
+## What it does
+
+- **Library**: 21 generated sounds across Water / Fire / Air / Wildlife /
+  Cozy / Earth / Noise / Urban — rain, fire, fan, birdsong, night insects,
+  thunder, windy forest, ocean, wind, underwater, white/pink/brown noise,
+  train, airplane, heartbeat (including a womb setting), cat purr, wind
+  chimes, ticking clock.
+- **Mixing**: layer any sounds with per-sound volume; masking-aware mixing
+  keeps stacked layers clear. Each sound has named character presets (e.g.
+  ocean: Lapping Shore / Distant Surf / Rolling Waves / Storm Surf) and
+  fine-tune sliders.
+- **Scenes**: ten curated one-tap mixes.
+- **Sleep timer**: 15m–8h with a gentle 90-second wind-down fade.
+- **Mixes**: save, reload, and delete custom mixes (stored locally).
+- **Drift mode**: a full-screen night clock with a screen wake lock.
+
+## Facts
+
+- Free, open source, no sign-up. All audio is generated on-device; the app
+  makes no network requests after install (fonts, icons, and audio worklets
+  are self-hosted and precached).
+- Privacy: no analytics, no tracking, no data leaves the device.
+  Details: https://hamzaanjum96.github.io/SleepSounds/privacy.html
+- Source code: https://github.com/HamzaAnjum96/SleepSounds
+- App: https://hamzaanjum96.github.io/SleepSounds/
+
+## Key docs (in the repository)
+
+- [README](https://github.com/HamzaAnjum96/SleepSounds/blob/main/README.md):
+  features, setup, full changelog.
+- [ARCHITECTURE](https://github.com/HamzaAnjum96/SleepSounds/blob/main/ARCHITECTURE.md):
+  the audio engine (Web Audio graph, AudioWorklet generators, procedural WAV
+  synthesis, masking model, PWA update flow).
+- [DESIGN](https://github.com/HamzaAnjum96/SleepSounds/blob/main/DESIGN.md):
+  the visual system.
+- [Adding a sound](https://github.com/HamzaAnjum96/SleepSounds/blob/main/docs/ADDING-A-SOUND.md):
+  the synthesis rules and contributor checklist.

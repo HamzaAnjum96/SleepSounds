@@ -152,6 +152,17 @@ for the history behind that.
 
 ## Changelog
 
+### 9.5.1
+- **`llms.txt` for AI readers.** A plain-text, agent-oriented summary at the
+  site root (per the emerging llms.txt convention): what the app is, the full
+  feature list, the key facts (free, open source, offline, no tracking), and
+  links to the in-repo docs. It notes explicitly that the app is a
+  client-side React shell — fetching the HTML yields nothing — so this file
+  and the JSON-LD are the reliable machine-readable descriptions.
+- Fix: removed an older, second JSON-LD `WebApplication` block that predated
+  9.5.0 — two entities describing the same app confuse structured-data
+  parsers; the richer 9.5.0 block is the one that stays.
+
 ### 9.5.0
 - **SEO fundamentals.** Start of a discoverability/accessibility pass:
   - **JSON-LD structured data** (`schema.org/WebApplication`) in the page
