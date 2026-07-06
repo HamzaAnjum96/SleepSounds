@@ -187,6 +187,16 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.10
+- **Revert the Fan stereo widening (0.0.9) — it sounded worse.** The
+  airflow-widening measured cleanly (correlation, mono-sum, band ratios all
+  looked fine) but by ear the decorrelation thinned the whoosh and unsettled
+  the steady hush that makes a fan calming. Reverted to the exact pre-0.0.9
+  mono render (verified byte-identical), and the generators test that pinned
+  the fan as centred is restored, with a note recording why. The lesson: a
+  clean measurement is not a listening test — the fan is a compact source and
+  stays mono.
+
 ### 0.0.9
 - **Fan: stereo width on the airflow, tones still centred.** A stereo-image
   audit (L/R correlation across the library) found the Fan the only
