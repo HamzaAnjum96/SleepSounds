@@ -1612,11 +1612,16 @@ function genClock(params?: Record<string, number>): string {
     const f = isTick ? tickF : tockF;
     const level = (isTick ? 1 : tockLevel) * (0.92 + random() * 0.16);
 
-    // The click: a short damped ring plus a breath of contact noise.
-    const clickLen = Math.floor(SR * 0.012);
+    // The click: the same sharp attack ring as always, plus a quiet ~11 ms
+    // resonant tail under it (the gear train ringing on after the contact).
+    // The tail is what lets the clock carry real energy — 12 ms clicks alone
+    // left the whole render ~20 dB under the rest of the library, inaudible
+    // in any mix (accents get no masking compensation by design).
+    const clickLen = Math.floor(SR * 0.030);
     for (let i = 0; i < clickLen && at + i < N; i++) {
       const ts = i / SR;
-      const ring = Math.sin(2 * Math.PI * f * ts) * Math.exp(-ts / 0.0030);
+      const ring = Math.sin(2 * Math.PI * f * ts) *
+        (Math.exp(-ts / 0.0030) + 0.38 * Math.exp(-ts / 0.011));
       const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0020) * 0.5;
       buf[at + i] += (ring + noise) * level * 0.5;
     }
@@ -1630,8 +1635,10 @@ function genClock(params?: Record<string, number>): string {
   }
 
   // Only the gentle top-safety the bare voicing always had — no distance
-  // muffle, no room-tone floor.
+  // muffle, no room-tone floor. Peak 0.8: sparse transients read far quieter
+  // than continuous beds at equal peak, so the clock needs the headroom just
+  // to be heard beside them.
   lp1(buf, 5200);
   lp1(buf, 9000);
-  return gen(buf, 0.5);
+  return gen(buf, 0.8);
 }

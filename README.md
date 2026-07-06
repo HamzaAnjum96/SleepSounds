@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.6
+- **Ticking Clock: audible at last.** A whole-library level audit found the
+  clock ~20 dB under everything else (rms 0.011 vs the library's 0.08–0.16)
+  — as an accent layer it gets no masking compensation, so in any mix it
+  simply vanished, and solo it was startlingly quiet next to any other
+  sound at the same slider. Fixed without changing the approved bare-tick
+  character: the same sharp attack now carries a quiet ~11 ms gear-train
+  tail, and the sparse transients normalize to 0.8 peak (they read far
+  quieter than continuous beds at equal peak). Result: +7 dB energy across
+  all four variants, true silence between beats preserved (floor at the
+  dither level), and the clock is still the quietest sound in the library
+  by sustained energy — present, not prominent. Verified per-variant by
+  probe and through the live audio graph (19/19 sweep).
+
 ### 0.0.5
 - **Descriptive variant marks for the last six bar-only sounds.** Birdsong,
   Stream, Thunder, Night Insects, Underwater, and Shower were still using
