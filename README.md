@@ -187,6 +187,9 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.4
+- **Fix: leftover "drift" branding in the install prompt.** The install row's `aria-label` still read "Install drift" from before the rebrand; now "Install starlight." Found while investigating a report of the install prompt not appearing (root cause was the intentional `hasPlayed && storageAck` gate plus per-browser support, not a bug — see `InstallPrompt.tsx`).
+
 ### 0.0.3
 - **Privacy page: dropped the GitHub-repo link.** The closing "questions? open an issue" note pointed at the repo; removed along with its now-unused `.note` styling (the border/spacing moved onto the "back to starlight" link so the page's closing rhythm is unchanged).
 

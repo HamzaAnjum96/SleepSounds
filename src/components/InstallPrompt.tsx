@@ -108,7 +108,7 @@ export default function InstallPrompt({ ready }: InstallPromptProps) {
   if (!ready || dismissed || (!installable && !ios)) return null;
 
   return (
-    <div className="install-row" role="region" aria-label="Install drift">
+    <div className="install-row" role="region" aria-label="Install starlight">
       <span className="material-symbols-rounded install-icon" aria-hidden="true">install_mobile</span>
       {ios ? (
         <span className="install-text">
