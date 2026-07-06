@@ -1,5 +1,5 @@
 /**
- * One-time storage notice. drift away sets no tracking or advertising cookies;
+ * One-time storage notice. starlight sets no tracking or advertising cookies;
  * it only keeps your mixes and settings in localStorage, and serves everything
  * (fonts and icons included) from its own files. This is an honest transparency
  * note (not a consent gate, since there is nothing non-essential to opt out
@@ -19,7 +19,7 @@ export default function CookieNotice({ show, onDismiss }: CookieNoticeProps) {
   return (
     <div className="cookie-notice" role="region" aria-label="Storage notice">
       <p className="cookie-text">
-        drift away keeps your mixes and settings on this device (like cookies).
+        starlight keeps your mixes and settings on this device (like cookies).
         Nothing leaves it. No tracking, no ads, no servers.
       </p>
       <div className="cookie-actions">

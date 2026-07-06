@@ -1,6 +1,6 @@
 # Architecture
 
-How **drift away** is put together. This complements the file map in
+How **starlight** is put together. This complements the file map in
 [`README.md`](README.md) and the visual system in [`DESIGN.md`](DESIGN.md);
 here we cover the runtime: how a tap becomes sound, how the audio graph is
 staged, how playback survives backgrounding and interruptions, how state is

@@ -57,4 +57,4 @@ sw = sw.replace('__APP_VERSION__', appVersion);
 sw = sw.replace('  /*__INJECT_ASSETS__*/', literal);
 writeFileSync(SW, sw);
 
-console.log(`[sw] precached ${assets.length} assets, cache drift-away-${version}, app v${appVersion}`);
+console.log(`[sw] precached ${assets.length} assets, cache starlight-${version}, app v${appVersion}`);

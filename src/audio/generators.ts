@@ -1,4 +1,4 @@
-// drift away — procedural sound generators. Each builds a loop-conditioned
+// starlight — procedural sound generators. Each builds a loop-conditioned
 // 32s WAV from the shared DSP helpers; regenerateSound() re-renders a sound
 // with new tuning params (used by the editor's WAV-backed sounds).
 

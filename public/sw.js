@@ -1,4 +1,4 @@
-/* drift away — service worker.
+/* starlight — service worker.
  *
  * Full offline: the install step precaches the entire app — the shell, the
  * content-hashed JS/CSS (injected at build time), the self-hosted fonts and
@@ -16,7 +16,7 @@
  * fresh cache and the old one is cleared on activate.
  */
 
-const CACHE = 'drift-away-__CACHE_VERSION__';
+const CACHE = 'starlight-__CACHE_VERSION__';
 // App version baked in at build (injected). The page compares this against its
 // own version to tell a real pending update from a normal online open.
 const VERSION = '__APP_VERSION__';
@@ -58,7 +58,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
       caches.keys().then((keys) =>
-        Promise.all(keys.filter((k) => k.startsWith('drift-away-') && k !== CACHE).map((k) => caches.delete(k))),
+        Promise.all(keys.filter((k) => (k.startsWith('starlight-') || k.startsWith('drift-away-')) && k !== CACHE).map((k) => caches.delete(k))),
       ),
       self.registration.navigationPreload
         ? self.registration.navigationPreload.enable()

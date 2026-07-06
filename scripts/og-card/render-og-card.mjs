@@ -1,4 +1,4 @@
-// Renders public/og-card.jpg — the social-share preview (WhatsApp, iMessage,
+// Renders public/og-starlight.jpg — the social-share preview (WhatsApp, iMessage,
 // Twitter/X, Slack…) — from og-card.html: the app's own night scene (seeded
 // starfield, the moon, the Cormorant wordmark). Generated, not borrowed.
 //
@@ -37,6 +37,6 @@ await browser.close();
 execSync(`python3 -c "
 from PIL import Image
 im = Image.open('${png}').convert('RGB')
-im.save('public/og-card.jpg', quality=86, optimize=True, progressive=True)
-import os; os.remove('${png}'); print('public/og-card.jpg', os.path.getsize('public/og-card.jpg'), 'bytes')
+im.save('public/og-starlight.jpg', quality=86, optimize=True, progressive=True)
+import os; os.remove('${png}'); print('public/og-starlight.jpg', os.path.getsize('public/og-starlight.jpg'), 'bytes')
 "`, { stdio: 'inherit' });

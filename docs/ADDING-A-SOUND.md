@@ -1,6 +1,6 @@
 # Adding a sound
 
-The checklist for adding a new generated sound to drift away, in the order
+The checklist for adding a new generated sound to starlight, in the order
 that works. Every sound is synthesized in the browser — no samples, no
 streams ("generated, not borrowed"). The 9.0.x releases (Cat Purr, Wind
 Chimes, Ticking Clock) walked exactly this path if you want worked examples.

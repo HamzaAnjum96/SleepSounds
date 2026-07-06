@@ -1,4 +1,4 @@
-// drift away — DSP helpers for the procedural WAV sound generators.
+// starlight — DSP helpers for the procedural WAV sound generators.
 // Noise sources, one-pole/biquad filters, loop-conditioning, and WAV encoding.
 // These are the shared building blocks the per-sound generators compose.
 

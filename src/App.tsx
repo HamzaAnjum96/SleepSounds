@@ -478,8 +478,8 @@ export default function App() {
     platform.setMediaMetadata({
       title: activeSounds.length > 0
         ? activeSounds.map((s) => s.name).join(' · ')
-        : 'drift away',
-      artist: 'drift away',
+        : 'starlight',
+      artist: 'starlight',
       album: 'sleep sounds',
       artwork: [
         { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png' },
@@ -696,8 +696,8 @@ export default function App() {
   // Reflect playback in the tab title, so the app is findable among many tabs
   // (the awake-but-focused, masking-noise user especially).
   useEffect(() => {
-    const base = 'drift away — sleep sounds';
-    document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · drift away` : base;
+    const base = 'starlight — sleep sounds';
+    document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · starlight` : base;
   }, [isPlaying, mixTitle]);
 
   // Teach the horizontal scroll: a gentle wink of the scenes shelf on every
@@ -764,7 +764,7 @@ export default function App() {
         <header>
           {/* The h1 gives the page its accessible title; visually it's the same
               wordmark (the preflight reset zeroes heading defaults). */}
-          <h1 className="wordmark">drift away</h1>
+          <h1 className="wordmark">starlight</h1>
           <div className="greeting">{devMode ? `${greeting()} · in dev mode` : greeting()}</div>
         </header>
 

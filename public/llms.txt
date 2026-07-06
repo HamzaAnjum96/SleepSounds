@@ -1,4 +1,4 @@
-# drift away
+# starlight
 
 > A calm, free sleep-sound mixer that runs entirely in the browser. Every one
 > of its 19 ambient sounds is synthesized at runtime — procedural DSP, no

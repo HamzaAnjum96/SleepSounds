@@ -1,4 +1,4 @@
-// drift away — the audio engine, free of React. Mixer sources (crossfaded WAV
+// starlight — the audio engine, free of React. Mixer sources (crossfaded WAV
 // loops and live AudioWorklet generators with a WAV fallback) and the factory
 // that builds the right one per sound. The React hook orchestrates these.
 

@@ -16,7 +16,7 @@ function AppCrashFallback() {
   };
   return (
     <div className="crash-screen">
-      <p className="crash-line">something slipped while loading drift away.</p>
+      <p className="crash-line">something slipped while loading starlight.</p>
       <button type="button" className="crash-btn" onClick={recover}>reload</button>
     </div>
   );

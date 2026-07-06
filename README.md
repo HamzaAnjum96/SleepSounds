@@ -1,4 +1,4 @@
-# Sleep Mixer
+# starlight
 
 > **For anyone making changes (human or AI):**
 > - Bump the version in `package.json` with every change.
@@ -8,7 +8,7 @@
 > - If you add/remove a sound or change a headline feature, keep the discoverability surfaces in sync: the meta/OG descriptions and the JSON-LD `featureList` in `index.html`, and `public/llms.txt` (see **Discoverability** below).
 > - UI changes must pass the accessibility gate: `tests/e2e/a11y.spec.ts` fails on any serious/critical axe-core violation across the primary surfaces.
 
-**drift away** (repo name Sleep Mixer) is a mobile-first ambient sound app for
+**starlight** (repo SleepSounds; formerly "drift away") is a mobile-first ambient sound app for
 relaxation and sleep. All 19 sounds are generated in the browser; nothing is
 streamed or downloaded. Rain, Thunder, Windy Forest, Fire, and Birdsong are
 synthesised live via AudioWorklet (event-based); the rest are procedural WAV
@@ -49,7 +49,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for how these fit together (audio graph
 interruption handling, storage, PWA update flow, testing).
 
 ```txt
-sleep-mixer/
+starlight/
 ├── index.html
 ├── package.json
 ├── postcss.config.js
@@ -171,7 +171,7 @@ which must be kept in sync by hand when features change:
 - **`index.html`** — the meta description, the Open Graph / Twitter card tags
   (absolute URLs; WhatsApp requires them), and one JSON-LD
   `schema.org/WebApplication` block (keep it to exactly one entity).
-- **`public/og-card.jpg`** — the 1200×630 social preview, generated from the
+- **`public/og-starlight.jpg`** — the 1200×630 social preview, generated from the
   app's own ingredients (starfield, moon, Cormorant wordmark) by
   `scripts/og-card/render-og-card.mjs`; re-run it rather than editing the JPEG.
 - **`public/robots.txt` + `public/sitemap.xml`** — everyone welcome, AI
@@ -186,6 +186,26 @@ which must be kept in sync by hand when features change:
 - The version number (from `package.json`) renders inline in the page footer (`.footer-meta` in `src/App.tsx`), beside the privacy link.
 
 ## Changelog
+
+### 0.0.1
+- **Rebrand: the app is now "starlight"** (formerly *drift away*), and the
+  version counter restarts at 0.0.1 for the new brand — every entry below
+  this one is the drift-away era. The night theme already fit the name, so
+  this is a text/metadata pass:
+  - **In-app**: wordmark, document title, media-session title/artist,
+    storage notice, crash line.
+  - **Metadata**: page meta + OG/Twitter tags, JSON-LD, PWA manifest
+    name/short name, privacy page, `robots.txt`, `llms.txt`.
+  - **Social card**: regenerated with the starlight wordmark and shipped
+    under a fresh URL (`og-starlight.jpg`) so WhatsApp's cached preview of
+    the old brand can't linger; the old `og-card.jpg` is gone.
+  - **Service worker**: cache prefix renamed to `starlight-`; activation
+    still deletes old `drift-away-*` caches so upgrading devices clean up.
+  - **Docs**: README/ARCHITECTURE/DESIGN/ADDING-A-SOUND intros; the
+    package is named `starlight`. Historical changelog entries keep the old
+    name. Internal identifiers (localStorage keys, `__drift*` globals,
+    `.drift-slider` classes, drift mode the feature) are deliberately
+    unchanged — renaming storage keys would discard users' saved mixes.
 
 ### 9.5.4
 - **Privacy page metadata.** The privacy page is listed in the sitemap but
