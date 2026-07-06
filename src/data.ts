@@ -151,15 +151,21 @@ export const BUILTIN_PRESETS: Preset[] = [
   // Mixed, not toggled-on: the focal layer leads, broad beds (rain, wind,
   // noise, ocean) sit underneath, and accents stay quiet and occasional.
   // Rain on glass — the exact "At a Window" variant (so the editor shows that
-  // name, not "custom"), matching the scene's mood line. The fan's hush and the
-  // masking graph keep the rain bed from competing, so no extra bed trim here.
-  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.06], ['rain', 0.50, { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }]]) },
-  { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.41], ['night', 0.05]]) },
-  { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.24], ['night', 0.12]]) },
+  // name, not "custom"), matching the scene's mood line.
+  //
+  // Layer volumes here are re-measured against the CURRENT renders (the
+  // generators have been re-leveled many times since these scenes were first
+  // tuned): effective level = WAV rms × volume × masking gain. Targets: a
+  // co-headline layer sits −3..−6 dB under the lead, a named garnish
+  // −9..−13 dB. Anything below ~−15 dB is inaudible in the mix — a scene
+  // must not advertise a layer it doesn't deliver.
+  { id: 'builtin-fan-rain',      name: 'Fan & Rain',        createdAt: '', masterVolume: 0.8,  state: builtinState([['fan', 0.34], ['rain', 0.50, { surface: 0.40, heaviness: 0.40, intensity: 0.50, drops: 0.55, bed: 0.66, space: 0.62, movement: 0.28, metallic: 0.30 }]]) },
+  { id: 'builtin-fireside',      name: 'Fireside',          createdAt: '', masterVolume: 0.8,  state: builtinState([['fire', 0.41], ['night', 0.16]]) },
+  { id: 'builtin-deep-rest',     name: 'Deep Rest',         createdAt: '', masterVolume: 0.7,  state: builtinState([['brown-noise', 0.50], ['heartbeat', 0.38], ['night', 0.20]]) },
   { id: 'builtin-rainfall',      name: 'Rainfall',          createdAt: '', masterVolume: 0.8,  state: builtinState([['rain', 0.62]]) },
   { id: 'builtin-distant-storm', name: 'Distant Storm',     createdAt: '', masterVolume: 0.78, state: builtinState([['thunder', 0.62], ['rain', 0.40], ['wind', 0.16]]) },
   { id: 'builtin-windy-forest',  name: 'Windy Forest',      createdAt: '', masterVolume: 0.8,  state: builtinState([['forest', 0.60], ['wind', 0.32]]) },
-  { id: 'builtin-ocean-night',   name: 'Ocean Night',       createdAt: '', masterVolume: 0.78, state: builtinState([['ocean', 0.55], ['wind', 0.18], ['night', 0.08]]) },
+  { id: 'builtin-ocean-night',   name: 'Ocean Night',       createdAt: '', masterVolume: 0.78, state: builtinState([['ocean', 0.55], ['wind', 0.18], ['night', 0.16]]) },
   { id: 'builtin-underwater',    name: 'Underwater',        createdAt: '', masterVolume: 0.75, state: builtinState([['underwater', 0.60]]) },
   // The purr leads; the rain is the exact "Light Rain" variant (so the editor
   // shows that name), a thin far-off patter under the breathing.

@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.7
+- **Scene balance audit: every advertised layer is now actually audible.**
+  Scene volumes were tuned long before months of generator re-leveling, and
+  a per-layer measurement (WAV rms at the scene's tuning × volume × masking
+  gain, in dB against the scene's lead) showed several scenes no longer
+  delivering their own mood line: **Fan & Rain**'s fan — the *title* layer —
+  sat at −20.5 dB (the scene played as a Rainfall duplicate; now −5.4 dB, a
+  proper co-headliner), **Fireside**'s "quiet dark" insects were at −22.4 dB
+  (now −12.3, a real garnish), **Deep Rest**'s heartbeat was masked at
+  −10.5 dB *inside the same low band* as the brown noise (now −6.5) with its
+  insects at −16 (now −11.6), and **Ocean Night**'s insects were at −16.7
+  (now −10.7). Targets: co-headline −3..−7 dB, named garnish −9..−13 dB,
+  nothing advertised below −15. Mix numbers only — no generator changed.
+
 ### 0.0.6
 - **Ticking Clock: audible at last.** A whole-library level audit found the
   clock ~20 dB under everything else (rms 0.011 vs the library's 0.08–0.16)
