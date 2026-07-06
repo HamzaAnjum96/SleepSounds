@@ -187,6 +187,19 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.5
+- **Descriptive variant marks for the last six bar-only sounds.** Birdsong,
+  Stream, Thunder, Night Insects, Underwater, and Shower were still using
+  the generic ascending-bars fallback on their character chips; each now has
+  crafted 16px marks in the house grammar (`lib/variantIcons.tsx`, inline
+  SVG — no icon-font subset step involved): far song / a perched bird / the
+  dawn sun; a trickle / stones in a brook / rushing flow; a flicker beyond
+  the horizon / rumble under a cloud / a gathering second cell / the bolt
+  landing; a lone chirp in the grass / the moon over a meadow / deep-night
+  stars; hanging bubbles / a current / the deep floor; and three shower
+  pressures. Every sound with variants now has descriptive icons — the bars
+  remain only as the deliberate fallback for future unmarked variants.
+
 ### 0.0.4
 - **Fix: leftover "drift" branding in the install prompt.** The install row's `aria-label` still read "Install drift" from before the rebrand; now "Install starlight." Found while investigating a report of the install prompt not appearing (root cause was the intentional `hasPlayed && storageAck` gate plus per-browser support, not a bug — see `InstallPrompt.tsx`).
 

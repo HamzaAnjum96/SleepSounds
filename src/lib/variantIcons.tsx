@@ -605,6 +605,222 @@ function CatDeep() {
   );
 }
 
+// ── birdsong (distance / scene) ──────────────────────────────────────────────
+function BirdFar() {
+  // two far gull-curves near the horizon, one fainter — song from a distance
+  return (
+    <Svg>
+      <path d="M2 11.5 H14" opacity={0.5} />
+      <path d="M5 6.2 q1.1 -1.1 2.2 0 M7.2 6.2 q1.1 -1.1 2.2 0" />
+      <path d="M9.8 4 q0.8 -0.8 1.6 0 M11.4 4 q0.8 -0.8 1.6 0" opacity={0.55} />
+    </Svg>
+  );
+}
+function BirdGarden() {
+  // a bird perched on a branch, one note in the air
+  return (
+    <Svg>
+      <path d="M2 11.6 H14" />
+      <circle cx="6.4" cy="8.6" r="1.7" />
+      <path d="M7.8 9.4 L10 10.6" />
+      <path d="M4.9 8.2 L3.7 7.4" opacity={0.85} />
+      <circle cx="11.6" cy="4.4" r="0.9" {...fill} opacity={0.8} />
+      <path d="M12.5 4.4 V1.9" opacity={0.8} />
+    </Svg>
+  );
+}
+function BirdDawn() {
+  // the sun coming up over the horizon, song rising with it
+  return (
+    <Svg>
+      <path d="M2 11.5 H14" />
+      <path d="M4.8 11.5 a3.2 3.2 0 0 1 6.4 0" />
+      <path d="M8 5.6 V3.8 M4 7 L2.9 5.9 M12 7 L13.1 5.9" opacity={0.75} />
+      <path d="M11.6 2.6 q0.8 -0.8 1.6 0" opacity={0.85} />
+    </Svg>
+  );
+}
+
+// ── stream (flow) ────────────────────────────────────────────────────────────
+function Trickle() {
+  // a thin rivulet finding its way down, one drop
+  return (
+    <Svg>
+      <path d="M8.8 2.5 q-2.2 2 -0.6 4 q1.6 2 -0.6 4" />
+      <path d={teardrop(7.1, 12.1, 0.5)} {...fill} opacity={0.9} />
+    </Svg>
+  );
+}
+function Brook() {
+  // water babbling over two stones
+  return (
+    <Svg>
+      <path d="M4.2 11.8 a1.9 1.9 0 0 1 3.8 0 M9.4 11.8 a1.6 1.6 0 0 1 3.2 0" />
+      <path d="M2.5 6.5 q1.8 -1.4 3.6 0 t3.6 0 t3.6 0" />
+      <path d="M5.2 9.1 q1.4 -1 2.8 0" opacity={0.55} />
+    </Svg>
+  );
+}
+function Creek() {
+  // fast water: three swift streamlines with a kicked-up crest
+  return (
+    <Svg>
+      <path d="M2 5.4 q3.4 -1.6 6.8 0 q2 0.9 4.4 0.2" />
+      <path d="M2.4 8.6 q3.2 -1.4 6.4 0 q2 0.9 4.4 0.2" opacity={0.8} />
+      <path d="M3 11.8 q3 -1.3 6 0 q1.9 0.8 4.1 0.2" opacity={0.55} />
+    </Svg>
+  );
+}
+
+// ── thunder (distance / build) ───────────────────────────────────────────────
+function cloud(dy = 0, opacity = 1) {
+  return <path d={`M3.4 ${8.2 + dy} a2.6 2.6 0 0 1 2.5 -3.3 a3 3 0 0 1 5.6 0.9 a2.1 2.1 0 0 1 -0.4 4.2 H5.6 a2.3 2.3 0 0 1 -2.2 -1.8`} opacity={opacity} />;
+}
+function ThunderFar() {
+  // the storm still beyond the horizon: a low flat line, a faint flicker under it
+  return (
+    <Svg>
+      <path d="M2 6.5 H14" />
+      <path d="M8.6 9 L7.4 11.2 h1.6 L7.8 13.4" opacity={0.55} />
+    </Svg>
+  );
+}
+function ThunderRoll() {
+  // one cloud with rumble arcs rolling out beneath
+  return (
+    <Svg>
+      {cloud(-1.2)}
+      <path d="M4.6 12 q1.5 -1 3 0 M9 12.6 q1.4 -0.9 2.8 0" opacity={0.6} />
+    </Svg>
+  );
+}
+function ThunderGather() {
+  // a second cell stacking up behind the first
+  return (
+    <Svg>
+      <path d="M6 4.4 a2.4 2.4 0 0 1 4.4 -0.6 a1.8 1.8 0 0 1 1.6 2.6" opacity={0.5} />
+      {cloud(0.6)}
+    </Svg>
+  );
+}
+function ThunderHeavy() {
+  // the bolt lands: filled strike out of the cloud with rain beside it
+  return (
+    <Svg>
+      {cloud(-1.6)}
+      <path d="M8.7 8.6 L6.9 11.4 h1.9 L7.4 14.2 L10.6 10.9 H8.8 L10 8.6 Z" {...fill} />
+      <line x1={4.6} y1={9.4} x2={3.9} y2={11.4} opacity={0.6} />
+      <line x1={12} y1={9.4} x2={11.3} y2={11.4} opacity={0.6} />
+    </Svg>
+  );
+}
+
+// ── night insects (depth of night) ───────────────────────────────────────────
+function grassBlades(opacity = 1) {
+  return <path d="M3.4 13.5 q-0.3 -2.6 1 -4.4 M6 13.5 q0.1 -2.2 -0.9 -3.6 M12 13.5 q0.3 -2.4 -0.9 -4" opacity={opacity} />;
+}
+function NightStill() {
+  // grass at dusk, a single chirp
+  return (
+    <Svg>
+      {grassBlades()}
+      <circle cx="9" cy="7" r="0.8" {...fill} opacity={0.6} />
+    </Svg>
+  );
+}
+function NightSummer() {
+  // the moon up over the meadow, the field singing
+  return (
+    <Svg>
+      {grassBlades()}
+      <path d="M9.8 2.6 a3 3 0 1 0 3.4 3.4 a2.5 2.5 0 0 1 -3.4 -3.4" />
+    </Svg>
+  );
+}
+function NightDeep() {
+  // deep night: the meadow fades, moon and stars carry it
+  return (
+    <Svg>
+      {grassBlades(0.45)}
+      <path d="M8.6 2.4 a2.7 2.7 0 1 0 3.1 3.1 a2.3 2.3 0 0 1 -3.1 -3.1" />
+      <circle cx="3.6" cy="4" r="0.7" {...fill} opacity={0.8} />
+      <circle cx="13.4" cy="8.2" r="0.55" {...fill} opacity={0.6} />
+    </Svg>
+  );
+}
+
+// ── underwater (depth / motion) ──────────────────────────────────────────────
+function DepthStill() {
+  // still water: a surface line, two slow bubbles hanging deep
+  return (
+    <Svg>
+      <path d="M2 3.5 q1.8 -1.2 3.6 0 t3.6 0 t3.6 0" opacity={0.6} />
+      <circle cx="7" cy="9.4" r="1.15" />
+      <circle cx="9.8" cy="12" r="0.75" opacity={0.7} />
+    </Svg>
+  );
+}
+function Current() {
+  // a gentle current carrying a bubble along
+  return (
+    <Svg>
+      <path d="M2 6.4 q3.2 -1.5 6.4 0 q2 0.9 5.6 0.1" />
+      <path d="M2.6 10 q3 -1.3 6 0 q1.9 0.8 4.8 0.1" opacity={0.6} />
+      <circle cx="11.6" cy="3.6" r="1" />
+    </Svg>
+  );
+}
+function DeepSea() {
+  // bubbles shrinking away toward the surface, the floor far below
+  return (
+    <Svg>
+      <circle cx="6.6" cy="10.2" r="1.35" />
+      <circle cx="8.6" cy="6.6" r="0.95" opacity={0.75} />
+      <circle cx="10" cy="3.6" r="0.6" opacity={0.5} />
+      <path d="M2.5 13.5 H13.5" opacity={0.55} />
+    </Svg>
+  );
+}
+
+// ── shower (pressure) ────────────────────────────────────────────────────────
+function showerHead() {
+  return <path d="M5 3.2 a3 3 0 0 1 6 0 v1 H5 Z" />;
+}
+function ShowerGentle() {
+  // a soft sprinkle: short, sparse streams
+  return (
+    <Svg>
+      {showerHead()}
+      <line x1={6} y1={6.6} x2={5.7} y2={8.4} opacity={0.8} />
+      <line x1={8} y1={7.6} x2={7.9} y2={9.6} opacity={0.55} />
+      <line x1={10} y1={6.6} x2={9.9} y2={8.4} opacity={0.8} />
+    </Svg>
+  );
+}
+function ShowerSteady() {
+  // an even fall
+  return (
+    <Svg>
+      {showerHead()}
+      <line x1={5.8} y1={6.6} x2={5.5} y2={10.6} />
+      <line x1={8} y1={6.6} x2={7.9} y2={10.6} />
+      <line x1={10.2} y1={6.6} x2={10.1} y2={10.6} />
+    </Svg>
+  );
+}
+function ShowerPower() {
+  // full pressure: dense, long jets
+  return (
+    <Svg>
+      {showerHead()}
+      <line x1={5.4} y1={6.6} x2={4.9} y2={12.6} />
+      <line x1={7.1} y1={6.6} x2={6.9} y2={13.2} />
+      <line x1={8.9} y1={6.6} x2={9.1} y2={13.2} />
+      <line x1={10.6} y1={6.6} x2={11.1} y2={12.6} />
+    </Svg>
+  );
+}
+
 const MARKS: Record<string, () => ReactNode> = {
   lvl1: () => <Bars level={1} />,
   lvl2: () => <Bars level={2} />,
@@ -671,6 +887,31 @@ const MARKS: Record<string, () => ReactNode> = {
   catdozing: () => <CatDozing />,
   catcontent: () => <CatContent />,
   catdeep: () => <CatDeep />,
+  // birdsong
+  birdfar: () => <BirdFar />,
+  birdgarden: () => <BirdGarden />,
+  birddawn: () => <BirdDawn />,
+  // stream
+  trickle: () => <Trickle />,
+  brook: () => <Brook />,
+  creek: () => <Creek />,
+  // thunder
+  thunderfar: () => <ThunderFar />,
+  thunderroll: () => <ThunderRoll />,
+  thundergather: () => <ThunderGather />,
+  thunderheavy: () => <ThunderHeavy />,
+  // night insects
+  nightstill: () => <NightStill />,
+  nightsummer: () => <NightSummer />,
+  nightdeep: () => <NightDeep />,
+  // underwater
+  depthstill: () => <DepthStill />,
+  current: () => <Current />,
+  deepsea: () => <DeepSea />,
+  // shower
+  showergentle: () => <ShowerGentle />,
+  showersteady: () => <ShowerSteady />,
+  showerpower: () => <ShowerPower />,
 };
 
 /** The mark token for a variant: its explicit `icon` if set, else a position

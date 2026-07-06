@@ -172,9 +172,9 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     processor: 'birdsong-synth',
     groups: BIRDSONG_PARAM_GROUPS,
     variants: vlist(
-      ['Distant',     { callRate: 1.0, callVol: 0.7, trillRate: 0.15, trillVol: 0.6, peepRate: 0.3, peepVol: 0.3, gain: 0.45 }],
-      ['Garden', {}],
-      ['Dawn Chorus', { callRate: 4.5, callVariety: 0.7, trillRate: 0.6, trillVol: 1.0, peepRate: 0.7, gain: 0.78 }],
+      ['Distant',     { callRate: 1.0, callVol: 0.7, trillRate: 0.15, trillVol: 0.6, peepRate: 0.3, peepVol: 0.3, gain: 0.45 }, 'birdfar'],
+      ['Garden', {}, 'birdgarden'],
+      ['Dawn Chorus', { callRate: 4.5, callVariety: 0.7, trillRate: 0.6, trillVol: 1.0, peepRate: 0.7, gain: 0.78 }, 'birddawn'],
     ),
   },
   rain: { label: 'Rain', mode: 'simple', groups: [
@@ -258,9 +258,9 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'sparkle', label: 'sparkle', def: 0.22 },
     { key: 'depth', label: 'depth', def: 0.50 },
   ), variants: vlist(
-    ['Trickle',        { flow: 0.30, sparkle: 0.30, depth: 0.35 }],
-    ['Babbling Brook', {}],
-    ['Rushing Creek',  { flow: 0.85, sparkle: 0.60, depth: 0.65 }],
+    ['Trickle',        { flow: 0.30, sparkle: 0.30, depth: 0.35 }, 'trickle'],
+    ['Babbling Brook', {}, 'brook'],
+    ['Rushing Creek',  { flow: 0.85, sparkle: 0.60, depth: 0.65 }, 'creek'],
   )},
   // Thunder is crack-free rolling rumble; the scenes lead, but the three
   // sliders shape it (they were hidden — `variantsOnly` — but they map to
@@ -271,10 +271,10 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'distance',       label: 'distance', def: 0.72 },
   ), variants: vlist(
     // Crack-free rolling rumble for sleep, ordered far → near.
-    ['Distant Rumble',  { stormIntensity: 0.12, rumble: 0.72, distance: 0.92 }],
-    ['Rolling Storm', {}],
-    ['Gathering Storm', { stormIntensity: 0.35, rumble: 0.66, distance: 0.52 }],
-    ['Heavy Storm',     { stormIntensity: 0.58, rumble: 0.82, distance: 0.34 }],
+    ['Distant Rumble',  { stormIntensity: 0.12, rumble: 0.72, distance: 0.92 }, 'thunderfar'],
+    ['Rolling Storm', {}, 'thunderroll'],
+    ['Gathering Storm', { stormIntensity: 0.35, rumble: 0.66, distance: 0.52 }, 'thundergather'],
+    ['Heavy Storm',     { stormIntensity: 0.58, rumble: 0.82, distance: 0.34 }, 'thunderheavy'],
   )},
   fan: { label: 'Fan', mode: 'simple', groups: shapeGroup(
     { key: 'speed', label: 'speed', def: 0.08 },
@@ -305,9 +305,9 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'cosmic', label: 'shimmer', def: 0.22 },
     { key: 'pulse', label: 'drift', def: 0.18 },
   ), variants: vlist(
-    ['Still',        { cosmic: 0.20, pulse: 0.15 }],
-    ['Summer Night', {}],
-    ['Deep Drift',   { cosmic: 0.60, pulse: 0.55 }],
+    ['Still',        { cosmic: 0.20, pulse: 0.15 }, 'nightstill'],
+    ['Summer Night', {}, 'nightsummer'],
+    ['Deep Drift',   { cosmic: 0.60, pulse: 0.55 }, 'nightdeep'],
   )},
   'white-noise': { label: 'White Noise', mode: 'simple', groups: simpleGroup(
     { key: 'brightness', label: 'brightness', def: 0.32 },
@@ -349,18 +349,18 @@ export const SOUND_EDITOR_MODELS: Record<string, SoundEditorModel> = {
     { key: 'bubbles', label: 'bubbles', def: 0.40 },
     { key: 'current', label: 'current', def: 0.50 },
   ), variants: vlist(
-    ['Still Depths',    { depth: 0.70, bubbles: 0.20, current: 0.30 }],
-    ['Gentle Current', {}],
-    ['Deep Sea',        { depth: 0.90, bubbles: 0.55, current: 0.70 }],
+    ['Still Depths',    { depth: 0.70, bubbles: 0.20, current: 0.30 }, 'depthstill'],
+    ['Gentle Current', {}, 'current'],
+    ['Deep Sea',        { depth: 0.90, bubbles: 0.55, current: 0.70 }, 'deepsea'],
   )},
   shower: { label: 'Shower', mode: 'simple', groups: simpleGroup(
     { key: 'pressure', label: 'pressure', def: 0.60 },
     { key: 'steam', label: 'steam', def: 0.30 },
     { key: 'room', label: 'room', def: 0.50 },
   ), variants: vlist(
-    ['Gentle',   { pressure: 0.35, steam: 0.40, room: 0.45 }],
-    ['Steady', {}],
-    ['Powerful', { pressure: 0.90, steam: 0.25, room: 0.60 }],
+    ['Gentle',   { pressure: 0.35, steam: 0.40, room: 0.45 }, 'showergentle'],
+    ['Steady', {}, 'showersteady'],
+    ['Powerful', { pressure: 0.90, steam: 0.25, room: 0.60 }, 'showerpower'],
   )},
   airplane: { label: 'Airplane', mode: 'simple', groups: simpleGroup(
     { key: 'altitude', label: 'altitude', def: 0.50 },
