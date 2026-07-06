@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.2
+- **Custom domain: the app now lives at `https://starlight.rest/`.** GitHub
+  Pages 301-redirects the old `hamzaanjum96.github.io/SleepSounds/` URLs to
+  the apex of the new domain — which broke the app there, because the build
+  was rooted at `/SleepSounds/` and every asset 404'd after the redirect
+  stripped the repo path. Fixes:
+  - Vite `base` is now `/` (the custom domain serves from the root); the
+    Playwright/e2e, sound-sweep, and OG-card scripts follow.
+  - Every absolute URL — canonical, `og:url`, `og:image`, Twitter image,
+    JSON-LD, `robots.txt`'s sitemap pointer, `sitemap.xml`, `llms.txt`, the
+    privacy page's canonical — now points at `https://starlight.rest/`.
+  - Old links keep working via GitHub's redirect; HTTPS on the new domain
+    activates as soon as GitHub finishes provisioning the certificate
+    (settings-side, nothing in-repo).
+
 ### 0.0.1
 - **Rebrand: the app is now "starlight"** (formerly *drift away*), and the
   version counter restarts at 0.0.1 for the new brand — every entry below

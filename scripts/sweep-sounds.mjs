@@ -15,7 +15,7 @@
 import { chromium } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
 
-const base = process.argv[2] || 'http://localhost:5173/SleepSounds/';
+const base = process.argv[2] || 'http://localhost:5173/';
 
 // Per-sound listen windows (ms). Default suits continuous beds; sparse
 // event sounds need longer.

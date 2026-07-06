@@ -3,4 +3,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hamzaanjum96.github.io/SleepSounds/sitemap.xml
+Sitemap: https://starlight.rest/sitemap.xml

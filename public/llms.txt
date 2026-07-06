@@ -32,9 +32,9 @@ the reliable machine-readable descriptions.
   makes no network requests after install (fonts, icons, and audio worklets
   are self-hosted and precached).
 - Privacy: no analytics, no tracking, no data leaves the device.
-  Details: https://hamzaanjum96.github.io/SleepSounds/privacy.html
+  Details: https://starlight.rest/privacy.html
 - Source code: https://github.com/HamzaAnjum96/SleepSounds
-- App: https://hamzaanjum96.github.io/SleepSounds/
+- App: https://starlight.rest/
 
 ## Key docs (in the repository)
 

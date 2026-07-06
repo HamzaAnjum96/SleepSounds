@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
 
 const PORT = 4321;
-const BASE = `http://localhost:${PORT}/SleepSounds/`;
+const BASE = `http://localhost:${PORT}/`;
 
 // Some managed environments pre-install a Chromium whose build number doesn't
 // match the one this @playwright/test version would download (and downloads are
