@@ -141,11 +141,13 @@ describe('stereo rendering', () => {
     expect(right.length).toBe(left.length);
   });
 
-  // Broad layers that should fill the image. (Brown noise, fan, underwater body
-  // and heartbeat are intentionally centred, so they're not asserted here.)
+  // Broad layers that should fill the image. (Brown noise, underwater body,
+  // heartbeat, purr and clock are intentionally centred, so they're not
+  // asserted here.) Fan is here now: its diffuse airflow bed is widened while
+  // its tonal blade/motor components stay centred (see genFan).
   it.each([
     'ocean', 'stream', 'wind', 'shower', 'white-noise', 'pink-noise',
-    'train', 'airplane', 'night', 'chimes',
+    'train', 'airplane', 'night', 'chimes', 'fan',
   ])(
     '%s is not effectively mono',
     (id) => {
@@ -156,7 +158,7 @@ describe('stereo rendering', () => {
 
   // Compact / non-directional sources must stay centred — guards against
   // accidentally widening them (and the comb artefacts that invites).
-  it.each(['brown-noise', 'heartbeat', 'fan', 'purr', 'clock'])(
+  it.each(['brown-noise', 'heartbeat', 'purr', 'clock'])(
     '%s stays centred (mono)',
     (id) => {
       const { left, right } = decodeStereo(regenerateSound(id, {})!);

@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.9
+- **Fan: stereo width on the airflow, tones still centred.** A stereo-image
+  audit (L/R correlation across the library) found the Fan the only
+  broadband bed rendering fully mono — every other bed (ocean, wind, forest,
+  train, airplane) is already widened. It had been kept mono on purpose,
+  because decorrelating its near-pure blade/motor sinusoids combs them; but
+  that also flattened the airflow "whoosh," which is the fan's largest and
+  most genuinely diffuse component. Now the noise bed is split from the
+  tones: the airflow above 900 Hz is decorrelated (L/R correlation 1.00 →
+  0.72, matching the airplane bed) while the blade pulse, motor hum, casing
+  resonances and all bass stay dead-centre — width without combing the
+  tones. The mono sum is nearly unchanged (all bass fused), so it still
+  sounds like a fan on a phone speaker; on headphones it fills the room.
+  Verified by A/B against the old render and through the live audio graph.
+
 ### 0.0.8
 - **WAV rendering moved off the main thread (Web Worker).** Every sound's
   first play and every variant/slider retune renders 32 s of audio — a

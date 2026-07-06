@@ -166,7 +166,16 @@ function genFan(params?: Record<string, number>): string {
   const bladeW   = humParam * (0.012 + size * 0.042);
   const motorW   = humParam * (0.009 + size * 0.007);
 
-  const mix = new Float32Array(N);
+  // Split by directionality: the broadband airflow (the "whoosh") carries the
+  // width; the tonal and narrow-resonant parts stay dead-centre. A fan's blade
+  // pulse and motor hum are near-pure sinusoids and the casing peaks are narrow
+  // noise resonances — decorrelating any of those combs them, which is why the
+  // fan was historically kept fully mono. But that also flattened the airflow,
+  // which is the fan's largest, calmest, and genuinely diffuse component. So we
+  // widen only the noise bed and keep the tones centred, getting the room-feel
+  // without the combing the old comment (rightly) warned about.
+  const bed = new Float32Array(N);    // diffuse airflow → widened
+  const centre = new Float32Array(N); // tones + resonances + sub → mono
   for (let i = 0; i < N; i++) {
     const t      = (2 * Math.PI * i) / SR;
     const jitter = phaseJitter[i];
@@ -179,22 +188,34 @@ function genFan(params?: Record<string, number>): string {
 
     const motor = Math.sin(motorF * t) * 0.65 + Math.sin(motorF2 * t + 1.1) * 0.28;
 
-    mix[i] = bodyBuf[i]    * bodyW    * bodyLfo[i]
+    bed[i] = bodyBuf[i]    * bodyW    * bodyLfo[i]
            + surfaceBuf[i] * surfaceW * surfaceLfo[i]
-           + casing1[i]    * casing1W
-           + casing2[i]    * casing2W
-           + bearingBuf[i] * bearingW
-           + hissBuf[i]    * hissW
-           + blade * bladeW
-           + motor * motorW;
+           + hissBuf[i]    * hissW;
+    centre[i] = casing1[i]    * casing1W
+              + casing2[i]    * casing2W
+              + bearingBuf[i] * bearingW
+              + blade * bladeW
+              + motor * motorW;
   }
 
   // Final roll-off: removes top-end harshness, softer for small fans
-  lp1(mix, 2800 + size * 4000);
+  const finalFc = 2800 + size * 4000;
+  lp1(bed, finalFc);
+  lp1(centre, finalFc);
 
-  // A fan is a compact source with strong tonal blade/motor components; widening
-  // those combs them. Keep it mono (centred) — stereo placement is the mixer's job.
-  return gen(mix, 0.65);
+  // Widen only the airflow, and only above 900 Hz — the warm body core and all
+  // bass stay fused, so there's no phase smear on the low end and the mono sum
+  // barely changes (a fan should still sound like a fan on a phone speaker).
+  // The tones ride centred on top; a short 9 ms spread gives room-feel without
+  // an obvious ping-pong.
+  const st = decorrelateMono(bed, 9, 900);
+  const left = new Float32Array(N);
+  const right = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    left[i]  = st.left[i]  + centre[i];
+    right[i] = st.right[i] + centre[i];
+  }
+  return genStereo(left, right, 0.65);
 }
 
 function genPink(params?: Record<string, number>): string {
