@@ -7,11 +7,77 @@ import { SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
 let generatorsPromise: Promise<typeof import('./audio/generators')> | null = null;
 const loadGenerators = () => (generatorsPromise ??= import('./audio/generators'));
 
-/** Render a sound's WAV loop, loading the generator module on first use. */
+// Rendering runs in a Web Worker: a 32 s render is a synchronous 100 ms–3 s
+// DSP block (device-dependent), which on the main thread froze the whole UI
+// on a sound's first play and on every variant/slider retune. The worker
+// mints the blob URL in the same origin's blob store, so only the URL string
+// crosses back. If the worker can't start (no Worker in the environment, CSP,
+// test runners), rendering falls back to the main thread — same code, same
+// deterministic output, just the old jank.
+interface PendingRender {
+  resolve: (url: string | null) => void;
+  reject: (err: unknown) => void;
+}
+let genWorker: Worker | null = null;
+let genWorkerBroken = false;
+let renderSeq = 0;
+const pendingRenders = new Map<number, PendingRender>();
+
+function getGenWorker(): Worker | null {
+  if (genWorkerBroken) return null;
+  if (genWorker) return genWorker;
+  try {
+    genWorker = new Worker(new URL('./audio/genWorker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    genWorkerBroken = true;
+    return null;
+  }
+  genWorker.onmessage = (e: MessageEvent<{ seq: number; url?: string | null; error?: string }>) => {
+    const pending = pendingRenders.get(e.data.seq);
+    if (!pending) return;
+    pendingRenders.delete(e.data.seq);
+    if (e.data.error !== undefined) pending.reject(new Error(e.data.error));
+    else pending.resolve(e.data.url ?? null);
+  };
+  genWorker.onerror = () => {
+    // Worker infrastructure failed (script didn't load, crashed): mark it
+    // broken so future renders go main-thread, and let the in-flight ones
+    // reject into the same fallback.
+    genWorkerBroken = true;
+    const stranded = [...pendingRenders.values()];
+    pendingRenders.clear();
+    genWorker?.terminate();
+    genWorker = null;
+    for (const p of stranded) p.reject(new Error('generator worker failed'));
+  };
+  return genWorker;
+}
+
+function renderInWorker(id: string, params: Record<string, number>): Promise<string | null> | null {
+  const worker = getGenWorker();
+  if (!worker) return null;
+  return new Promise<string | null>((resolve, reject) => {
+    const seq = renderSeq++;
+    pendingRenders.set(seq, { resolve, reject });
+    worker.postMessage({ seq, soundId: id, params });
+  });
+}
+
+/** Render a sound's WAV loop — in the worker when available, else inline. */
 export async function generateSoundWav(
   id: string,
   params: Record<string, number>,
 ): Promise<string | null> {
+  const viaWorker = renderInWorker(id, params);
+  if (viaWorker) {
+    try {
+      return await viaWorker;
+    } catch (err) {
+      // Generator errors are deterministic — the fallback would throw the
+      // same way — but worker-infrastructure failures deserve the retry.
+      if (!genWorkerBroken) throw err;
+    }
+  }
   return (await loadGenerators()).regenerateSound(id, params);
 }
 

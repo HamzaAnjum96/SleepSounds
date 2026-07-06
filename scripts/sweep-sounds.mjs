@@ -42,6 +42,28 @@ await page.waitForTimeout(1000);
 const gotIt = page.getByRole('button', { name: /got it/i });
 if (await gotIt.isVisible().catch(() => false)) await gotIt.click();
 
+// Sample the master peak densely from inside the page for `ms`, returning the
+// running max. `__driftMasterPeak` reads a ~6 ms time-domain window, so a
+// single call almost never lands on a sparse transient — a clock tick is ~30 ms
+// once a second, caught by a 250 ms poll only ~10% of the time (this exact gap
+// once produced a false FAIL for the clock and sent a debugging session chasing
+// a phantom regression). Per-frame accumulation catches every tick.
+const peakOver = (ms) =>
+  page.evaluate(
+    (ms) =>
+      new Promise((resolve) => {
+        let mx = 0;
+        const t0 = performance.now();
+        const tick = () => {
+          const p = window.__driftMasterPeak?.() ?? 0;
+          if (p > mx) mx = p;
+          if (performance.now() - t0 < ms) requestAnimationFrame(tick);
+          else resolve(mx);
+        };
+        requestAnimationFrame(tick);
+      }),
+    ms,
+  );
 const peak = () => page.evaluate(() => window.__driftMasterPeak?.() ?? 0);
 const cards = page.locator('.sound-card');
 const count = await cards.count();
@@ -54,11 +76,12 @@ for (let i = 0; i < count; i++) {
   await card.scrollIntoViewIfNeeded();
   await card.locator('.sound-card-toggle').click();
   const windowMs = WINDOWS[name] ?? DEFAULT_WINDOW;
+  // Sample densely in short slices so a sound that clears the bar early exits
+  // fast, while a sparse one still gets its full window of per-frame reads.
   let p = 0;
   const t0 = Date.now();
   while (Date.now() - t0 < windowMs) {
-    await page.waitForTimeout(250);
-    p = await peak();
+    p = Math.max(p, await peakOver(500));
     if (p > 0.01) break;
   }
   const ok = p > 0.01;

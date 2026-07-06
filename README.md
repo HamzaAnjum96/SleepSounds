@@ -187,6 +187,26 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.8
+- **WAV rendering moved off the main thread (Web Worker).** Every sound's
+  first play and every variant/slider retune renders 32 s of audio — a
+  synchronous 100 ms–3 s DSP block (ocean ~670 ms, fire ~560 ms on this
+  machine) that ran on the main thread, freezing the UI mid-tap so even the
+  card's loading spinner couldn't animate. Rendering now runs in a dedicated
+  worker (`src/audio/genWorker.ts`); the blob URL is minted in the same
+  origin's store, so only the URL string crosses back and the `<audio>`
+  elements play it directly. Falls back to the old inline render if a worker
+  can't start (CSP, test runners) — same deterministic output. Verified
+  bit-for-bit parity with the main-thread path and 19/19 through the live
+  audio graph.
+- **Hardened the sound-sweep verifier against sparse sounds.** The permanent
+  runtime sweep read a single ~6 ms peak-meter window per 250 ms poll, which
+  almost never coincides with a sparse transient — a clock tick is ~30 ms
+  once a second — so it could report the (perfectly audible) Ticking Clock as
+  a FAIL. It now accumulates the peak per animation frame across each listen
+  window, catching every tick; confirmed the clock ticks nine to eleven times
+  in eight seconds at ~0.3–0.4 peak.
+
 ### 0.0.7
 - **Scene balance audit: every advertised layer is now actually audible.**
   Scene volumes were tuned long before months of generator re-leveling, and
