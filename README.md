@@ -187,6 +187,9 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.3
+- **Privacy page: dropped the GitHub-repo link.** The closing "questions? open an issue" note pointed at the repo; removed along with its now-unused `.note` styling (the border/spacing moved onto the "back to starlight" link so the page's closing rhythm is unchanged).
+
 ### 0.0.2
 - **Custom domain: the app now lives at `https://starlight.rest/`.** GitHub
   Pages 301-redirects the old `hamzaanjum96.github.io/SleepSounds/` URLs to
