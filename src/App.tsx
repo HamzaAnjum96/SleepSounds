@@ -555,8 +555,15 @@ export default function App() {
       setDriftOpen(false);
       setSheetOpen(false);
       setActiveMixId(null);
+      // [v0.0.22 fix] Clear any running sleep timer when the mix empties, so a
+      // stale countdown can't silently carry over onto the next mix you start.
+      // Silent — stopping the mix is already announced — and a no-op on timer
+      // expiry (the timer has already cleared itself by then). A scene/preset
+      // swap never lands here: restoreMixerState replaces the layers in one
+      // batch, so activeSounds goes straight from old to new, never through 0.
+      clearTimer(true);
     }
-  }, [activeSounds.length]);
+  }, [activeSounds.length, clearTimer]);
 
   // Keep the silent background-audio element in sync with playback, so iOS
   // keeps the session alive and the lock-screen player reflects true state. The

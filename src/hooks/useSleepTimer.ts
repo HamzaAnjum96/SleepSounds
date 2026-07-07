@@ -48,8 +48,9 @@ export interface SleepTimer {
   toggle: (secs: number) => void;
   /** Add `secs` to a running timer (or start one of that length). */
   extend: (secs: number) => void;
-  /** Clear any running timer. */
-  clear: () => void;
+  /** Clear any running timer. `silent` skips the announcement — used when the
+   *  clear is a side effect of the whole mix stopping (already announced). */
+  clear: (silent?: boolean) => void;
 }
 
 /** The sleep timer: a playing-time countdown that gently winds the mix down over
@@ -157,11 +158,15 @@ export function useSleepTimer({ isPlaying, setMasterFade, onExpire, announce }: 
     announce(`added ${humanizeSecs(secs)} to the sleep timer`);
   }, [announce]);
 
-  const clear = useCallback(() => {
+  // [v0.0.22] Reads secondsLeftRef (not secondsLeft) so the callback identity is
+  // stable, and only announces when a timer was actually set — so a silent clear
+  // on mix-stop never speaks a spurious "sleep timer off" when none was running.
+  const clear = useCallback((silent = false) => {
+    const had = secondsLeftRef.current !== null;
     deadlineRef.current = null;
     setSecondsLeft(null);
     setTimerTotal(null);
-    announce('sleep timer off');
+    if (had && !silent) announce('sleep timer off');
   }, [announce]);
 
   // The sky settles with the mix over the last five minutes of the timer.

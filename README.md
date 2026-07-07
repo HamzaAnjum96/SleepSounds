@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.22
+- **Fix: stopping the mix clears a running sleep timer.** A stopped mix left its
+  countdown frozen rather than cleared, and because the timer runs while
+  *playing*, starting a fresh mix later silently resumed that leftover
+  countdown — so a new session could stop itself early on a timer the user
+  thought was long gone. The timer is now cleared whenever the mix empties
+  (stop, drift-mode stop, or removing the last layer). It's a silent clear
+  (stopping is already announced) and a no-op on timer expiry, and a
+  scene/preset swap never triggers it — `restoreMixerState` replaces the layers
+  in one batch, so the active set goes straight from old to new without passing
+  through empty. `clear()` also gained a `silent` flag and now only speaks when
+  a timer was actually set. Tagged `[v0.0.22 fix]` in `App.tsx` /
+  `useSleepTimer.ts`.
+
 ### 0.0.21
 - **Perf: the scenes shelf and saved-mixes row no longer re-render on unrelated
   updates.** Both rows were built inline in `App`, so every App re-render — once
