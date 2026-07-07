@@ -187,6 +187,15 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.18
+- **Robustness: saving a mix can no longer throw.** `handleSaveMix` minted the
+  preset id with a bare `crypto.randomUUID()`, which is `undefined` in an
+  insecure context (plain http on a non-localhost host) and in older browsers —
+  so the save handler would throw and the mix silently fail to save. The storage
+  layer already had a guarded `safeId()` (used by the migrations to backfill
+  ids); it's now exported as `newMixId` and used here too, so the save path
+  matches the migrations' never-throw contract. Tagged `[v0.0.18 fix]`.
+
 ### 0.0.17
 - **Fix: the sleep timer now counts real time, not interval ticks.** The
   countdown decremented by one each time its 1-second `setInterval` fired — but

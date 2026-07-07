@@ -76,7 +76,10 @@ export function migrateSession(
   return { state, masterVolume };
 }
 
-function safeId(): string {
+/** A unique id that never throws: `crypto.randomUUID` is undefined in insecure
+ *  contexts (plain http on a non-localhost host) and older browsers, so fall
+ *  back to a timestamp+random id there rather than crash the caller. */
+export function safeId(): string {
   try {
     return crypto.randomUUID();
   } catch {

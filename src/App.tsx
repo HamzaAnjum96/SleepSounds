@@ -11,7 +11,7 @@ import SidePanel from './components/SidePanel';
 import Toast from './components/Toast';
 import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds, editorDefaults } from './data';
 import { features } from './config/features';
-import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession } from './storage/savedMixes';
+import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession, newMixId } from './storage/savedMixes';
 import { platform } from './platform';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
@@ -298,7 +298,9 @@ export default function App() {
 
   const handleSaveMix = (name: string) => {
     const preset: Preset = {
-      id: crypto.randomUUID(),
+      // [v0.0.18 fix] newMixId (not a bare crypto.randomUUID, which is undefined
+      // in insecure contexts / older browsers) so saving a mix can never throw.
+      id: newMixId(),
       name,
       createdAt: new Date().toISOString(),
       // [v0.0.16 fix] Bake each worklet layer's effective tuning into the saved

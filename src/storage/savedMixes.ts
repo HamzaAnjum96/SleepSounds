@@ -1,7 +1,11 @@
 import type { Preset, SoundState } from '../types';
 import { SOUND_LIBRARY } from '../data';
 import { STORAGE_KEYS } from './keys';
-import { migrateSavedMixes, migrateSession } from './migrations';
+import { migrateSavedMixes, migrateSession, safeId } from './migrations';
+
+/** A fresh mix id that never throws (see safeId) — the crash-proof replacement
+ *  for a bare `crypto.randomUUID()`, which is undefined in insecure contexts. */
+export const newMixId = safeId;
 
 const validIds = new Set(SOUND_LIBRARY.map((s) => s.id));
 
