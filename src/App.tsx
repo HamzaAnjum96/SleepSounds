@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { version } from '../package.json';
 import CookieNotice from './components/CookieNotice';
@@ -23,7 +23,7 @@ import { SOUND_ICONS } from './lib/soundIcons';
 import { haptic } from './lib/haptics';
 import { primeBackgroundAudio, setKeepAlive, setKeepAliveInterruptionHandler } from './lib/backgroundAudio';
 import { setAudioInterruptionHandler, setAudioIntent } from './audio/graph';
-import { SCENES, presetSoundIds } from './lib/scenes';
+import { SCENES, presetSoundIds, type Scene } from './lib/scenes';
 import { formatCountdown } from './lib/time';
 
 // Post-interaction surfaces are split out of the initial bundle: the sound
@@ -113,6 +113,87 @@ function buildMediaArtwork(size: number): string {
     return c.toDataURL('image/png');
   } catch { return `${import.meta.env.BASE_URL}icon-512.png`; }
 }
+
+// [v0.0.21 perf] The scenes shelf and saved-mixes row are extracted into memo'd
+// cards. App re-renders once a second while a sleep-timer counts down (and on
+// every volume/master change), which re-ran these whole rows each time even
+// though a card's own inputs — its scene/preset, whether it's the current mix,
+// and play state — hadn't changed. Memo + stable (ref-backed) handlers mean a
+// countdown tick now repaints none of them.
+const SceneCard = memo(function SceneCard({ scene, current, isPlaying, onPlay }: {
+  scene: Scene;
+  current: boolean;
+  isPlaying: boolean;
+  onPlay: (preset: Preset) => void;
+}) {
+  const ids = presetSoundIds(scene.preset);
+  return (
+    <div role="listitem" className="scene-item">
+      <button
+        type="button"
+        className={`scene-card${current ? ' current' : ''}`}
+        style={{ background: scene.art }}
+        onClick={() => onPlay(scene.preset)}
+        aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
+      >
+        <span className="scene-icons" aria-hidden="true">
+          {ids.slice(0, 3).map((id) => (
+            <span key={id} className="material-symbols-rounded">{SOUND_ICONS[id] ?? 'music_note'}</span>
+          ))}
+        </span>
+        {current && (
+          <span className={`scene-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
+            <span /><span /><span />
+          </span>
+        )}
+        <span className="scene-name">{scene.preset.name}</span>
+        <span className="scene-mood">{scene.mood}</span>
+        <span className="scene-count">{ids.length} layer{ids.length === 1 ? '' : 's'}</span>
+      </button>
+    </div>
+  );
+});
+
+const MixCard = memo(function MixCard({ preset, current, isPlaying, onPlay, onDelete }: {
+  preset: Preset;
+  current: boolean;
+  isPlaying: boolean;
+  onPlay: (preset: Preset) => void;
+  onDelete: (id: string) => void;
+}) {
+  const ids = presetSoundIds(preset);
+  const count = ids.length;
+  return (
+    <div role="listitem" className={`mix-card${current ? ' current' : ''}`}>
+      <button
+        type="button"
+        className="mix-card-body"
+        style={{ backgroundImage: mixArt(preset) }}
+        onClick={() => onPlay(preset)}
+        aria-label={`${current && isPlaying ? 'Pause' : 'Play'} mix ${preset.name}`}
+      >
+        <span className="mix-icons" aria-hidden="true">
+          {ids.slice(0, 3).map((id) => (
+            <span key={id} className="material-symbols-rounded">{SOUND_ICONS[id] ?? 'music_note'}</span>
+          ))}
+        </span>
+        {current && (
+          <span className={`mix-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
+            <span /><span /><span />
+          </span>
+        )}
+        <span className="mix-name">{preset.name}</span>
+        <span className="mix-count">{count} layer{count === 1 ? '' : 's'}</span>
+      </button>
+      <button
+        type="button"
+        className="mix-del"
+        onClick={() => onDelete(preset.id)}
+        aria-label={`Delete mix ${preset.name}`}
+      >✕</button>
+    </div>
+  );
+});
 
 export default function App() {
   const {
@@ -457,6 +538,16 @@ export default function App() {
     setActiveMixId(preset.id);
     setIsPaused(false);
   }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState, enrichPresetState]);
+
+  // [v0.0.21 perf] Stable handlers for the memo'd scene/mix cards. handlePlayPreset
+  // and handleDeletePreset both change identity as the mix changes; routing through
+  // refs keeps a constant identity so a timer tick never invalidates the cards.
+  const handlePlayPresetRef = useRef(handlePlayPreset);
+  handlePlayPresetRef.current = handlePlayPreset;
+  const stablePlayPreset = useCallback((preset: Preset) => handlePlayPresetRef.current(preset), []);
+  const handleDeletePresetRef = useRef(handleDeletePreset);
+  handleDeletePresetRef.current = handleDeletePreset;
+  const stableDeletePreset = useCallback((id: string) => handleDeletePresetRef.current(id), []);
 
   useEffect(() => {
     if (activeSounds.length === 0) {
@@ -861,37 +952,15 @@ export default function App() {
             <span className="section-meta">curated mixes</span>
           </div>
           <div className="scene-row" role="list" ref={sceneRowRef}>
-            {SCENES.map((scene) => {
-              const current = activeMixId === scene.preset.id && activeSounds.length > 0;
-              const ids = presetSoundIds(scene.preset);
-              return (
-                <div key={scene.preset.id} role="listitem" className="scene-item">
-                  <button
-                    type="button"
-                    className={`scene-card${current ? ' current' : ''}`}
-                    style={{ background: scene.art }}
-                    onClick={() => handlePlayPreset(scene.preset)}
-                    aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
-                  >
-                    <span className="scene-icons" aria-hidden="true">
-                      {ids.slice(0, 3).map((id) => (
-                        <span key={id} className="material-symbols-rounded">
-                          {SOUND_ICONS[id] ?? 'music_note'}
-                        </span>
-                      ))}
-                    </span>
-                    {current && (
-                      <span className={`scene-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
-                        <span /><span /><span />
-                      </span>
-                    )}
-                    <span className="scene-name">{scene.preset.name}</span>
-                    <span className="scene-mood">{scene.mood}</span>
-                    <span className="scene-count">{ids.length} layer{ids.length === 1 ? '' : 's'}</span>
-                  </button>
-                </div>
-              );
-            })}
+            {SCENES.map((scene) => (
+              <SceneCard
+                key={scene.preset.id}
+                scene={scene}
+                current={activeMixId === scene.preset.id && activeSounds.length > 0}
+                isPlaying={isPlaying}
+                onPlay={stablePlayPreset}
+              />
+            ))}
           </div>
         </section>
 
@@ -905,43 +974,16 @@ export default function App() {
               <span className="section-meta">{presets.length} saved</span>
             </div>
             <div className="mix-row" role="list">
-              {presets.map((preset) => {
-                const current = activeMixId === preset.id && activeSounds.length > 0;
-                const ids = presetSoundIds(preset);
-                const count = ids.length;
-                return (
-                  <div key={preset.id} role="listitem" className={`mix-card${current ? ' current' : ''}`}>
-                    <button
-                      type="button"
-                      className="mix-card-body"
-                      style={{ backgroundImage: mixArt(preset) }}
-                      onClick={() => handlePlayPreset(preset)}
-                      aria-label={`${current && isPlaying ? 'Pause' : 'Play'} mix ${preset.name}`}
-                    >
-                      <span className="mix-icons" aria-hidden="true">
-                        {ids.slice(0, 3).map((id) => (
-                          <span key={id} className="material-symbols-rounded">
-                            {SOUND_ICONS[id] ?? 'music_note'}
-                          </span>
-                        ))}
-                      </span>
-                      {current && (
-                        <span className={`mix-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
-                          <span /><span /><span />
-                        </span>
-                      )}
-                      <span className="mix-name">{preset.name}</span>
-                      <span className="mix-count">{count} layer{count === 1 ? '' : 's'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="mix-del"
-                      onClick={() => handleDeletePreset(preset.id)}
-                      aria-label={`Delete mix ${preset.name}`}
-                    >✕</button>
-                  </div>
-                );
-              })}
+              {presets.map((preset) => (
+                <MixCard
+                  key={preset.id}
+                  preset={preset}
+                  current={activeMixId === preset.id && activeSounds.length > 0}
+                  isPlaying={isPlaying}
+                  onPlay={stablePlayPreset}
+                  onDelete={stableDeletePreset}
+                />
+              ))}
             </div>
           </section>
         )}

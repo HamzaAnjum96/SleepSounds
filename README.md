@@ -187,6 +187,17 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.21
+- **Perf: the scenes shelf and saved-mixes row no longer re-render on unrelated
+  updates.** Both rows were built inline in `App`, so every App re-render — once
+  a second while a sleep timer counts down, and on each master/volume change —
+  re-ran all ten scene cards and every saved-mix card, even though a card's own
+  inputs (its scene/preset, whether it's the current mix, and play state) were
+  unchanged. Extracted `SceneCard` and `MixCard` as `memo`'d components with
+  ref-backed stable `onPlay`/`onDelete` handlers, so a timer tick repaints none
+  of them — the same treatment `SoundCard` got in 0.0.11. No visual change.
+  Tagged `[v0.0.21 perf]` in `App.tsx`.
+
 ### 0.0.20
 - **Fix: hand-tuning of WAV sounds now survives save and resume too.** 0.0.16
   taught the save paths to bake worklet layers' hand tuning; the WAV sounds
