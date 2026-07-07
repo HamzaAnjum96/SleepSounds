@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Seconds before timer end over which the mix gently fades out. */
 const FADE_WINDOW_S = 90;
@@ -59,19 +59,63 @@ export function useSleepTimer({ isPlaying, setMasterFade, onExpire, announce }: 
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [timerTotal, setTimerTotal] = useState<number | null>(null);
 
-  // Tick down one second at a time, but only while playing. Keyed on whether a
-  // timer exists (not its value), so the interval isn't torn down every second.
+  // [v0.0.17 fix] The countdown runs off the wall clock, not a count of interval
+  // ticks. A sleep mixer is used with the screen off, where the browser throttles
+  // — or, on a locked phone, suspends — background timers, so decrementing once
+  // per fired tick made the timer run far too slow (a throttled tick can fire as
+  // little as once a minute, stretching a 30-minute timer into hours). `deadline`
+  // is the real clock time the timer expires *while playing*; every tick and every
+  // foreground return recomputes the remaining seconds from it, so elapsed real
+  // time is always honoured and a backgrounded timer catches up the instant JS
+  // runs again. Kept in a ref so it can be adjusted (extend) and read (pause)
+  // without re-running the tick effect each second.
+  const deadlineRef = useRef<number | null>(null);
+  const secondsLeftRef = useRef<number | null>(null);
+  secondsLeftRef.current = secondsLeft;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
+  /** Recompute the displayed seconds from the wall-clock deadline. */
+  const sync = useCallback(() => {
+    if (deadlineRef.current === null) return;
+    setSecondsLeft(Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000)));
+  }, []);
+
+  // Start the clock when playback starts, freeze it when playback stops — the
+  // deadline is only live while playing, so a paused mix never burns down. Keyed
+  // on `isPlaying` alone; the duration-setting paths adjust the deadline directly
+  // (below), since they don't flip `isPlaying`.
+  useEffect(() => {
+    if (secondsLeftRef.current === null) return;
+    if (isPlaying) {
+      deadlineRef.current = Date.now() + secondsLeftRef.current * 1000;
+    } else if (deadlineRef.current !== null) {
+      // Freeze: bank the seconds remaining right now, then stop the clock.
+      setSecondsLeft(Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000)));
+      deadlineRef.current = null;
+    }
+  }, [isPlaying]);
+
+  // Tick while playing, but only re-establish the interval when a timer appears
+  // or disappears (keyed on presence, not value) — not every second.
   useEffect(() => {
     if (!isPlaying || secondsLeft === null) return;
-    const id = window.setInterval(() => {
-      setSecondsLeft((s) => (s !== null && s > 1 ? s - 1 : 0));
-    }, 1000);
+    const id = window.setInterval(sync, 1000);
     return () => clearInterval(id);
-  }, [isPlaying, secondsLeft !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPlaying, secondsLeft !== null, sync]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A foreground return corrects, at once, any drift that built up while the tab
+  // was backgrounded, throttled, or suspended.
+  useEffect(() => {
+    const onVisible = () => { if (!document.hidden) sync(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [sync]);
 
   // Reaching zero stops the mix and clears the timer.
   useEffect(() => {
     if (secondsLeft === 0) {
+      deadlineRef.current = null;
       onExpire();
       setSecondsLeft(null);
       setTimerTotal(null);
@@ -89,12 +133,16 @@ export function useSleepTimer({ isPlaying, setMasterFade, onExpire, announce }: 
   const toggle = useCallback((secs: number) => {
     // Tapping the running duration again turns the timer off.
     if (timerTotal === secs && secondsLeft !== null) {
+      deadlineRef.current = null;
       setSecondsLeft(null);
       setTimerTotal(null);
       announce('sleep timer off');
     } else {
       setSecondsLeft(secs);
       setTimerTotal(secs);
+      // Set the live deadline now if playing — the play/pause effect won't re-run
+      // when only the duration changes on an already-running timer.
+      deadlineRef.current = isPlayingRef.current ? Date.now() + secs * 1000 : null;
       announce(`sleep timer set for ${humanizeSecs(secs)}`);
     }
   }, [timerTotal, secondsLeft, announce]);
@@ -102,10 +150,15 @@ export function useSleepTimer({ isPlaying, setMasterFade, onExpire, announce }: 
   const extend = useCallback((secs: number) => {
     setSecondsLeft((s) => (s !== null ? s + secs : secs));
     setTimerTotal((t) => (t !== null ? t + secs : secs));
+    // Push the live deadline out; if paused, the banked seconds above carry the
+    // extension and the deadline is re-derived on resume.
+    if (deadlineRef.current !== null) deadlineRef.current += secs * 1000;
+    else if (isPlayingRef.current) deadlineRef.current = Date.now() + secs * 1000;
     announce(`added ${humanizeSecs(secs)} to the sleep timer`);
   }, [announce]);
 
   const clear = useCallback(() => {
+    deadlineRef.current = null;
     setSecondsLeft(null);
     setTimerTotal(null);
     announce('sleep timer off');

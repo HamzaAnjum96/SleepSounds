@@ -187,6 +187,22 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.17
+- **Fix: the sleep timer now counts real time, not interval ticks.** The
+  countdown decremented by one each time its 1-second `setInterval` fired — but
+  a sleep mixer runs with the screen off, exactly where browsers throttle (and
+  locked phones suspend) background timers. A throttled tick can fire as little
+  as once a minute, so the old timer ran many times too slow: a 30-minute timer
+  could stretch into hours, and on returning to the app it simply resumed from
+  where it had frozen, ignoring the real time that had passed. The timer now
+  tracks a wall-clock `deadline` while playing and recomputes the remaining
+  seconds from it on every tick and on every foreground return, so elapsed real
+  time is always honoured and a backgrounded timer catches up the instant JS
+  runs again. Pause still freezes it, resume re-derives the deadline, and extend
+  pushes it out — all preserved. Verified with a controllable clock: fast-
+  forwarding past the deadline stops the mix even when almost no ticks fire.
+  Tagged `[v0.0.17 fix]` in `useSleepTimer.ts`.
+
 ### 0.0.16
 - **Fix: hand-tuning of worklet sounds now survives save and resume.** Shaping a
   live worklet sound (rain, fire, birdsong, thunder, windy forest) in its editor
