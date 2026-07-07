@@ -187,6 +187,18 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.14
+- **A11y: the snackbar no longer double-speaks.** The forgiveness toast (stop
+  mix / delete mix, with undo) carried `role="status"`, making it a live region
+  — but every action it shows is *already* announced by the app's dedicated
+  live region ("deleted mix …") or its playback-status region ("stopped"). So a
+  screen reader read each destructive action twice, in two slightly different
+  wordings. The toast is now a plain container: not a live region (no
+  double-announce) and deliberately not `aria-hidden` either (that would hide
+  its own focusable undo button from assistive tech), so undo stays reachable.
+  Its comment claimed this behaviour all along — the markup now matches. Tagged
+  `[v0.0.14 a11y]` in `Toast.tsx`.
+
 ### 0.0.13
 - **Fix: the storage notice no longer covers the sleep timer.** The one-time
   "we keep your mixes on this device" banner is a fixed element at the top of
