@@ -62,4 +62,13 @@ describe('migrateSession', () => {
     const s = migrateSession({ state: { fire: { enabled: true, volume: 0.5 } }, masterVolume: 9 }, ids);
     expect(s!.masterVolume).toBe(1);
   });
+
+  it('preserves a layer\'s finite tuning so a resumed mix keeps its character', () => {
+    const s = migrateSession(
+      { state: { rain: { enabled: true, volume: 0.5, tuning: { intensity: 0.2, drops: 0.55, junk: 'x', bad: NaN } } } },
+      ids,
+    );
+    // Only finite numbers survive; the string and NaN are dropped.
+    expect(s!.state.rain.tuning).toEqual({ intensity: 0.2, drops: 0.55 });
+  });
 });

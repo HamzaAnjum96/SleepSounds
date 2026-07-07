@@ -29,12 +29,20 @@ export function loadLastSession(): { state: Record<string, SoundState>; masterVo
   }
 }
 
-/** Persist only the enabled layers; clears the key when the mix is empty. */
+/** Persist only the enabled layers; clears the key when the mix is empty.
+ *  [v0.0.15 fix] Each layer's `tuning` is kept too, so "resume your night"
+ *  brings a mix back with the exact character it was playing — e.g. a scene's
+ *  reduced rain bed — instead of silently reverting tuned layers to their
+ *  defaults. The load path (migrateSession → sanitizeTuning) already restores
+ *  tuning; only this write side was dropping it. */
 export function saveLastSession(state: Record<string, SoundState>, masterVolume: number): void {
   try {
     const enabled = Object.entries(state).filter(([, s]) => s.enabled);
     if (enabled.length === 0) { localStorage.removeItem(STORAGE_KEYS.lastSession); return; }
-    const slim = Object.fromEntries(enabled.map(([id, s]) => [id, { enabled: true, volume: s.volume }]));
+    const slim = Object.fromEntries(enabled.map(([id, s]) => [
+      id,
+      s.tuning ? { enabled: true, volume: s.volume, tuning: s.tuning } : { enabled: true, volume: s.volume },
+    ]));
     localStorage.setItem(STORAGE_KEYS.lastSession, JSON.stringify({ state: slim, masterVolume }));
   } catch { /* private mode / quota */ }
 }

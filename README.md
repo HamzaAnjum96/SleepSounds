@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.15
+- **Fix: "resume your night" keeps each layer's character.** The last-session
+  writer (`saveLastSession`) persisted only `{ enabled, volume }` per layer and
+  dropped each layer's `tuning`. So reopening the app restored the *layers* of
+  the mix you fell asleep to, but reverted every tuned layer to its defaults —
+  e.g. a resumed **Fan & Rain** came back with a full default rain instead of
+  the scene's quieter "at a window" bed under the fan. The writer now keeps a
+  layer's `tuning` when present; the load path already sanitised and restored
+  it (`migrateSession` → `sanitizeTuning`), so only this write side needed the
+  fix. Added a migration test pinning that finite tuning survives (and junk /
+  NaN is dropped). No generator or scene definition changed — this only makes
+  the resumed mix faithfully reproduce what was already playing. Tagged
+  `[v0.0.15 fix]` in `savedMixes.ts`.
+
 ### 0.0.14
 - **A11y: the snackbar no longer double-speaks.** The forgiveness toast (stop
   mix / delete mix, with undo) carried `role="status"`, making it a live region
