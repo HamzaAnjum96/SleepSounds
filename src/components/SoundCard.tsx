@@ -83,6 +83,10 @@ function SoundCard({
           type="button"
           className={`card-editor-icon${editorOpen ? ' active' : ''}`}
           aria-label={`Edit ${sound.name}`}
+          // [v0.0.24 a11y] This toggles the inline editor open/closed, so expose
+          // the disclosure state — matching the editor's own "fine-tune" toggle,
+          // which already carries aria-expanded.
+          aria-expanded={editorOpen}
           onClick={(e) => {
             e.stopPropagation();
             onToggleEditor?.(sound.id);

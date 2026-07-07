@@ -187,6 +187,15 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.24
+- **A11y: the sound card's editor toggle now exposes its open/closed state.** The
+  little "tune" button on an editable card opens and closes the inline sound
+  editor, but carried only an `aria-label` — so a screen reader gave no hint of
+  whether the panel was open, even though the editor's own "fine-tune sliders"
+  disclosure already announces its state. Added `aria-expanded` to the card
+  toggle so the two disclosures are consistent and the editor's state is legible
+  without sight. No visual change. Tagged `[v0.0.24 a11y]` in `SoundCard.tsx`.
+
 ### 0.0.23
 - **A11y: the sleep-timer preset chips now read as durations to screen readers.**
   The preset buttons showed terse text ("15m", "1h", "8h") with only
