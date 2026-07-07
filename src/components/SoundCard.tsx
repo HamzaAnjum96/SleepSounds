@@ -1,8 +1,14 @@
+import { memo } from 'react';
 import type { Sound } from '../types';
 import { EDITABLE_SOUND_IDS } from './soundEditorDefs';
 import { SOUND_ICONS } from '../lib/soundIcons';
 import { sliderFill } from '../lib/sliderFill';
 
+// [v0.0.11 perf] Callbacks are id-parameterized so the parent can pass stable
+// (ref-backed) handlers, and the component is wrapped in memo() below. Together
+// these stop an unrelated re-render — a sleep-timer tick, or a volume drag on a
+// *different* card — from re-rendering all ~19 cards; only the card whose own
+// props actually change repaints.
 interface SoundCardProps {
   sound: Sound;
   enabled: boolean;
@@ -11,12 +17,12 @@ interface SoundCardProps {
   volume: number;
   cardIndex?: number;
   editorOpen?: boolean;
-  onToggleEditor?: () => void;
-  onToggle: () => void;
-  onVolumeChange: (value: number) => void;
+  onToggleEditor?: (id: string) => void;
+  onToggle: (id: string) => void;
+  onVolumeChange: (id: string, value: number) => void;
 }
 
-export default function SoundCard({
+function SoundCard({
   sound,
   enabled,
   playing,
@@ -37,7 +43,7 @@ export default function SoundCard({
       className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}${canEdit ? ' has-editor' : ''}`}
       data-cat={sound.category}
     >
-      <button type="button" className="sound-card-toggle" onClick={onToggle} aria-pressed={enabled}>
+      <button type="button" className="sound-card-toggle" onClick={() => onToggle(sound.id)} aria-pressed={enabled}>
         <div className="card-top">
           <span className="material-symbols-rounded card-icon">{icon}</span>
           <div className="card-indicator" aria-hidden="true">
@@ -68,7 +74,7 @@ export default function SoundCard({
           value={volume}
           style={sliderFill(volume)}
           aria-label={`${sound.name} volume`}
-          onChange={(e) => onVolumeChange(Number(e.target.value))}
+          onChange={(e) => onVolumeChange(sound.id, Number(e.target.value))}
         />
       </div>
 
@@ -79,7 +85,7 @@ export default function SoundCard({
           aria-label={`Edit ${sound.name}`}
           onClick={(e) => {
             e.stopPropagation();
-            onToggleEditor?.();
+            onToggleEditor?.(sound.id);
           }}
         >
           <span className="material-symbols-rounded">tune</span>
@@ -88,3 +94,7 @@ export default function SoundCard({
     </div>
   );
 }
+
+// memo: props are all primitives plus the stable `sound` object and stable
+// handlers, so the default shallow compare is exactly right here.
+export default memo(SoundCard);

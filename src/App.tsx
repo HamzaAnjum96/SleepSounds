@@ -521,6 +521,25 @@ export default function App() {
     await toggleSound(soundId);
   }, [soundState, isPaused, toggleSound, dismissHint, setSoundTuning, editorValuesBySound]);
 
+  // [v0.0.11 perf] Stable, id-parameterized card handlers. handleSoundToggle
+  // and setSoundVolume both change identity whenever soundState (or master
+  // volume) changes, so passing them straight to the memoized SoundCard would
+  // re-render every card on any single-card edit. Routing through refs keeps a
+  // constant function identity, so only the card whose own props changed
+  // repaints — dragging one slider no longer re-renders all ~19 cards.
+  const handleSoundToggleRef = useRef(handleSoundToggle);
+  handleSoundToggleRef.current = handleSoundToggle;
+  const stableToggleSound = useCallback((id: string) => { void handleSoundToggleRef.current(id); }, []);
+
+  const setSoundVolumeRef = useRef(setSoundVolume);
+  setSoundVolumeRef.current = setSoundVolume;
+  const stableSetSoundVolume = useCallback((id: string, v: number) => setSoundVolumeRef.current(id, v), []);
+
+  const stableToggleEditor = useCallback((id: string) => {
+    if (!EDITABLE_SOUND_IDS.includes(id)) return;
+    setOpenEditorSoundId((prev) => (prev === id ? null : id));
+  }, []);
+
   // Space plays/pauses when no control has focus.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -906,12 +925,9 @@ export default function App() {
                   volume={soundState[sound.id]?.volume ?? 0.5}
                   cardIndex={i}
                   editorOpen={openEditorSoundId === sound.id}
-                  onToggleEditor={() => {
-                    if (!EDITABLE_SOUND_IDS.includes(sound.id)) return;
-                    setOpenEditorSoundId((prev) => (prev === sound.id ? null : sound.id));
-                  }}
-                  onToggle={() => handleSoundToggle(sound.id)}
-                  onVolumeChange={(v) => setSoundVolume(sound.id, v)}
+                  onToggleEditor={stableToggleEditor}
+                  onToggle={stableToggleSound}
+                  onVolumeChange={stableSetSoundVolume}
                 />
                 {i === editorInsertAfter && openEditorSoundId && (
                   <div

@@ -187,6 +187,18 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.11
+- **Perf: the sound grid no longer re-renders on unrelated updates.** Every
+  library card (`SoundCard`) received freshly-allocated inline callbacks each
+  render, and `handleSoundToggle` changes identity whenever `soundState` does —
+  so dragging *one* card's volume slider, or a once-per-second sleep-timer tick,
+  re-rendered all ~19 cards. The card is now wrapped in `memo`, its callbacks
+  are id-parameterized, and the parent passes ref-backed handlers with a
+  constant identity. Result: only the card whose own props actually changed
+  repaints; a timer tick repaints none of them. No visual or audio change —
+  pure render-cost reduction, most noticeable while dragging a slider on a
+  low-end phone. Tagged `[v0.0.11 perf]` in `SoundCard.tsx` and `App.tsx`.
+
 ### 0.0.10
 - **Revert the Fan stereo widening (0.0.9) — it sounded worse.** The
   airflow-widening measured cleanly (correlation, mono-sum, band ratios all
