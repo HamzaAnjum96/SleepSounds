@@ -1077,7 +1077,12 @@ export default function App() {
         </Suspense>
       )}
 
-      <CookieNotice show={hasPlayed && !storageAck} onDismiss={ackStorage} />
+      {/* [v0.0.13 fix] The storage notice is a fixed banner at the top of the
+          stack (--z-toast), so with the now-playing sheet or drift mode open it
+          floated over them and covered the sleep-timer controls. Hold it back
+          while either is open — one prompt surface at a time — and it returns
+          the moment they close, still unacknowledged. */}
+      <CookieNotice show={hasPlayed && !storageAck && !sheetOpen && !driftOpen} onDismiss={ackStorage} />
 
       {toast && (
         <Toast

@@ -187,6 +187,17 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.13
+- **Fix: the storage notice no longer covers the sleep timer.** The one-time
+  "we keep your mixes on this device" banner is a fixed element at the top of
+  the z-stack (`--z-toast`), above both the now-playing sheet (`--z-sheet`) and
+  drift mode (`--z-modal`). So on a first-ever play, opening the sheet put the
+  banner squarely on top of the sleep-timer chips and fade note — a first-time
+  user couldn't see or reach the timer. The notice is now held back while the
+  sheet or drift mode is open (one prompt surface at a time, matching the app's
+  existing prompt discipline) and reappears, still unacknowledged, the moment
+  they close. Tagged `[v0.0.13 fix]` in `App.tsx`.
+
 ### 0.0.12
 - **A11y: the modal dialogs now trap keyboard focus.** The now-playing sheet
   and drift mode are both `aria-modal="true"` and already moved focus in on
