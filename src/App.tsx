@@ -322,12 +322,12 @@ export default function App() {
       id: newMixId(),
       name,
       createdAt: new Date().toISOString(),
-      // [v0.0.16 fix] Bake each worklet layer's effective tuning into the saved
-      // state (via enrichPresetState) instead of storing raw soundState. Hand
-      // tuning lives in editorValuesBySound, which resets on reload — so without
-      // this a saved mix reopened later replayed its tuned layers (e.g. a rain
-      // shaped to "at a window") at their defaults. Baking pins what you saved.
-      state: enrichPresetState(soundState),
+      // [v0.0.16/0.0.20 fix] Bake each layer's effective tuning into the saved
+      // state (via bakeForSave) instead of storing raw soundState. Hand tuning
+      // lives in editorValuesBySound, which resets on reload — so without this a
+      // saved mix reopened later replayed its tuned layers (e.g. a rain shaped to
+      // "at a window", or an ocean variant) at their defaults. Baking pins it.
+      state: bakeForSave(soundState),
       masterVolume,
     };
     persistPresets([...presets, preset]);
@@ -398,6 +398,35 @@ export default function App() {
       out[id] = s.enabled && (WORKLET_SOUND_IDS.has(id) || s.tuning)
         ? { ...s, tuning: { ...editorValuesBySound[id], ...(s.tuning ?? {}) } }
         : s;
+    }
+    return out;
+  }, [editorValuesBySound]);
+
+  // [v0.0.20 fix] Persist-time enrichment: bake the effective editor tuning of
+  // every enabled layer into the saved state, so a saved or resumed mix replays
+  // exactly what's tuned now — including hand-tuned WAV sounds (ocean, wind,
+  // chimes…), whose tuning otherwise lives only in editorValuesBySound and was
+  // lost on reload. Worklet layers bake unconditionally (params apply live, no
+  // cost); a WAV layer bakes only when actually tuned away from its defaults, so
+  // an untouched WAV keeps using its memoized default render instead of
+  // needlessly regenerating on load. Kept separate from enrichPresetState, which
+  // runs on the *play* path and must not fold stale session editor values into a
+  // preset being loaded.
+  const bakeForSave = useCallback((state: Record<string, SoundState>): Record<string, SoundState> => {
+    const out: Record<string, SoundState> = {};
+    for (const [id, s] of Object.entries(state)) {
+      if (!s.enabled) { out[id] = s; continue; }
+      const vals = editorValuesBySound[id];
+      let tuned = false;
+      if (vals) {
+        if (WORKLET_SOUND_IDS.has(id) || s.tuning) {
+          tuned = true;
+        } else {
+          const def = editorDefaults(id);
+          tuned = Object.keys(def).some((k) => Math.abs((vals[k] ?? def[k]) - def[k]) > 1e-9);
+        }
+      }
+      out[id] = tuned ? { ...s, tuning: { ...vals, ...(s.tuning ?? {}) } } : s;
     }
     return out;
   }, [editorValuesBySound]);
@@ -489,14 +518,14 @@ export default function App() {
 
   // Persist the live mix so it survives a reload or a closed tab. Debounced so
   // a volume drag doesn't hammer storage; clears itself when the mix is empty.
-  // [v0.0.16 fix] Persist the *enriched* state so a resumed night keeps each
-  // worklet layer's hand tuning (which lives in editorValuesBySound, not
-  // soundState); editorValuesBySound is a dep so a retune re-triggers the save.
+  // [v0.0.16/0.0.20 fix] Persist the *baked* state so a resumed night keeps each
+  // layer's hand tuning (which lives in editorValuesBySound, not soundState);
+  // editorValuesBySound is a dep (via bakeForSave) so a retune re-triggers the save.
   useEffect(() => {
     if (!launchedRef.current) return;
-    const t = window.setTimeout(() => saveLastSession(enrichPresetState(soundState), masterVolume), 500);
+    const t = window.setTimeout(() => saveLastSession(bakeForSave(soundState), masterVolume), 500);
     return () => window.clearTimeout(t);
-  }, [soundState, masterVolume, enrichPresetState]);
+  }, [soundState, masterVolume, bakeForSave]);
 
   // Media Session API — powers lock-screen / notification player on Android & iOS.
   // Metadata goes through the platform bridge; the web-specific transport

@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.20
+- **Fix: hand-tuning of WAV sounds now survives save and resume too.** 0.0.16
+  taught the save paths to bake worklet layers' hand tuning; the WAV sounds
+  (ocean, wind, chimes, and the rest that shape via variant chips) were still
+  left out, so a mix saved — or fallen asleep to — with, say, a chosen ocean
+  variant came back at the default render on reload. A new persist-time
+  `bakeForSave` folds every enabled layer's effective editor tuning into the
+  saved state: worklet layers unconditionally (params apply live, no cost), and
+  WAV layers only when actually tuned away from their defaults, so an untouched
+  WAV keeps using its memoized default render and never regenerates needlessly
+  on load. Kept deliberately separate from the play-path `enrichPresetState`,
+  which must not fold stale session editor values into a preset being loaded.
+  Verified: a tuned WAV layer persists its tuning while an untouched one stays
+  bare. No generator or scene changed. Tagged `[v0.0.20 fix]` in `App.tsx`.
+
 ### 0.0.19
 - **Perf: build the lock-screen artwork off the first-render path.** The
   media-session "now playing" image (the crescent-moon night scene) was drawn to
