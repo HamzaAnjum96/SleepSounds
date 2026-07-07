@@ -615,11 +615,13 @@ export default function App() {
     launchedRef.current = true;
     const sceneId = new URLSearchParams(window.location.search).get('scene');
     if (sceneId) {
-      const scene = SCENES.find((s) => s.preset.id === sceneId);
-      if (scene) handlePlayPreset(scene.preset);
       // Clean the param so refreshes don't re-trigger.
       window.history.replaceState(null, '', window.location.pathname);
-      return;
+      const scene = SCENES.find((s) => s.preset.id === sceneId);
+      if (scene) { handlePlayPreset(scene.preset); return; }
+      // [v0.0.26 fix] Unknown/stale scene id — a retired or renamed scene, or a
+      // typo in the link — used to return here and strand the user on a blank
+      // app. Fall through instead, so they still land on last night's mix.
     }
     // No deep link: bring back last night's mix, paused and ready (autoplay is
     // blocked without a gesture anyway, and a sudden sound would be jarring).

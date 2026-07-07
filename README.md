@@ -187,6 +187,16 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.26
+- **Fix: a stale scene deep link no longer strands you on a blank app.** A
+  `?scene=…` launch (the app-icon shortcuts) that pointed at an unknown id — a
+  scene since retired or renamed, or a typo — matched nothing, then `return`ed
+  early and skipped the "resume last night's mix" path, leaving an empty app.
+  Now an unrecognised scene id falls through to the resume path (and the URL is
+  cleaned either way), so a bad link still lands you on last night's mix instead
+  of nothing. A valid scene still plays and returns as before. Tagged
+  `[v0.0.26 fix]` in `App.tsx`.
+
 ### 0.0.25
 - **Fix: the greeting no longer goes stale.** "good morning / afternoon /
   evening / up late" was recomputed only when `App` happened to re-render — so a
