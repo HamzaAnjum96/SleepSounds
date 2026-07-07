@@ -241,6 +241,22 @@ export default function App() {
 
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
+  // [v0.0.25 fix] Keep the greeting honest over time. It used to be recomputed
+  // only when App happened to re-render, so a phone left playing overnight (no
+  // timer, nothing forcing a render) could still say "good evening" past
+  // midnight, and returning to a long-backgrounded tab showed the wrong line.
+  // Hold it in state and refresh on a one-minute cadence (boundaries are on the
+  // hour, and setting the same string is a no-op in React, so this only actually
+  // re-renders the handful of times a day the greeting changes) plus an
+  // immediate refresh whenever the tab returns to the foreground.
+  const [greetingText, setGreetingText] = useState(greeting);
+  useEffect(() => {
+    const refresh = () => setGreetingText(greeting());
+    const id = window.setInterval(refresh, 60000);
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
   // Dev mode: spam-tap the moon (5 taps inside 3s) to toggle. Session-only by
   // design — a refresh always lands back in the normal app.
   const [devMode, setDevMode] = useState(false);
@@ -941,7 +957,7 @@ export default function App() {
           {/* The h1 gives the page its accessible title; visually it's the same
               wordmark (the preflight reset zeroes heading defaults). */}
           <h1 className="wordmark">starlight</h1>
-          <div className="greeting">{devMode ? `${greeting()} · in dev mode` : greeting()}</div>
+          <div className="greeting">{devMode ? `${greetingText} · in dev mode` : greetingText}</div>
         </header>
 
         {/* The main landmark: everything that is the app — the install

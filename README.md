@@ -187,6 +187,17 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.25
+- **Fix: the greeting no longer goes stale.** "good morning / afternoon /
+  evening / up late" was recomputed only when `App` happened to re-render — so a
+  phone left playing overnight (no timer running, nothing forcing a render) could
+  still read "good evening" well past midnight, and coming back to a
+  long-backgrounded tab showed yesterday's line. It's now held in state and
+  refreshed on a one-minute cadence and whenever the tab returns to the
+  foreground. Because setting the same string is a no-op in React, this only
+  actually re-renders the handful of times a day the greeting truly changes — no
+  idle churn. Tagged `[v0.0.25 fix]` in `App.tsx`.
+
 ### 0.0.24
 - **A11y: the sound card's editor toggle now exposes its open/closed state.** The
   little "tune" button on an editable card opens and closes the inline sound
