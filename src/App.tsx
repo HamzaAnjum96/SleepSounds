@@ -301,7 +301,12 @@ export default function App() {
       id: crypto.randomUUID(),
       name,
       createdAt: new Date().toISOString(),
-      state: soundState,
+      // [v0.0.16 fix] Bake each worklet layer's effective tuning into the saved
+      // state (via enrichPresetState) instead of storing raw soundState. Hand
+      // tuning lives in editorValuesBySound, which resets on reload — so without
+      // this a saved mix reopened later replayed its tuned layers (e.g. a rain
+      // shaped to "at a window") at their defaults. Baking pins what you saved.
+      state: enrichPresetState(soundState),
       masterVolume,
     };
     persistPresets([...presets, preset]);
@@ -463,11 +468,14 @@ export default function App() {
 
   // Persist the live mix so it survives a reload or a closed tab. Debounced so
   // a volume drag doesn't hammer storage; clears itself when the mix is empty.
+  // [v0.0.16 fix] Persist the *enriched* state so a resumed night keeps each
+  // worklet layer's hand tuning (which lives in editorValuesBySound, not
+  // soundState); editorValuesBySound is a dep so a retune re-triggers the save.
   useEffect(() => {
     if (!launchedRef.current) return;
-    const t = window.setTimeout(() => saveLastSession(soundState, masterVolume), 500);
+    const t = window.setTimeout(() => saveLastSession(enrichPresetState(soundState), masterVolume), 500);
     return () => window.clearTimeout(t);
-  }, [soundState, masterVolume]);
+  }, [soundState, masterVolume, enrichPresetState]);
 
   // Media Session API — powers lock-screen / notification player on Android & iOS.
   // Metadata goes through the platform bridge; the web-specific transport

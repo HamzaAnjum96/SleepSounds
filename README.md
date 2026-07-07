@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.16
+- **Fix: hand-tuning of worklet sounds now survives save and resume.** Shaping a
+  live worklet sound (rain, fire, birdsong, thunder, windy forest) in its editor
+  stores the values in `editorValuesBySound`, which resets on reload — but the
+  two persistence paths saved raw `soundState`, which never carries that tuning.
+  So a mix you *saved* after shaping the rain, or the mix you *fell asleep to*,
+  came back with its worklet layers at defaults. Both paths now persist the
+  enriched state (`enrichPresetState`, the same baking already used when a preset
+  plays), so what you saved is what you get back; `editorValuesBySound` is added
+  to the resume effect's deps so a retune re-triggers the debounced save. Builds
+  on 0.0.15 (which taught the writer to keep `tuning`) — that fixed scene-defined
+  tuning, this fixes hand tuning. No generator or scene changed. Tagged
+  `[v0.0.16 fix]` in `App.tsx`. (WAV-only sounds' hand tuning is still not
+  persisted, matching preset semantics — a known, separate follow-up.)
+
 ### 0.0.15
 - **Fix: "resume your night" keeps each layer's character.** The last-session
   writer (`saveLastSession`) persisted only `{ enabled, volume }` per layer and
