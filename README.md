@@ -187,6 +187,18 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.19
+- **Perf: build the lock-screen artwork off the first-render path.** The
+  media-session "now playing" image (the crescent-moon night scene) was drawn to
+  a 512×512 canvas and PNG-encoded inside a `useMemo` during the first render — a
+  synchronous ~12 ms on this machine, more on a low-end phone — even though it
+  isn't needed until the first play. It's now generated after first paint, on
+  `requestIdleCallback` (falling back to a short timeout), so it no longer blocks
+  the initial render; the media-session effect folds it in the instant it's
+  ready, and the on-brand icon PNGs stand in until then. No visual change to the
+  app; the lock-screen art is identical once built. Tagged `[v0.0.19 perf]` in
+  `App.tsx`.
+
 ### 0.0.18
 - **Robustness: saving a mix can no longer throw.** `handleSaveMix` minted the
   preset id with a bare `crypto.randomUUID()`, which is `undefined` in an

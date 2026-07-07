@@ -137,7 +137,26 @@ export default function App() {
     setSleepSafe,
   } = useAudioMixer(SOUND_LIBRARY);
 
-  const mediaArtwork = useMemo(() => buildMediaArtwork(512), []);
+  // [v0.0.19 perf] The crescent-moon lock-screen artwork is a ~one-off canvas
+  // draw + synchronous PNG encode (~12 ms here, more on a low-end phone) that
+  // isn't needed until the first play — so build it after first paint, on idle,
+  // instead of in a useMemo during the first render. The media-session effect
+  // folds it in the moment it's ready (it already depends on mediaArtwork), and
+  // until then the on-brand icon PNGs stand in.
+  const [mediaArtwork, setMediaArtwork] = useState<string | null>(null);
+  useEffect(() => {
+    const build = () => setMediaArtwork(buildMediaArtwork(512));
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }).requestIdleCallback;
+    if (ric) {
+      const id = ric(build);
+      return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
+    }
+    const t = window.setTimeout(build, 200);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
@@ -494,7 +513,8 @@ export default function App() {
       artwork: [
         { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png' },
         { src: `${base}icon-512.png`, sizes: '512x512', type: 'image/png' },
-        { src: mediaArtwork,          sizes: '512x512', type: 'image/png' },
+        // Folded in once the idle build (above) has produced it.
+        ...(mediaArtwork ? [{ src: mediaArtwork, sizes: '512x512', type: 'image/png' }] : []),
       ],
     });
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
