@@ -187,6 +187,17 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.12
+- **A11y: the modal dialogs now trap keyboard focus.** The now-playing sheet
+  and drift mode are both `aria-modal="true"` and already moved focus in on
+  open and restored it on close — but neither stopped Tab / Shift+Tab from
+  walking out into the shell behind them, so a keyboard or screen-reader user
+  could get lost outside an open modal while the rest of the page was meant to
+  be inert. A small shared `useFocusTrap` hook (`src/hooks/useFocusTrap.ts`)
+  now wraps focus at the dialog's edges and pulls it back if it lands outside.
+  Purely additive — the existing focus-in/restore behaviour is untouched, and
+  the trap is inert while the modal is closed. Tagged `[v0.0.12 a11y]`.
+
 ### 0.0.11
 - **Perf: the sound grid no longer re-renders on unrelated updates.** Every
   library card (`SoundCard`) received freshly-allocated inline callbacks each

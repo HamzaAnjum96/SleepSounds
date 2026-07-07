@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
 import { haptic } from '../lib/haptics';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import MixControls from './MixControls';
 
 /**
@@ -86,6 +87,9 @@ export default function NowPlayingSheet({
   const dragRef = useRef<DragState | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+
+  // [v0.0.12 a11y] Trap Tab focus within the sheet while it's the open modal.
+  useFocusTrap(sheetRef, open && !closing);
 
   /** Play the slide-down exit, then hand control back to the parent. */
   const requestClose = useCallback((fromDragY = 0) => {

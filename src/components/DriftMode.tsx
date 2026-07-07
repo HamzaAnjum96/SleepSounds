@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatCountdown } from '../lib/time';
 import { platform } from '../platform';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /**
  * Drift mode: the fullscreen night surface for when the mix is set and the
@@ -47,6 +48,10 @@ export default function DriftMode({
   const quietTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // [v0.0.12 a11y] Trap Tab focus within drift mode while it's the open modal.
+  useFocusTrap(rootRef, open);
 
   const wake = useCallback(() => {
     setQuiet(false);
@@ -104,6 +109,7 @@ export default function DriftMode({
 
   return (
     <div
+      ref={rootRef}
       className={`drift-mode${quiet ? ' quiet' : ''}`}
       role="dialog"
       aria-modal="true"
