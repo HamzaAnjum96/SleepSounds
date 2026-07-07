@@ -265,6 +265,10 @@ export default function MixControls({
           <div className="preset-save-row">
             <input
               className="preset-input"
+              // [v0.0.27 a11y] A placeholder is not a reliable accessible name
+              // (it vanishes on input and isn't consistently announced), so the
+              // field carries an explicit label for screen readers.
+              aria-label="Name this mix"
               placeholder="name this mix…"
               value={name}
               maxLength={40}

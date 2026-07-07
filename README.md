@@ -187,6 +187,16 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.27
+- **A11y: the save-mix name field now has a real label.** The "name this mix…"
+  input relied on its placeholder alone for a name — but a placeholder isn't a
+  reliable accessible name (it disappears the moment you type and isn't
+  consistently announced), so a screen-reader user focused on the field heard an
+  unlabeled text box. Added an explicit `aria-label` ("Name this mix"). It's the
+  app's only free-text input, and every slider/toggle was already labeled, so
+  this closes the last unlabeled control. Tagged `[v0.0.27 a11y]` in
+  `MixControls.tsx`.
+
 ### 0.0.26
 - **Fix: a stale scene deep link no longer strands you on a blank app.** A
   `?scene=…` launch (the app-icon shortcuts) that pointed at an unknown id — a
