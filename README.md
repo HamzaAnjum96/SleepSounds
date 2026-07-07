@@ -187,6 +187,16 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.23
+- **A11y: the sleep-timer preset chips now read as durations to screen readers.**
+  The preset buttons showed terse text ("15m", "1h", "8h") with only
+  `aria-pressed` — so a screen reader announced a bare "15m" (often spelled out),
+  while the sibling extend/off buttons in the same row already carried full
+  spoken labels ("Add 30 minutes to the sleep timer", "Turn the sleep timer
+  off"). Each preset now has an `aria-label` ("Sleep timer, 15 minutes", …), so
+  the whole timer row is consistently legible without sight. Visible chips and
+  behaviour are unchanged. Tagged `[v0.0.23 a11y]` in `MixControls.tsx`.
+
 ### 0.0.22
 - **Fix: stopping the mix clears a running sleep timer.** A stopped mix left its
   countdown frozen rather than cleared, and because the timer runs while

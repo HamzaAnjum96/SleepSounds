@@ -14,13 +14,16 @@ import { formatCountdown } from '../lib/time';
  * the controls and the local save-name state.
  */
 
+// `spoken` is the screen-reader label — the terse visible chip ("15m") reads as
+// letters otherwise, and its sibling +30m / +1h / off buttons already carry full
+// spoken labels, so the presets should match. [v0.0.23 a11y]
 export const TIMER_PRESETS = [
-  { label: '15m', secs: 15 * 60 },
-  { label: '30m', secs: 30 * 60 },
-  { label: '1h',  secs: 60 * 60 },
-  { label: '2h',  secs: 120 * 60 },
-  { label: '4h',  secs: 240 * 60 },
-  { label: '8h',  secs: 480 * 60 },
+  { label: '15m', secs: 15 * 60,  spoken: '15 minutes' },
+  { label: '30m', secs: 30 * 60,  spoken: '30 minutes' },
+  { label: '1h',  secs: 60 * 60,  spoken: '1 hour' },
+  { label: '2h',  secs: 120 * 60, spoken: '2 hours' },
+  { label: '4h',  secs: 240 * 60, spoken: '4 hours' },
+  { label: '8h',  secs: 480 * 60, spoken: '8 hours' },
 ];
 
 function endsAround(secondsLeft: number) {
@@ -212,6 +215,7 @@ export default function MixControls({
                 type="button"
                 className={`timer-btn${active ? ' active' : ''}`}
                 aria-pressed={active}
+                aria-label={`Sleep timer, ${t.spoken}`}
                 onClick={() => onTimerSelect(t.secs)}
               >{t.label}</button>
             );
