@@ -187,6 +187,19 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.30
+- **Perf: the media-session player stops rebuilding on every volume tick.** The
+  single effect that sets the lock-screen / notification metadata and registers
+  its play/pause/stop handlers depended on `activeSounds` (a fresh array each
+  `soundState` change) and `playAllActive` (a fresh identity each change) — so
+  dragging any volume slider rebuilt the `MediaMetadata` and re-registered all
+  three action handlers on every frame of the drag. Split into three narrow
+  effects: title/artwork update only when they actually change (the title is a
+  string, so an unchanged active set is a no-op dependency), `playbackState`
+  updates only on play/pause, and the transport handlers register once and read
+  the latest functions through a ref. Same lock-screen behaviour, none of the
+  per-drag churn. Tagged `[v0.0.30 perf]` in `App.tsx`.
+
 ### 0.0.29
 - **A11y: saving a mix is now announced.** Deleting a mix already spoke a
   confirmation through the live region ("deleted mix …"), but saving one was

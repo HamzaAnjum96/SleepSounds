@@ -648,15 +648,24 @@ export default function App() {
   }, [soundState, masterVolume, bakeForSave]);
 
   // Media Session API — powers lock-screen / notification player on Android & iOS.
-  // Metadata goes through the platform bridge; the web-specific transport
-  // (playback state + action handlers) stays here.
+  // [v0.0.30 perf] Split into three narrow effects so a volume drag — which mints
+  // a fresh activeSounds array and a fresh playAllActive every tick — no longer
+  // rebuilds the metadata and re-registers every action handler each frame. The
+  // title/artwork update only when they change (mediaTitle is a string, so an
+  // identical active set is a no-op dep), playbackState only on play/pause, and
+  // the transport handlers register once and read the latest fns through a ref.
+  const mediaTitle = useMemo(
+    () => (activeSounds.length > 0 ? activeSounds.map((s) => s.name).join(' · ') : 'starlight'),
+    [activeSounds],
+  );
+  const mediaTransportRef = useRef({ playAllActive, pauseAll, stopAll, setIsPaused });
+  mediaTransportRef.current = { playAllActive, pauseAll, stopAll, setIsPaused };
+
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const base = import.meta.env.BASE_URL;
     platform.setMediaMetadata({
-      title: activeSounds.length > 0
-        ? activeSounds.map((s) => s.name).join(' · ')
-        : 'starlight',
+      title: mediaTitle,
       artist: 'starlight',
       album: 'sleep sounds',
       artwork: [
@@ -666,12 +675,20 @@ export default function App() {
         ...(mediaArtwork ? [{ src: mediaArtwork, sizes: '512x512', type: 'image/png' }] : []),
       ],
     });
-    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [mediaTitle, mediaArtwork]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    const t = mediaTransportRef;
     // Prime first: an explicit resume must mark the keep-alive as intended before
     // the element plays, so the auto-resume guard doesn't suppress it.
-    navigator.mediaSession.setActionHandler('play',  () => { primeBackgroundAudio(); playAllActive(); setIsPaused(false); });
-    navigator.mediaSession.setActionHandler('pause', () => { pauseAll();      setIsPaused(true); });
-    navigator.mediaSession.setActionHandler('stop',  () => { stopAll();       setIsPaused(false); });
+    navigator.mediaSession.setActionHandler('play',  () => { primeBackgroundAudio(); t.current.playAllActive(); t.current.setIsPaused(false); });
+    navigator.mediaSession.setActionHandler('pause', () => { t.current.pauseAll();  t.current.setIsPaused(true); });
+    navigator.mediaSession.setActionHandler('stop',  () => { t.current.stopAll();   t.current.setIsPaused(false); });
     try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch { /* ok */ }
     try { navigator.mediaSession.setActionHandler('seekforward',  null); } catch { /* ok */ }
     try { navigator.mediaSession.setActionHandler('seekto',       null); } catch { /* ok */ }
@@ -679,7 +696,7 @@ export default function App() {
       (navigator.mediaSession as MediaSession & { setPositionState?: (s: object) => void })
         .setPositionState?.({ duration: Infinity, playbackRate: 1, position: 0 });
     } catch { /* ok */ }
-  }, [isPlaying, activeSounds, mediaArtwork, playAllActive, pauseAll, stopAll]);
+  }, []);
 
   const handleSoundToggle = useCallback(async (soundId: string) => {
     haptic(8);
