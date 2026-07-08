@@ -429,6 +429,10 @@ export default function App() {
     };
     persistPresets([...presets, preset]);
     setActiveMixId(preset.id);
+    // [v0.0.29 a11y] Confirm the save to screen readers — deleting a mix already
+    // announces ("deleted mix …"), but saving was silent, so a non-sighted user
+    // got no acknowledgement that the key action succeeded.
+    announce(`saved mix ${name}`);
   };
 
   // Stop the whole mix, but leave an undo: snapshot the live layers first, so

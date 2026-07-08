@@ -187,6 +187,14 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.29
+- **A11y: saving a mix is now announced.** Deleting a mix already spoke a
+  confirmation through the live region ("deleted mix …"), but saving one was
+  silent — so a screen-reader user got no acknowledgement that the save
+  succeeded, even though the visible UI (a new card, the field closing) told
+  everyone else. `handleSaveMix` now announces "saved mix …", matching the delete
+  path. Tagged `[v0.0.29 a11y]` in `App.tsx`.
+
 ### 0.0.28
 - **Mobile polish: the save-mix name field behaves on a phone keyboard.** The
   "name this mix…" input now sets `enterkeyhint="done"` so the on-screen keyboard's
