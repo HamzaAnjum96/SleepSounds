@@ -187,6 +187,14 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.28
+- **Mobile polish: the save-mix name field behaves on a phone keyboard.** The
+  "name this mix…" input now sets `enterkeyhint="done"` so the on-screen keyboard's
+  action key reads "done" (Enter already saves the mix), and turns off autocorrect
+  and spellcheck so a short name — often a proper noun like "Fireside" — isn't
+  quietly rewritten or underlined mid-type. Desktop is unaffected. Tagged
+  `[v0.0.28]` in `MixControls.tsx`.
+
 ### 0.0.27
 - **A11y: the save-mix name field now has a real label.** The "name this mix…"
   input relied on its placeholder alone for a name — but a placeholder isn't a
