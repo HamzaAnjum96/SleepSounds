@@ -1,10 +1,81 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import type { Sound, SoundState } from '../types';
 import { SOUND_ICONS } from '../lib/soundIcons';
 import { features } from '../config/features';
 import { sliderFill } from '../lib/sliderFill';
 import { haptic } from '../lib/haptics';
 import { formatCountdown } from '../lib/time';
+
+// [v0.0.35 perf] One layer's row, memoized so dragging a single layer's slider
+// (or master, or the timer ticking) only repaints the row whose own volume /
+// mute / solo actually changed — not every active layer. Props are the sound
+// (stable), primitives, and constant-identity handlers threaded from App, so the
+// default shallow compare is exactly right.
+const LayerRow = memo(function LayerRow({
+  sound, volume, muted, soloed, onSoundVolume, onRemoveSound, onToggleMute, onToggleSolo,
+}: {
+  sound: Sound;
+  volume: number;
+  muted: boolean;
+  soloed: boolean;
+  onSoundVolume: (id: string, v: number) => void;
+  onRemoveSound: (id: string) => void;
+  onToggleMute: (id: string) => void;
+  onToggleSolo: (id: string) => void;
+}) {
+  return (
+    <div className="layer-row" data-cat={sound.category}>
+      {/* [v0.0.34] Per-sound icon (matching the library cards, sound editor, and
+          scene previews), not the category icon — so each layer is distinct
+          rather than, e.g., Fan / Thunder / Wind all showing the same "air"
+          glyph. */}
+      <span className="material-symbols-rounded layer-icon" aria-hidden="true">
+        {SOUND_ICONS[sound.id] ?? 'music_note'}
+      </span>
+      <div className="layer-main">
+        <div className="layer-head">
+          <span className="layer-name">{sound.name}</span>
+          <span className="layer-pct">{Math.round(volume * 100)}%</span>
+        </div>
+        <input
+          type="range"
+          className="drift-slider"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          style={sliderFill(volume)}
+          aria-label={`${sound.name} volume`}
+          onChange={(e) => onSoundVolume(sound.id, Number(e.target.value))}
+        />
+      </div>
+      {features.layerMuteSolo && (
+        <div className="layer-toggles">
+          <button
+            type="button"
+            className={`layer-toggle${muted ? ' on' : ''}`}
+            aria-pressed={muted}
+            onClick={() => onToggleMute(sound.id)}
+            aria-label={`${muted ? 'Unmute' : 'Mute'} ${sound.name}`}
+          >M</button>
+          <button
+            type="button"
+            className={`layer-toggle${soloed ? ' on' : ''}`}
+            aria-pressed={soloed}
+            onClick={() => onToggleSolo(sound.id)}
+            aria-label={`${soloed ? 'Unsolo' : 'Solo'} ${sound.name}`}
+          >S</button>
+        </div>
+      )}
+      <button
+        type="button"
+        className="layer-remove"
+        onClick={() => onRemoveSound(sound.id)}
+        aria-label={`Remove ${sound.name}`}
+      >✕</button>
+    </div>
+  );
+});
 
 /**
  * The mix's control body: every active layer on its own slider, master volume,
@@ -110,63 +181,19 @@ export default function MixControls({
             >stop mix</button>
           )}
         </div>
-        {activeSounds.map((sound) => {
-          const volume = soundState[sound.id]?.volume ?? 0.5;
-          const muted = mutedIds.includes(sound.id);
-          const soloed = soloIds.includes(sound.id);
-          return (
-            <div key={sound.id} className="layer-row" data-cat={sound.category}>
-              {/* [v0.0.34] Per-sound icon (matching the library cards, sound
-                  editor, and scene previews), not the category icon — so each
-                  layer is distinct rather than, e.g., Fan / Thunder / Wind all
-                  showing the same "air" glyph. */}
-              <span className="material-symbols-rounded layer-icon" aria-hidden="true">
-                {SOUND_ICONS[sound.id] ?? 'music_note'}
-              </span>
-              <div className="layer-main">
-                <div className="layer-head">
-                  <span className="layer-name">{sound.name}</span>
-                  <span className="layer-pct">{Math.round(volume * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  className="drift-slider"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={volume}
-                  style={sliderFill(volume)}
-                  aria-label={`${sound.name} volume`}
-                  onChange={(e) => onSoundVolume(sound.id, Number(e.target.value))}
-                />
-              </div>
-              {features.layerMuteSolo && (
-                <div className="layer-toggles">
-                  <button
-                    type="button"
-                    className={`layer-toggle${muted ? ' on' : ''}`}
-                    aria-pressed={muted}
-                    onClick={() => onToggleMute(sound.id)}
-                    aria-label={`${muted ? 'Unmute' : 'Mute'} ${sound.name}`}
-                  >M</button>
-                  <button
-                    type="button"
-                    className={`layer-toggle${soloed ? ' on' : ''}`}
-                    aria-pressed={soloed}
-                    onClick={() => onToggleSolo(sound.id)}
-                    aria-label={`${soloed ? 'Unsolo' : 'Solo'} ${sound.name}`}
-                  >S</button>
-                </div>
-              )}
-              <button
-                type="button"
-                className="layer-remove"
-                onClick={() => onRemoveSound(sound.id)}
-                aria-label={`Remove ${sound.name}`}
-              >✕</button>
-            </div>
-          );
-        })}
+        {activeSounds.map((sound) => (
+          <LayerRow
+            key={sound.id}
+            sound={sound}
+            volume={soundState[sound.id]?.volume ?? 0.5}
+            muted={mutedIds.includes(sound.id)}
+            soloed={soloIds.includes(sound.id)}
+            onSoundVolume={onSoundVolume}
+            onRemoveSound={onRemoveSound}
+            onToggleMute={onToggleMute}
+            onToggleSolo={onToggleSolo}
+          />
+        ))}
         {activeSounds.length === 0 && (
           <p className="sheet-empty">the mix is empty · add sounds from the library</p>
         )}

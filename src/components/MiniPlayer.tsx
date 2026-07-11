@@ -4,7 +4,7 @@
  * countdown at a glance, and the way into the now-playing sheet.
  */
 
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 
 const RING_R = 21;
 const RING_C = 2 * Math.PI * RING_R;
@@ -91,4 +91,8 @@ const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlay
   );
 });
 
-export default MiniPlayer;
+// [v0.0.35 perf] memo so the player bar skips re-render when App re-renders for
+// something it doesn't show — a volume drag, a library toggle. All props are
+// primitives or (from App) constant-identity handlers, so the shallow compare is
+// exactly right; a timer tick still updates it (subtitle / ring change).
+export default memo(MiniPlayer);

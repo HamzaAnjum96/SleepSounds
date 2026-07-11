@@ -736,6 +736,38 @@ export default function App() {
     setOpenEditorSoundId((prev) => (prev === id ? null : id));
   }, []);
 
+  // [v0.0.35 perf] Constant-identity handlers for the memoized player surfaces
+  // (the mini player, and the sheet / side-panel layer rows). Master toggle,
+  // stop, save, and the timer actions otherwise change identity whenever
+  // soundState or the timer state changes — passed to memoized children, that
+  // would defeat the memoization on every volume drag and every countdown tick.
+  // Ref indirection keeps a stable identity while still calling the latest
+  // closure; the setState-only ones are plain empty-dep callbacks.
+  const masterToggleRef = useRef(handleMasterToggle);
+  masterToggleRef.current = handleMasterToggle;
+  const stableMasterToggle = useCallback(() => { void masterToggleRef.current(); }, []);
+  const stopMixRef = useRef(handleStopMix);
+  stopMixRef.current = handleStopMix;
+  const stableStopMix = useCallback(() => stopMixRef.current(), []);
+  const saveMixRef = useRef(handleSaveMix);
+  saveMixRef.current = handleSaveMix;
+  const stableSaveMix = useCallback((name: string) => saveMixRef.current(name), []);
+  const timerSelectRef = useRef(handleTimerSelect);
+  timerSelectRef.current = handleTimerSelect;
+  const stableTimerSelect = useCallback((secs: number) => timerSelectRef.current(secs), []);
+  const timerExtendRef = useRef(handleTimerExtend);
+  timerExtendRef.current = handleTimerExtend;
+  const stableTimerExtend = useCallback((secs: number) => timerExtendRef.current(secs), []);
+  const timerClearRef = useRef(handleTimerClear);
+  timerClearRef.current = handleTimerClear;
+  const stableTimerClear = useCallback(() => timerClearRef.current(), []);
+  const stableOpenSheet = useCallback(() => setSheetOpen(true), []);
+  const stableCloseSheet = useCallback(() => { setSheetOpen(false); setSheetStartSaving(false); }, []);
+  const stableDriftFromSheet = useCallback(() => { setSheetOpen(false); setDriftOpen(true); }, []);
+  const stableDriftFromPanel = useCallback(() => setDriftOpen(true), []);
+  const stableDriftClose = useCallback(() => setDriftOpen(false), []);
+  const stableDriftStop = useCallback(() => { haptic(10); stopAll(); setIsPaused(false); }, [stopAll]);
+
   // Space plays/pauses when no control has focus.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1139,21 +1171,21 @@ export default function App() {
             hasPlayer={hasPlayer}
             isPlaying={isPlaying}
             quiet={driftOpen}
-            onTogglePlay={handleMasterToggle}
+            onTogglePlay={stableMasterToggle}
             activeSounds={activeSounds}
             soundState={soundState}
-            onSoundVolume={setSoundVolume}
-            onRemoveSound={(id) => { void handleSoundToggle(id); }}
+            onSoundVolume={stableSetSoundVolume}
+            onRemoveSound={stableToggleSound}
             masterVolume={masterVolume}
             onMasterVolume={setMasterVolume}
             secondsLeft={secondsLeft}
             timerTotal={timerTotal}
-            onTimerSelect={handleTimerSelect}
-            onTimerExtend={handleTimerExtend}
-            onTimerClear={handleTimerClear}
-            onClearMix={handleStopMix}
-            onDrift={() => setDriftOpen(true)}
-            onSave={handleSaveMix}
+            onTimerSelect={stableTimerSelect}
+            onTimerExtend={stableTimerExtend}
+            onTimerClear={stableTimerClear}
+            onClearMix={stableStopMix}
+            onDrift={stableDriftFromPanel}
+            onSave={stableSaveMix}
             mutedIds={mutedIds}
             soloIds={soloIds}
             onToggleMute={toggleMute}
@@ -1171,8 +1203,8 @@ export default function App() {
           subtitle={mixSubtitle}
           isPlaying={isPlaying}
           timerFrac={secondsLeft !== null && timerTotal !== null ? secondsLeft / timerTotal : null}
-          onTogglePlay={handleMasterToggle}
-          onOpen={() => setSheetOpen(true)}
+          onTogglePlay={stableMasterToggle}
+          onOpen={stableOpenSheet}
           onSave={handleSaveIntent}
         />
       )}
@@ -1181,25 +1213,25 @@ export default function App() {
         <Suspense fallback={null}>
           <LazyNowPlayingSheet
             open={sheetOpen}
-            onClose={() => { setSheetOpen(false); setSheetStartSaving(false); }}
+            onClose={stableCloseSheet}
             startSaving={sheetStartSaving}
             title={mixTitle || 'your mix'}
             activeSounds={activeSounds}
             soundState={soundState}
             isPlaying={isPlaying}
-            onTogglePlay={handleMasterToggle}
-            onSoundVolume={setSoundVolume}
-            onRemoveSound={(id) => { void handleSoundToggle(id); }}
+            onTogglePlay={stableMasterToggle}
+            onSoundVolume={stableSetSoundVolume}
+            onRemoveSound={stableToggleSound}
             masterVolume={masterVolume}
             onMasterVolume={setMasterVolume}
             secondsLeft={secondsLeft}
             timerTotal={timerTotal}
-            onTimerSelect={handleTimerSelect}
-            onTimerExtend={handleTimerExtend}
-            onTimerClear={handleTimerClear}
-            onClearMix={handleStopMix}
-            onDrift={() => { setSheetOpen(false); setDriftOpen(true); }}
-            onSave={handleSaveMix}
+            onTimerSelect={stableTimerSelect}
+            onTimerExtend={stableTimerExtend}
+            onTimerClear={stableTimerClear}
+            onClearMix={stableStopMix}
+            onDrift={stableDriftFromSheet}
+            onSave={stableSaveMix}
             mutedIds={mutedIds}
             soloIds={soloIds}
             onToggleMute={toggleMute}
@@ -1214,10 +1246,10 @@ export default function App() {
         <Suspense fallback={null}>
           <LazyDriftMode
             open={driftOpen}
-            onClose={() => setDriftOpen(false)}
+            onClose={stableDriftClose}
             isPlaying={isPlaying}
-            onTogglePlay={handleMasterToggle}
-            onStop={() => { haptic(10); stopAll(); setIsPaused(false); }}
+            onTogglePlay={stableMasterToggle}
+            onStop={stableDriftStop}
             mixNames={activeSounds.map((s) => s.name)}
             secondsLeft={secondsLeft}
           />

@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.35
+- **Perf: the now-playing surfaces stop over-rendering.** The mini player and the
+  mix's layer rows (in the sheet and the desktop side panel) re-rendered on every
+  App render — so a single volume drag repainted the mini player and *every*
+  active layer row, not just the one being dragged, and a sleep-timer tick did
+  the same. The mini player is now `memo`'d and each layer row is a `memo`'d
+  `LayerRow`, fed constant-identity handlers from App (master toggle, stop, save,
+  the timer actions, open/close, drift — ref-backed where they otherwise change
+  with `soundState` or the timer). Measured with 5 active layers and a 10-event
+  drag on one slider: the mini player re-rendered **0** times (was every event)
+  and only the dragged row repainted — **10** row renders instead of ~50. Same
+  behaviour, verified by the full e2e suite; extends the memoization pattern from
+  0.0.11 / 0.0.21 to the player surfaces. Tagged `[v0.0.35 perf]`.
+
 ### 0.0.34
 - **Now-playing layer rows show each sound's own icon.** The mix's layer rows
   (in the mobile sheet and the desktop side panel) labelled every layer with its
