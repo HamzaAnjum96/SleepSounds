@@ -187,6 +187,17 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.34
+- **Now-playing layer rows show each sound's own icon.** The mix's layer rows
+  (in the mobile sheet and the desktop side panel) labelled every layer with its
+  *category* icon, so Fan, Thunder, and Wind — all "Air" — all showed the same
+  glyph, while the same sounds carry distinct icons on their library cards, in
+  the sound editor, and in the scene previews. The rows now use the per-sound
+  icon too, so each layer is individually recognisable and iconography is
+  consistent across the app. Same Material Symbols style and placement — a
+  clarity refinement, not a visual redesign. Tagged `[v0.0.34]` in
+  `MixControls.tsx`.
+
 ### 0.0.33
 - **Perf: layer masking recomputes only on active-set changes, not every volume
   tick.** The mixer effect that applies per-layer masking (the gain-trim /

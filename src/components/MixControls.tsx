@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Sound, SoundState } from '../types';
-import { CATEGORY_ICONS } from '../lib/categoryIcons';
+import { SOUND_ICONS } from '../lib/soundIcons';
 import { features } from '../config/features';
 import { sliderFill } from '../lib/sliderFill';
 import { haptic } from '../lib/haptics';
@@ -116,8 +116,12 @@ export default function MixControls({
           const soloed = soloIds.includes(sound.id);
           return (
             <div key={sound.id} className="layer-row" data-cat={sound.category}>
+              {/* [v0.0.34] Per-sound icon (matching the library cards, sound
+                  editor, and scene previews), not the category icon — so each
+                  layer is distinct rather than, e.g., Fan / Thunder / Wind all
+                  showing the same "air" glyph. */}
               <span className="material-symbols-rounded layer-icon" aria-hidden="true">
-                {CATEGORY_ICONS[sound.category] ?? 'music_note'}
+                {SOUND_ICONS[sound.id] ?? 'music_note'}
               </span>
               <div className="layer-main">
                 <div className="layer-head">
