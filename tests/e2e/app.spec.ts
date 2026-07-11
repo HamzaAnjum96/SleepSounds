@@ -90,6 +90,30 @@ test('a sleep timer can be set', async ({ page }) => {
   await expect(page.locator('.sheet-value.warm')).toBeVisible();
 });
 
+// Guards the 0.0.17 wall-clock fix: the countdown must track real elapsed time,
+// not the number of interval ticks fired. A sleep mixer runs screen-off, where
+// the browser throttles (or suspends) background timers — clock.fastForward fires
+// each timer at most once across the jump, exactly like a throttled tick, so a
+// tick-counting timer would barely move while a wall-clock one keeps pace.
+test('the sleep timer counts real wall-clock time, not interval ticks', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('./');
+  await dismissNotice(page);
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-body').click();
+  await page.locator('.timer-btn', { hasText: /^15m$/ }).click();
+  await expect(page.locator('.sheet-value.warm')).toContainText('15:00');
+
+  // Jump five minutes firing a single tick: tick-counting would read ~14:59;
+  // wall-clock must read 10:00.
+  await page.clock.fastForward(5 * 60 * 1000);
+  await expect(page.locator('.sheet-value.warm')).toContainText('10:00');
+
+  // Past the 15-minute deadline the mix stops itself, even from sparse ticks.
+  await page.clock.fastForward(11 * 60 * 1000);
+  await expect(page.locator('.mini-player')).toBeHidden();
+});
+
 test('stop mix stops the mix, and undo brings it back', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await page.locator('.mp-body').click();
