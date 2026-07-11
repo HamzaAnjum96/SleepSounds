@@ -114,6 +114,48 @@ test('the sleep timer counts real wall-clock time, not interval ticks', async ({
   await expect(page.locator('.mini-player')).toBeHidden();
 });
 
+// Guards 0.0.22: a scene swap keeps a running timer, but stopping the mix clears
+// it, so a fresh mix never inherits a stale countdown.
+test('stopping the mix clears a running sleep timer', async ({ page }) => {
+  await page.locator('.scene-card').nth(0).click();
+  await page.locator('.mp-body').click();
+  await page.locator('.timer-btn', { hasText: /^15m$/ }).click();
+  await expect(page.locator('.sheet-value.warm')).toBeVisible();
+
+  // Swapping scenes keeps the timer.
+  await page.keyboard.press('Escape');
+  await page.locator('.scene-card').nth(1).click();
+  await page.locator('.mp-body').click();
+  await expect(page.locator('.sheet-value.warm')).toBeVisible();
+
+  // Stopping the mix clears it — a fresh scene starts with no timer.
+  await page.locator('.sheet-clear').click();
+  await expect(page.locator('.mini-player')).toBeHidden();
+  await page.locator('.scene-card').nth(0).click();
+  await page.locator('.mp-body').click();
+  await expect(page.locator('.sheet-value.warm')).toBeHidden();
+});
+
+// Guards 0.0.26: an unknown ?scene= id (a retired scene or a typo) falls through
+// to the resumed last-session mix instead of stranding on a blank app.
+test('a stale scene deep link falls through to resume', async ({ page }) => {
+  // Establish a last-session, then let the debounced save land.
+  await page.locator('.scene-card', { hasText: 'Fireside' }).click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+  await page.waitForTimeout(700);
+
+  // Unknown id → URL cleaned, and last night's mix comes back (not a blank app).
+  await page.goto('./?scene=nonexistent-xyz');
+  await dismissNotice(page);
+  await expect(page.locator('.mini-player')).toBeVisible();
+  expect(page.url()).not.toContain('scene=');
+
+  // A valid id still plays its scene.
+  await page.goto('./?scene=builtin-rainfall');
+  await dismissNotice(page);
+  await expect(page.locator('.mini-player')).toBeVisible();
+});
+
 test('stop mix stops the mix, and undo brings it back', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await page.locator('.mp-body').click();
