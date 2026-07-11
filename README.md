@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.33
+- **Perf: layer masking recomputes only on active-set changes, not every volume
+  tick.** The mixer effect that applies per-layer masking (the gain-trim /
+  low-pass / high-shelf that keeps stacked broadband soft) re-ran on every
+  `soundState` change — including every frame of a volume-slider drag — even
+  though the shaping depends only on *which* layers are playing and sleep-safe
+  mode, never on their levels. Its own comment already said "recomputed whenever
+  the active set changes"; now the code matches: shaping reads `soundState`
+  through a ref and its effect is keyed on the joined enabled-id set (a string,
+  so an unchanged set is a no-op dependency), while per-layer volume application
+  stays on its own effect. The applied shaping targets are identical, so this is
+  a pure work reduction — no audible change (verified by the audio-through-bus
+  and sleep-safe e2e checks). Tagged `[v0.0.33 perf]` in `useAudioMixer.ts`.
+
 ### 0.0.32
 - **Cleanup: remove the dead playback-rate/gain tuning path from the audio
   engine.** `CrossfadeAudio` still carried an `applyTuning()` method and its

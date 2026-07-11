@@ -96,22 +96,41 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
   // Masking-aware shaping: duck and darken stacked beds / piled-up broadband so
   // several broadband sounds at once stay clear and soft instead of fogging or
-  // sharpening together. Recomputed whenever the active set changes.
+  // sharpening together. Depends only on the *active set* and sleep-safe mode —
+  // not on per-sound volume — so it reads soundState through a ref (keeping its
+  // own identity stable) and the effect below is keyed on the active-id set.
+  const soundStateRef = useRef(soundState);
+  soundStateRef.current = soundState;
   const applyShaping = useCallback(() => {
-    const activeIds = Object.entries(soundState)
+    const activeIds = Object.entries(soundStateRef.current)
       .filter(([, s]) => s.enabled)
       .map(([id]) => id);
     activeIds.forEach((soundId) => {
       audioMapRef.current[soundId]?.setShaping?.(layerShaping(activeIds, soundId, sleepSafe));
     });
-  }, [soundState, sleepSafe]);
+  }, [sleepSafe]);
 
+  // Volume/gate: re-apply each layer's level on any volume, master, or mute/solo
+  // change (the mute/solo gate lives in applyVolume via the audible() refs).
   useEffect(() => {
     Object.entries(soundState).forEach(([soundId, state]) => {
       applyVolume(soundId, state.volume);
     });
+  }, [masterVolume, soundState, applyVolume, mutedIds, soloIds]);
+
+  // [v0.0.33 perf] Shaping recomputes only when the active set (or sleep-safe)
+  // actually changes — keyed on the joined enabled-id list, a string, so an
+  // unchanged set during a volume drag is a no-op dependency. Previously this
+  // rebuilt every layer's masking on every volume tick (redundantly, since the
+  // set was unchanged); the applied shaping targets are identical, so this is a
+  // pure work reduction with no audible effect.
+  const activeKey = useMemo(
+    () => Object.entries(soundState).filter(([, s]) => s.enabled).map(([id]) => id).join(','),
+    [soundState],
+  );
+  useEffect(() => {
     applyShaping();
-  }, [masterVolume, soundState, applyVolume, applyShaping, mutedIds, soloIds]);
+  }, [activeKey, applyShaping]);
 
   // Reflect sleep-safe mode onto the master shelf, and persist the choice.
   useEffect(() => {
