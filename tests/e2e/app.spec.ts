@@ -156,6 +156,22 @@ test('a stale scene deep link falls through to resume', async ({ page }) => {
   await expect(page.locator('.mini-player')).toBeVisible();
 });
 
+// Guards the tuning-persistence arc (0.0.15 / 0.0.16 / 0.0.20): the last-session
+// writer must keep each layer's tuning, so a resumed mix comes back with the
+// character it was playing rather than reverting tuned layers to defaults.
+test('a resumed session keeps each layer\'s tuning', async ({ page }) => {
+  // Fan & Rain shapes the rain layer (the scene's quieter "at a window" bed).
+  await page.locator('.scene-card', { hasText: 'Fan & Rain' }).click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+  await page.waitForTimeout(700); // let the debounced save land
+  const rain = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('drift-last-session') || 'null');
+    return s?.state?.rain ?? null;
+  });
+  expect(rain?.tuning).toBeTruthy();
+  expect(Object.keys(rain.tuning).length).toBeGreaterThan(0);
+});
+
 test('stop mix stops the mix, and undo brings it back', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await page.locator('.mp-body').click();
