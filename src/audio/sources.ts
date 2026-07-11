@@ -31,7 +31,6 @@ const LOOP_STEPS = 40;
 interface MixerSource {
   volume: number;
   readonly paused: boolean;
-  applyTuning?: (tuning: { playbackRate: number; gainMultiplier: number }) => void;
   swapUrl?: (newUrl: string) => void;
   /** Live k-rate control for worklet-backed sounds (rain, thunder, forest, fire). */
   setParams?: (values: Record<string, number>) => void;
@@ -59,8 +58,6 @@ class CrossfadeAudio implements MixerSource {
   private _timeupdateB: () => void;
   private _monitorTimer: ReturnType<typeof setTimeout> | null = null;
   private _active = false;
-  private _playbackRate = 1;
-  private _gainMultiplier = 1;
   /** Graph routing: each element's MediaElementSource, so it can be disconnected
    *  when the element is rebuilt or destroyed. */
   private _nodes = new Map<HTMLAudioElement, MediaElementAudioSourceNode>();
@@ -88,10 +85,6 @@ class CrossfadeAudio implements MixerSource {
     this._els = [this._make(), this._make()];
     this._els[0].addEventListener('timeupdate', this._timeupdateA);
     this._els[1].addEventListener('timeupdate', this._timeupdateB);
-    this._els.forEach((el) => {
-      el.playbackRate = this._playbackRate;
-      el.defaultPlaybackRate = this._playbackRate;
-    });
     return this._els;
   }
 
@@ -179,7 +172,7 @@ class CrossfadeAudio implements MixerSource {
     void inEl.play();
 
     const startOutVol = outEl.volume;
-    const targetInVol = Math.min(1, this._targetVol * this._gainMultiplier);
+    const targetInVol = Math.min(1, this._targetVol);
     let step = 0;
 
     this._xfadeTimer = setInterval(() => {
@@ -214,7 +207,7 @@ class CrossfadeAudio implements MixerSource {
   set volume(v: number) {
     this._targetVol = v;
     if (this._els && !this._xfading) {
-      this._els[this._cur].volume = Math.min(1, v * this._gainMultiplier);
+      this._els[this._cur].volume = Math.min(1, v);
     }
   }
 
@@ -231,20 +224,8 @@ class CrossfadeAudio implements MixerSource {
     this._ensureEls();
     this._active = true;
     this._startMonitor();
-    this._primary.volume = Math.min(1, this._targetVol * this._gainMultiplier);
+    this._primary.volume = Math.min(1, this._targetVol);
     await this._primary.play();
-  }
-
-  applyTuning(tuning: { playbackRate: number; gainMultiplier: number }) {
-    this._playbackRate = Math.min(1.7, Math.max(0.6, tuning.playbackRate));
-    this._gainMultiplier = Math.min(1.45, Math.max(0.6, tuning.gainMultiplier));
-    this._els?.forEach((el) => {
-      el.playbackRate = this._playbackRate;
-      el.defaultPlaybackRate = this._playbackRate;
-    });
-    if (this._els && !this._xfading) {
-      this._els[this._cur].volume = Math.min(1, this._targetVol * this._gainMultiplier);
-    }
   }
 
   swapUrl(newUrl: string) {
@@ -269,10 +250,6 @@ class CrossfadeAudio implements MixerSource {
       this._els[0].addEventListener('timeupdate', this._timeupdateA);
       this._els[1].addEventListener('timeupdate', this._timeupdateB);
       this._cur = 0;
-      this._els.forEach(el => {
-        el.playbackRate = this._playbackRate;
-        el.defaultPlaybackRate = this._playbackRate;
-      });
       if (oldUrl) URL.revokeObjectURL(oldUrl);
       return;
     }
@@ -288,8 +265,6 @@ class CrossfadeAudio implements MixerSource {
     els[secIdx].pause();
     this._discard(els[secIdx]);
     els[secIdx] = this._make();
-    els[secIdx].playbackRate = this._playbackRate;
-    els[secIdx].defaultPlaybackRate = this._playbackRate;
     els[secIdx].addEventListener('timeupdate', secIdx === 0 ? this._timeupdateA : this._timeupdateB);
 
     const inEl = els[secIdx];
@@ -298,7 +273,7 @@ class CrossfadeAudio implements MixerSource {
     void inEl.play();
 
     const startOutVol = outEl.volume;
-    const targetInVol = Math.min(1, this._targetVol * this._gainMultiplier);
+    const targetInVol = Math.min(1, this._targetVol);
     let step = 0;
     const SWAP_STEPS = 20;
     const SWAP_MS = 400;
@@ -324,8 +299,6 @@ class CrossfadeAudio implements MixerSource {
         els[nowSecIdx].pause();
         this._discard(els[nowSecIdx]);
         els[nowSecIdx] = this._make();
-        els[nowSecIdx].playbackRate = this._playbackRate;
-        els[nowSecIdx].defaultPlaybackRate = this._playbackRate;
         els[nowSecIdx].addEventListener('timeupdate', nowSecIdx === 0 ? this._timeupdateA : this._timeupdateB);
       }
     }, SWAP_MS / SWAP_STEPS);

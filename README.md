@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.32
+- **Cleanup: remove the dead playback-rate/gain tuning path from the audio
+  engine.** `CrossfadeAudio` still carried an `applyTuning()` method and its
+  `_playbackRate` / `_gainMultiplier` fields — the pre-0.2.0 way of tuning a
+  sound by nudging element playback rate and gain, superseded by real WAV
+  regeneration and never called since. Both fields sat at their unity defaults
+  (1), so every `× _gainMultiplier` was `× 1` and every `playbackRate = 1` was a
+  no-op set of the element's own default. Removed the method, the fields, the
+  now-unused `applyTuning?` member of the `MixerSource` interface, and the
+  identity operations. Output is byte-for-byte identical — verified by the
+  generator determinism tests and the live "audio flows through the shared
+  master bus" check — this only tidies a superseded API out of the engine.
+  Tagged in `src/audio/sources.ts`.
+
 ### 0.0.31
 - **Dev mode: the crescent moon holds still instead of drifting.** The moon disc
   always ran a gentle breathing drift (`moonDrift`, ±6px), and dev mode layered
