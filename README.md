@@ -187,6 +187,15 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.31
+- **Dev mode: the crescent moon holds still instead of drifting.** The moon disc
+  always ran a gentle breathing drift (`moonDrift`, ±6px), and dev mode layered
+  its wane-to-crescent on top — so the dark dev-mode moon both darkened *and*
+  floated. Dev mode now stops the drift (`animation: none` on `.moon-dev`), so it
+  simply goes dark and stays put, as intended. Normal mode keeps its drifting
+  moon; only the crescent-wane darkening is retained in dev. Tagged `[v0.0.31]`
+  in `index.css`.
+
 ### 0.0.30
 - **Perf: the media-session player stops rebuilding on every volume tick.** The
   single effect that sets the lock-screen / notification metadata and registers

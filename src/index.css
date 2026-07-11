@@ -285,12 +285,16 @@ button, .material-symbols-rounded {
 }
 .moon:focus-visible { outline: none; } /* tabIndex=-1; never keyboard-reached */
 
-/* Dev mode: the moon wanes to a crescent. A night-sky disc slides across from
-   the upper-left, carving the lit edge on the lower-right; the glow pulls in. */
+/* Dev mode: the moon wanes to a crescent — a night-sky disc fades in from the
+   upper-left, carving the lit edge on the lower-right, and the glow pulls in.
+   [v0.0.31] It also holds still: the gentle drift (moonDrift) is stopped while
+   dev mode is on, so the crescent just goes dark rather than darkening *and*
+   floating. Normal mode keeps its drifting moon. */
 .moon-dev {
   box-shadow:
     0 0 14px rgba(210,180,110,0.35),
     0 0 34px rgba(200,165,100,0.16);
+  animation: none;
 }
 /* .moon.moon-dev so this outranks the later .moon::before crater rule. */
 .moon.moon-dev::before {
