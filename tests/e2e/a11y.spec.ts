@@ -42,6 +42,39 @@ test('an open sound editor has no serious accessibility violations', async ({ pa
   await checkA11y(page, 'sound editor');
 });
 
+// Guards the 0.0.12 focus trap: both modals are aria-modal, so Tab / Shift+Tab
+// must wrap at their edges rather than walk out into the shell behind them —
+// axe can't catch this (it's behavioural), hence the explicit keyboard walk.
+test('keyboard focus stays trapped inside the open modals', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-body').click();
+  await expect(page.locator('.sheet')).toBeVisible();
+
+  const focusInside = (scope: string) =>
+    page.evaluate((sel) => {
+      const root = document.querySelector(sel);
+      return !!root && root.contains(document.activeElement);
+    }, scope);
+
+  // The now-playing sheet: a full lap forwards and backwards.
+  for (let i = 0; i < 25; i++) {
+    await page.keyboard.press('Tab');
+    expect(await focusInside('.sheet'), `Tab #${i + 1} escaped the sheet`).toBe(true);
+  }
+  for (let i = 0; i < 25; i++) {
+    await page.keyboard.press('Shift+Tab');
+    expect(await focusInside('.sheet'), `Shift+Tab #${i + 1} escaped the sheet`).toBe(true);
+  }
+
+  // Drift mode: fewer controls, same rule.
+  await page.locator('.sheet-action.accent').click();
+  await expect(page.locator('.drift-mode')).toBeVisible();
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Tab');
+    expect(await focusInside('.drift-mode'), `Tab #${i + 1} escaped drift mode`).toBe(true);
+  }
+});
+
 test.describe('desktop split layout', () => {
   test.use({ viewport: { width: 1280, height: 860 }, isMobile: false, hasTouch: false });
 
