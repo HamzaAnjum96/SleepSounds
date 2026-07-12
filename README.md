@@ -187,6 +187,17 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.37
+- **Dependency hygiene: patched the @babel/core advisory.** `npm audit fix`
+  (non-breaking) resolved GHSA-4x5r-pxfx-6jf8 (arbitrary file read via
+  `sourceMappingURL`) in `@babel/core`, a build-time dependency of the React
+  plugin. No app code changed; the version bump exists so the rebuilt bundle
+  flows through the normal update path. The remaining audit findings are the
+  esbuild dev-server advisory (GHSA-67mh-4wv8-2f99), which affects only `vite
+  dev` on a developer machine — the shipped app is static files and never runs
+  esbuild — and whose only fix is a breaking vite 5→8 migration, deliberately
+  not taken here.
+
 ### 0.0.36
 - **Perf: the last always-mounted surfaces stop over-rendering.** Completes the
   memoization pass (0.0.11 / 0.0.21 / 0.0.35): `DriftMode` stays mounted after
