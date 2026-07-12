@@ -661,6 +661,11 @@ export default function App() {
   const mediaTransportRef = useRef({ playAllActive, pauseAll, stopAll, setIsPaused });
   mediaTransportRef.current = { playAllActive, pauseAll, stopAll, setIsPaused };
 
+  // [v0.0.36 perf] Stable names array for the memo'd DriftMode — the inline
+  // `activeSounds.map(...)` minted a fresh array every render, which would
+  // defeat its memo on every unrelated update.
+  const mixNames = useMemo(() => activeSounds.map((s) => s.name), [activeSounds]);
+
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const base = import.meta.env.BASE_URL;
@@ -1250,7 +1255,7 @@ export default function App() {
             isPlaying={isPlaying}
             onTogglePlay={stableMasterToggle}
             onStop={stableDriftStop}
-            mixNames={activeSounds.map((s) => s.name)}
+            mixNames={mixNames}
             secondsLeft={secondsLeft}
           />
         </Suspense>

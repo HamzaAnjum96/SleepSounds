@@ -187,6 +187,19 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.36
+- **Perf: the last always-mounted surfaces stop over-rendering.** Completes the
+  memoization pass (0.0.11 / 0.0.21 / 0.0.35): `DriftMode` stays mounted after
+  its first open, so every App render re-ran it even while closed — it's now
+  `memo`'d, with its `mixNames` prop stabilized via `useMemo` (the inline
+  `activeSounds.map(...)` minted a fresh array each render, which would have
+  defeated the memo). `NightSky` likewise re-rendered on every App render though
+  its three props are primitives that rarely change — now `memo`'d, so the sky
+  only re-renders when playing / intensity / dim actually change; its rAF loop
+  reads live props through a ref and is untouched. A timer countdown still
+  updates drift mode each second while open. No behavioural or visual change.
+  Tagged `[v0.0.36 perf]` in `App.tsx`, `DriftMode.tsx`, `NightSky.tsx`.
+
 ### 0.0.35
 - **Perf: the now-playing surfaces stop over-rendering.** The mini player and the
   mix's layer rows (in the sheet and the desktop side panel) re-rendered on every

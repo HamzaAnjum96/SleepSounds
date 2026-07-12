@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { formatCountdown } from '../lib/time';
 import { platform } from '../platform';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -34,7 +34,7 @@ function formatClock(d: Date) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-export default function DriftMode({
+function DriftMode({
   open,
   onClose,
   isPlaying,
@@ -161,3 +161,10 @@ export default function DriftMode({
     </div>
   );
 }
+
+// [v0.0.36 perf] memo: DriftMode stays mounted after its first open, so without
+// this every App render (volume drags, library toggles) re-ran it even while
+// closed. Props are primitives plus App's constant-identity handlers and a
+// memoized mixNames array, so the shallow compare is exactly right; the timer
+// countdown still updates it each second while open (secondsLeft changes).
+export default memo(DriftMode);

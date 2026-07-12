@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 /**
  * The drift night sky: a procedural canvas starfield that lives behind the app.
@@ -77,7 +77,7 @@ function makeStars(): Star[] {
 const STARS = makeStars();
 const FRAME_MS = 1000 / 30;
 
-export default function NightSky({ playing, intensity, dim }: NightSkyProps) {
+function NightSky({ playing, intensity, dim }: NightSkyProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Live prop mirror so the rAF loop never restarts on prop changes.
   const stateRef = useRef({ playing, intensity, dim });
@@ -238,3 +238,10 @@ export default function NightSky({ playing, intensity, dim }: NightSkyProps) {
 
   return <canvas ref={canvasRef} className="night-sky" aria-hidden="true" />;
 }
+
+// [v0.0.36 perf] memo: all three props are primitives, so the sky only
+// re-renders when playing / intensity / dim actually change — not on every App
+// render (volume drags, library filters). The animation itself lives in the
+// mount effect and reads live props through stateRef, which the (now less
+// frequent) renders keep current.
+export default memo(NightSky);
