@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.38
+- **Build toolchain: vite 5 → 8 (Rolldown), audit now fully clean.** Upgraded
+  `vite` 5.4 → 8.1 (the Rolldown-bundler line), `@vitejs/plugin-react` 4 → 6,
+  and `vitest` to 4.1.10 — clearing the last `npm audit` findings (the esbuild
+  dev-server advisory, GHSA-67mh-4wv8-2f99): **0 vulnerabilities**. The build
+  output is equivalent: same entry/lazy chunks at comparable-or-smaller sizes,
+  plus one new tiny shared chunk (`useFocusTrap`, ~0.8 kB, split because both
+  lazy modals import it) which the SW precache injector picked up automatically.
+  Verified end-to-end on the new toolchain: typecheck, lint, 110 unit tests
+  (including generator determinism — WAV output is byte-identical, no sound
+  changed), all 24 e2e including offline/service-worker, plus a dev-server
+  smoke test. Follow-ups included: CI and deploy workflows bumped Node 20 → 22
+  (vite 8 requires ≥20.19; Node 20 EOLs April 2026), and `package.json` gained
+  an `engines` field making the requirement explicit.
+
 ### 0.0.37
 - **Dependency hygiene: patched the @babel/core advisory.** `npm audit fix`
   (non-breaking) resolved GHSA-4x5r-pxfx-6jf8 (arbitrary file read via
