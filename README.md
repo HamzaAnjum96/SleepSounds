@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.40
+- **Airplane: the twin-engine beat.** Two jets in cruise never hold exactly the
+  same shaft speed, so their cabin tones sit a fraction of a Hz apart and
+  *beat* — the slow wah…wah swell that is one of the most recognisable cabin
+  signatures (it's what prop synchrophasers exist to tame). The render had a
+  single fundamental plus a 2.02× partial — no physical beat, just a random
+  amplitude LFO (measured 60–160 Hz AM index 0.02–0.04 with no stable rate).
+  The fundamental is now two engines 0.3125 Hz apart — ten exact steps of the
+  1/32 Hz loop grid, so the beat phase closes over the 32 s seam — each at
+  1/√2 of the old amplitude (total tonal power unchanged). Measured after:
+  AM index 0.10–0.12 with a stable detected rate of 0.30–0.33 Hz on every
+  variant — a gentle ~3 s swell, present but far below throbbing. Overall
+  levels within 0.5 dB of 0.0.39 on all variants. Research notes:
+  `docs/research/tail-sounds-refinement.md`.
+
 ### 0.0.39
 - **Train: the real four-beat clickety-clack.** On jointed track a passenger
   coach rides on *two* bogies (two axles each) whose centres sit ~15.7 m apart

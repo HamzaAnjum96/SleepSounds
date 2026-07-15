@@ -1205,8 +1205,15 @@ function genAirplane(params?: Record<string, number>): string {
   lp1(engine, 420);
   const engDrift = smoothRandomLfo(0.88, 1.05, 3.0, 8.0);
 
-  // 2. Faint engine orders, loop-locked, beating slowly under the bed.
+  // 2. Faint engine orders, loop-locked. [0.0.40] Two engines, not one: twin
+  //    jets never hold exactly the same shaft speed in cruise, and the two
+  //    cabin fundamentals a fraction of a Hz apart *beat* — the slow wah…wah
+  //    swell that is one of the most recognisable cabin signatures. The
+  //    engines sit 0.3125 Hz apart (10 exact loop-grid steps, so the beat
+  //    phase closes over the 32 s seam), each at 1/√2 of the old single-tone
+  //    amplitude — total tonal power unchanged.
   const f1 = lockFreq(88 + altitude * 38);
+  const f1b = lockFreq(f1 + 0.3125);
   const f2 = lockFreq(f1 * 2.02);
   const toneBeat = smoothRandomLfo(0.55, 1.0, 2.5, 7.0);
 
@@ -1251,7 +1258,7 @@ function genAirplane(params?: Record<string, number>): string {
   const blanket = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const t = (2 * Math.PI * i) / SR;
-    const tone = Math.sin(f1 * t) * 0.7 + Math.sin(f2 * t + 1.1) * 0.45;
+    const tone = (Math.sin(f1 * t) + Math.sin(f1b * t + 2.3)) * 0.495 + Math.sin(f2 * t + 1.1) * 0.45;
     const turb = turbEnv[i];
     centre[i] =
       engine[i] * 0.30 * engDrift[i] * (1 + 0.7 * turb) +
