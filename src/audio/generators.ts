@@ -948,32 +948,47 @@ function genTrain(params?: Record<string, number>): string {
   lp1(traction, 520);
   const humF = lockFreq(46 + speed * 28);
 
-  // ── Event layer: joints under axle pairs ──────────────────────────
+  // ── Event layer: joints under both bogies ─────────────────────────
+  // [0.0.39] A coach rides on TWO bogies (two axles each, ~2.6 m apart) whose
+  // centres sit ~15.7 m apart under a ~20 m body, on ~19 m rails. Each joint
+  // therefore fires four clacks — leading pair, then the trailing pair — and
+  // because the bogie spacing is close to the rail length, the trailing pair
+  // of one joint lands just before the leading pair of the next: the classic
+  // "da-da … da-da ……" gallop. The old render fired a single pair per joint,
+  // which is the rhythm of a two-axle freight wagon, not a passenger coach.
+  // Per-clack strength is scaled ×0.72 so doubling the events keeps the
+  // clack-band energy at its old level (see docs/research/tail-sounds-…md).
   const mps = (40 + speed * 180) / 3.6;     // 40–220 km/h
   const jointGapS = 19 / mps;               // ~19 m rail lengths
   const axleGapS = 2.6 / mps;               // bogie axle spacing
+  const bogieGapS = 15.7 / mps;             // bogie-centre spacing
   const clacks = new Float32Array(N);
   const thumps = new Float32Array(N);
   let jPos = SR * rand(0.2, 1.0);
   while (jPos < N) {
     // Some joints are welded out, so the rhythm breathes instead of ticking.
     if (chance(0.85)) {
-      const strength = rand(0.5, 1.0) * (0.45 + clatter * 0.9);
-      for (const axle of [0, 1] as const) {
-        const aPos = Math.floor(jPos + axle * axleGapS * SR * rand(0.92, 1.08));
-        const len = Math.floor(SR * rand(0.003, 0.009));
-        const amp = strength * rand(0.6, 1.0) * (axle === 0 ? 1 : rand(0.55, 0.85));
-        for (let i = 0; i < len && aPos + i < N; i++) {
-          clacks[aPos + i] += (random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
-        }
-        // The heavier hits put a soft thump into the floor as well.
-        if (chance(0.4)) {
-          const thLen = Math.floor(SR * rand(0.05, 0.09));
-          const f0 = rand(46, 64);
-          let ph = 0;
-          for (let i = 0; i < thLen && aPos + i < N; i++) {
-            ph += (2 * Math.PI * f0) / SR;
-            thumps[aPos + i] += Math.sin(ph) * Math.exp(-5.5 * (i / thLen)) * amp * 0.5;
+      const strength = rand(0.5, 1.0) * (0.45 + clatter * 0.9) * 0.72;
+      for (const bogie of [0, 1] as const) {
+        const bPos = jPos + bogie * bogieGapS * SR * rand(0.99, 1.01);
+        const bogieW = bogie === 0 ? 1 : rand(0.7, 0.95); // trailing bogie a touch softer
+        for (const axle of [0, 1] as const) {
+          const aPos = Math.floor(bPos + axle * axleGapS * SR * rand(0.92, 1.08));
+          const len = Math.floor(SR * rand(0.003, 0.009));
+          const amp = strength * bogieW * rand(0.6, 1.0) * (axle === 0 ? 1 : rand(0.55, 0.85));
+          for (let i = 0; i < len && aPos + i < N; i++) {
+            clacks[aPos + i] += (random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
+          }
+          // The heavier hits put a soft thump into the floor as well. (Chance
+          // halved from the pair-per-joint days: twice the clacks, same thumps.)
+          if (chance(0.28)) {
+            const thLen = Math.floor(SR * rand(0.05, 0.09));
+            const f0 = rand(46, 64);
+            let ph = 0;
+            for (let i = 0; i < thLen && aPos + i < N; i++) {
+              ph += (2 * Math.PI * f0) / SR;
+              thumps[aPos + i] += Math.sin(ph) * Math.exp(-5.5 * (i / thLen)) * amp * 0.5;
+            }
           }
         }
       }
@@ -1012,7 +1027,10 @@ function genTrain(params?: Record<string, number>): string {
     left[i]  = floorSt.left[i]  + clackSt.left[i]  * 0.30 + thump;
     right[i] = floorSt.right[i] + clackSt.right[i] * 0.30 + thump;
   }
-  return genStereo(left, right, 0.68);
+  // Encode gain 0.68 → 0.60: the four-clack rhythm lowered the crest factor
+  // (softer stacks, lower raw peak), so peak-normalisation ran up to +2 dB
+  // hot; 0.60 puts every variant back within ~1 dB of its 0.0.38 loudness.
+  return genStereo(left, right, 0.60);
 }
 
 // ── Sound regeneration ────────────────────────────────────────────────────

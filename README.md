@@ -187,6 +187,23 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.39
+- **Train: the real four-beat clickety-clack.** On jointed track a passenger
+  coach rides on *two* bogies (two axles each) whose centres sit ~15.7 m apart
+  under a ~20 m body, on ~19 m rails — so each rail joint fires **four** clacks
+  (leading pair, then the trailing pair), and because the bogie spacing is
+  close to the rail length, the trailing pair of one joint lands just before
+  the leading pair of the next: the classic *da-da … da-da ……* gallop. The old
+  render fired a single axle pair per joint — a two-beat, which is the rhythm
+  of a two-axle freight wagon, not a coach. Verified structurally: the
+  inter-clack gap histogram now shows the 0.40–0.45 s bogie-spacing cluster,
+  which cannot occur in the single-pair render. Level-matched: per-clack
+  strength ×0.72, floor-thump chance 0.4 → 0.28, and encode gain 0.68 → 0.60
+  (the softer four-clack stacks lowered the raw crest, so peak-normalisation
+  had run up to +2 dB hot) — every variant lands within ±1 dB of its 0.0.38
+  loudness with the clack:floor mix ratio preserved to three decimals.
+  Research notes: `docs/research/tail-sounds-refinement.md`.
+
 ### 0.0.38
 - **Build toolchain: vite 5 → 8 (Rolldown), audit now fully clean.** Upgraded
   `vite` 5.4 → 8.1 (the Rolldown-bundler line), `@vitejs/plugin-react` 4 → 6,
