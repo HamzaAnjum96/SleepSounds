@@ -187,6 +187,20 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.47
+- **Ticking Clock: less wood, more mechanism.** Listening feedback: the tick
+  "sounds too much like wood" — and acoustically that was exactly right: a
+  single exponentially-decaying sine is *the* woodblock model. Metal reads as
+  **inharmonic partials**, so each tick now rings two faint, faster-decaying
+  partials at 1.63× and 2.47× the beat's own frequency (per-beat micro-detuned
+  ±1 % with random phase, so no two ticks shimmer identically), under the
+  unchanged fundamental and contact noise. The partials sit below the
+  top-safety shelf, so the voicing stays gentle. Beat structure is untouched
+  (tick counts byte-identical per variant: 19/34/34/60) and per-variant RMS is
+  within 0.9 dB of 0.0.46. The `pace` / `tick–tock` / `brightness` sliders and
+  the bare-mechanism character are exactly as before — the material of the
+  mechanism just reads as brass, not birch.
+
 ### 0.0.46
 - **Wind Chimes: no longer opens on the end of a ring.** Listening feedback:
   the chimes "start at the end of a ring every time". Two causes stacked: the

@@ -1711,11 +1711,25 @@ function genClock(params?: Record<string, number>): string {
     // The tail is what lets the clock carry real energy — 12 ms clicks alone
     // left the whole render ~20 dB under the rest of the library, inaudible
     // in any mix (accents get no masking compensation by design).
+    // [0.0.47] Two faint INHARMONIC partials (1.63× and 2.47×, per-beat
+    // micro-detuned, faster-decaying) ring with the fundamental: a single
+    // decaying sine is literally the woodblock model — "too much like wood"
+    // was exactly right — where metal reads as inharmonic partials. The
+    // partials sit under the top-safety shelf; they raise the click's raw
+    // peak slightly, which peak-normalisation absorbs, so the fundamental
+    // stays untrimmed to hold the render at its old loudness.
     const clickLen = Math.floor(SR * 0.030);
+    const d2 = 1.63 * (1 + (random() - 0.5) * 0.02);
+    const d3 = 2.47 * (1 + (random() - 0.5) * 0.02);
+    const p2ph = random() * 2 * Math.PI;
+    const p3ph = random() * 2 * Math.PI;
     for (let i = 0; i < clickLen && at + i < N; i++) {
       const ts = i / SR;
-      const ring = Math.sin(2 * Math.PI * f * ts) *
-        (Math.exp(-ts / 0.0030) + 0.38 * Math.exp(-ts / 0.011));
+      const ring =
+        Math.sin(2 * Math.PI * f * ts) *
+          (Math.exp(-ts / 0.0030) + 0.38 * Math.exp(-ts / 0.011)) +
+        Math.sin(2 * Math.PI * f * d2 * ts + p2ph) * Math.exp(-ts / 0.0022) * 0.42 +
+        Math.sin(2 * Math.PI * f * d3 * ts + p3ph) * Math.exp(-ts / 0.0015) * 0.22;
       const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0020) * 0.5;
       buf[at + i] += (ring + noise) * level * 0.5;
     }
