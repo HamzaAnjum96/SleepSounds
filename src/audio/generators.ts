@@ -976,8 +976,16 @@ function genTrain(params?: Record<string, number>): string {
           const aPos = Math.floor(bPos + axle * axleGapS * SR * rand(0.92, 1.08));
           const len = Math.floor(SR * rand(0.003, 0.009));
           const amp = strength * bogieW * rand(0.6, 1.0) * (axle === 0 ? 1 : rand(0.55, 0.85));
+          // [0.0.45] Raised-cosine attack (~1.2 ms): the burst used to start at
+          // full amplitude on its first sample — an instant broadband edge that
+          // reads as a keyboard key, not a wheel. This was the one discrete
+          // event in the library violating the no-clicks rule (an eased onset
+          // on every event); the splatter above the clack's own lowpass is
+          // what made it cut through as "not a train".
+          const atk = Math.max(2, Math.min(Math.floor(SR * 0.0012), Math.floor(len / 3)));
           for (let i = 0; i < len && aPos + i < N; i++) {
-            clacks[aPos + i] += (random() * 2 - 1) * amp * Math.exp(-9 * (i / len));
+            const on = i < atk ? 0.5 - 0.5 * Math.cos(Math.PI * (i / atk)) : 1;
+            clacks[aPos + i] += (random() * 2 - 1) * amp * on * Math.exp(-9 * (i / len));
           }
           // The heavier hits put a soft thump into the floor as well. (Chance
           // halved from the pair-per-joint days: twice the clacks, same thumps.)

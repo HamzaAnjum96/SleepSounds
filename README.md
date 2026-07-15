@@ -187,6 +187,19 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.45
+- **Train: the keyboard click is gone.** Listening feedback: an occasional
+  sharp click that "doesn't sound like anything on a train". Diagnosis: the
+  joint-clack noise bursts started at full amplitude on their very first
+  sample — an instant broadband edge whose spectral splatter cuts far above
+  the clack's own lowpass and reads as a keyboard key, not steel on steel. It
+  was the one discrete event left in the library violating the no-clicks rule
+  (an eased onset on every event). Each clack now opens with a ~1.2 ms
+  raised-cosine attack. Measured: the worst-case high-band edge (max sample
+  step above 3 kHz) halves — 0.134 → 0.067 on the default, 0.166 → 0.074 on
+  Old Local — while clack-band and overall RMS stay within 0.15 dB, so the
+  rhythm and level are untouched; only the false edge is gone.
+
 ### 0.0.44
 - **Ticking Clock: the second contact rings too.** The escapement's secondary
   contact (~11 ms behind each beat) was rendered as a pure noise burst — a

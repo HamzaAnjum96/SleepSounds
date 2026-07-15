@@ -100,6 +100,34 @@ so the echo's total level is unchanged), and let its delay wobble ±1.5 ms
 per beat (mechanical variation). Beat structure, pace/contrast/brightness
 voicing, and the bare-mechanism character are untouched.
 
+## Listening feedback (0.0.45–0.0.47)
+
+Three fixes from real listening after the refinement pass:
+
+- **Train (0.0.45): the keyboard click.** The joint-clack noise bursts started
+  at full amplitude on their first sample — an instant broadband edge whose
+  spectral splatter cuts far above the clack's own lowpass and reads as a
+  keyboard key, not a wheel. This was the one discrete event in the library
+  violating the no-clicks rule. A ~1.2 ms raised-cosine attack halves the
+  measured worst-case high-band edge (max |Δx| above 3 kHz: 0.134 → 0.067
+  default, 0.166 → 0.074 Old Local) with clack-band and overall RMS unchanged
+  (±0.15 dB).
+- **Chimes (0.0.46): opening on a dying ring.** The generic loop blend
+  crossfades the *end* of the buffer into its first 1.2 s, so on first play
+  the chimes opened mid-decay — a ring you never heard struck. Strike
+  probability now tapers away over the ~3 s before the seam guard (so the
+  material the blend copies forward is quiet), forced lull-bridging strikes
+  skip the taper zone, and a guaranteed opening strike lands in the first
+  half-second so the loop begins with a chime beginning. Loop-seam
+  continuity is untouched — the blend still runs; there's simply little left
+  for it to smear.
+- **Clock (0.0.47): too much like wood.** A single decaying sine is
+  literally the woodblock model; metal reads as *inharmonic partials*. Each
+  tick now rings two faint inharmonic partials (1.63× and 2.47× the beat
+  frequency, per-beat micro-detuned, faster-decaying) under the fundamental,
+  sitting below the top-safety shelf. Beat structure and tick counts are
+  unchanged; levels within the usual gate.
+
 ## What was deliberately left alone
 
 - Train's removed hiss layers (9.1.x listener feedback) stay removed.
