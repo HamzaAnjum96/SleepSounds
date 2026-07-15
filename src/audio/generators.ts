@@ -1374,6 +1374,15 @@ function genHeartbeat(params?: Record<string, number>): string {
   };
 
   const s1F = 36 + chest * 16;
+  // [0.0.41] Respiratory sinus arrhythmia: a resting heart doesn't jitter
+  // white — it swings smoothly with breathing (faster on the inhale, slower
+  // on the exhale), a few percent either way over each ~4 s breath, and it's
+  // strongest in exactly the relaxed state this sound is for. The old render
+  // drew every interval i.i.d. (±2.25 %), so successive beats were
+  // uncorrelated. Now a slow loop-closed wander (±4 %, breathing-paced holds)
+  // carries the rate, with only a small white tremor (±1 %) on top. Mean
+  // rate, S1/S2 voicing and timing are untouched.
+  const rsa = smoothRandomLfo(0.96, 1.04, 1.8, 3.2);
   let beatAt = SR * 0.3;
   while (beatAt < N) {
     const s1 = Math.floor(beatAt);
@@ -1385,7 +1394,7 @@ function genHeartbeat(params?: Record<string, number>): string {
     // follows S2.
     surge(s1 + Math.floor(SR * 0.02), (interval / SR) * 0.34, weight);
     surge(s2 + Math.floor(SR * 0.03), (interval / SR) * 0.22, 0.55 * weight);
-    beatAt += interval * (1 + (random() - 0.5) * 0.045);
+    beatAt += interval * rsa[Math.min(N - 1, s1)] * (1 + (random() - 0.5) * 0.02);
   }
 
   // The circulatory bed the beats sit in — silent-ish at low flow, the whole

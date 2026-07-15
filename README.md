@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.41
+- **Heartbeat: respiratory sinus arrhythmia.** A resting heart doesn't jitter
+  white — its rate swings smoothly with breathing (faster on the inhale,
+  slower on the exhale), a few percent either way over each ~4 s breath, and
+  the effect is strongest in exactly the relaxed, drifting-off state this
+  sound exists for. The old render drew each beat interval i.i.d. (±2.25 %),
+  so successive beats were uncorrelated. The interval now rides a slow
+  loop-closed wander (±4 %, breathing-paced holds) with only a small white
+  tremor (±1 %) on top. Verified on the raw interval series (crisp-onset
+  render): baseline wiggles white around 924 ms with no structure; the new
+  series undulates in smooth multi-beat waves (~891 → ~954 → ~893 ms) — a
+  body breathing, not a metronome with noise. Mean rate, S1/S2 voicing and
+  timing untouched; per-variant RMS within 0.3 dB. Research notes:
+  `docs/research/tail-sounds-refinement.md`.
+
 ### 0.0.40
 - **Airplane: the twin-engine beat.** Two jets in cruise never hold exactly the
   same shaft speed, so their cabin tones sit a fraction of a Hz apart and
