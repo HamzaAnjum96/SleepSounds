@@ -192,6 +192,33 @@ test('a sound card can be dragged to a new position, and it persists', async ({ 
   expect(reloaded[1]).toBe('Rain');
 });
 
+// [0.1.2] The drop target is the cell the CARD visibly covers — probed by the
+// card's visual centre with row-band-first geometry — not wherever the finger
+// happens to be. Grabbing by a corner and hovering the bottom half of a cell
+// were the two ways the old pointer-based, row-major targeting overshot
+// right/down.
+test('a corner-grabbed card drops onto the cell it visibly covers', async ({ page }) => {
+  await page.waitForTimeout(1600);
+  const fire = (await page.locator('[data-sound-id="fire"]').boundingBox())!;
+  const fan = (await page.locator('[data-sound-id="fan"]').boundingBox())!;
+  // Grab Fire by its top-right corner (a corner grab that keeps the pointer
+  // inside the viewport on the small device profile)…
+  const grab = { x: fire.x + fire.width - 12, y: fire.y + 12 };
+  // …and put the card's visual centre on Fan's cell (next row, left column).
+  const dx = (fan.x + fan.width / 2) - (fire.x + fire.width / 2);
+  const dy = (fan.y + fan.height / 2) - (fire.y + fire.height / 2);
+  await page.mouse.move(grab.x, grab.y);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  await page.mouse.move(grab.x + dx, grab.y + dy, { steps: 10 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const names = await page.locator('.sounds-grid .card-name').allInnerTexts();
+  // Fire claims exactly the covered cell: [Rain, Fan, Fire, …]
+  expect(names.slice(0, 3)).toEqual(['Rain', 'Fan', 'Fire']);
+});
+
 // [0.1.1] Dropping a card must not replay anyone's entrance reveal: a finished
 // CSS animation restarts when React moves the node (and `backwards` fill makes
 // it blink invisible for its stagger delay — "flashes as if new"). The reveal

@@ -50,6 +50,10 @@ interface DragState {
   /** Visible card ids in DOM order at lift, and their content-space rects. */
   ids: string[];
   rects: { x: number; y: number; w: number; h: number }[];
+  /** Grid geometry at lift: row centre-lines and column centres (content
+   *  space), so the drop cell is picked row-band-first, then column. */
+  rowYs: number[];
+  colXs: number[];
   fromIndex: number;
   /** Current insertion slot in the without-dragged list (0..n-1). */
   slot: number;
@@ -57,6 +61,8 @@ interface DragState {
   raf: number;
   lastClientX: number;
   lastClientY: number;
+  /** Fractional auto-scroll accumulator (lets the ramp start truly gentle). */
+  scrollAcc: number;
 }
 
 const LIFT_MS = 350;
@@ -80,18 +86,27 @@ export function useGridReorder({
     grid.classList.remove('dragging');
   }, [gridRef]);
 
-  /** The slot the pointer is over, in the without-dragged arrangement. */
+  /** The display cell the lifted CARD (not the finger) is over. [0.1.2] The
+   *  card's visual centre claims a cell, Voronoi-style: rows first (bands
+   *  split midway between row centre-lines), then the column whose centre is
+   *  nearest — so the boundaries sit in the gaps between cards, exactly where
+   *  the eye expects. The previous row-major score (y·K + x) ignored x the
+   *  moment the probe crossed a row's centre-line — hovering the bottom half
+   *  of ANY card targeted past its whole row — and probing with the raw
+   *  pointer instead of the card added the grab-point offset on top. Both
+   *  biased drops right and down ("favours the right, worse on a lower
+   *  line"). Claiming the covered cell means: where the box sits is where it
+   *  lands. */
   const slotAt = useCallback((d: DragState, contentX: number, contentY: number): number => {
-    // Row-major score: rows dominate, x breaks ties within a row.
-    const score = (x: number, y: number) => y * 100000 + x;
-    const p = score(contentX, contentY);
-    let slot = 0;
-    for (let i = 0; i < d.rects.length; i++) {
-      if (i === d.fromIndex) continue; // dragged card doesn't occupy a slot
-      const r = d.rects[i];
-      if (score(r.x + r.w / 2, r.y + r.h / 2) < p) slot++;
-    }
-    return slot;
+    const band = (v: number, centers: number[]): number => {
+      for (let i = 0; i < centers.length - 1; i++) {
+        if (v < (centers[i] + centers[i + 1]) / 2) return i;
+      }
+      return centers.length - 1;
+    };
+    const row = band(contentY, d.rowYs);
+    const col = band(contentX, d.colXs);
+    return Math.min(d.rects.length - 1, row * d.colXs.length + col);
   }, []);
 
   /** Shift every non-dragged card toward its slot in the current arrangement. */
@@ -202,11 +217,29 @@ export function useGridReorder({
       });
       const fromIndex = ids.indexOf(p.id);
       if (fromIndex < 0) return;
+      // Grid geometry: cluster the card centres into row centre-lines and
+      // column centres (tolerance: half a card), for the cell-claim targeting.
+      const cluster = (vals: number[], tol: number): number[] => {
+        const sorted = [...vals].sort((a, b) => a - b);
+        const out: number[] = [];
+        let group: number[] = [];
+        for (const v of sorted) {
+          if (group.length && v - group[0] > tol) {
+            out.push(group.reduce((s, x) => s + x, 0) / group.length);
+            group = [];
+          }
+          group.push(v);
+        }
+        if (group.length) out.push(group.reduce((s, x) => s + x, 0) / group.length);
+        return out;
+      };
+      const rowYs = cluster(rects.map((r) => r.y + r.h / 2), rects[0].h * 0.5);
+      const colXs = cluster(rects.map((r) => r.x + r.w / 2), rects[0].w * 0.5);
       const d: DragState = {
         id: p.id, el: p.el, pointerId: p.pointerId,
         startX: p.x, startY: p.y, startScroll: scrollTop,
-        ids, rects, fromIndex, slot: fromIndex, lifted: true,
-        raf: 0, lastClientX: p.x, lastClientY: p.y,
+        ids, rects, rowYs, colXs, fromIndex, slot: fromIndex, lifted: true,
+        raf: 0, lastClientX: p.x, lastClientY: p.y, scrollAcc: 0,
       };
       drag.current = d;
       try { p.el.setPointerCapture(p.pointerId); } catch { /* gone */ }
@@ -221,15 +254,33 @@ export function useGridReorder({
         if (!dd) return;
         const sc = scrollRef.current;
         if (sc) {
+          // [0.1.2] Ramped auto-scroll: speed rises QUADRATICALLY from zero at
+          // the zone edge, so dropping on a card that happens to sit near the
+          // bottom of a small screen barely drifts, while pushing to the very
+          // edge still travels fast. The old linear ramp (68 px zone, ~12 px
+          // per frame near the edge) scrolled the target away under a
+          // stationary finger. Fractional speeds accumulate so "gentle" is
+          // really gentle.
           const r = sc.getBoundingClientRect();
-          const margin = 68;
+          const margin = 44;
+          const maxV = 13; // px/frame at (or past) the very edge
           let v = 0;
-          if (dd.lastClientY < r.top + margin) v = -Math.ceil((r.top + margin - dd.lastClientY) / 6);
-          else if (dd.lastClientY > r.bottom - margin) v = Math.ceil((dd.lastClientY - (r.bottom - margin)) / 6);
+          if (dd.lastClientY < r.top + margin) {
+            const depth = Math.min(1, (r.top + margin - dd.lastClientY) / margin);
+            v = -maxV * depth * depth;
+          } else if (dd.lastClientY > r.bottom - margin) {
+            const depth = Math.min(1, (dd.lastClientY - (r.bottom - margin)) / margin);
+            v = maxV * depth * depth;
+          }
           if (v !== 0) {
-            sc.scrollTop += v;
-            positionLifted(dd);
-            retarget(dd);
+            dd.scrollAcc += v;
+            const whole = Math.trunc(dd.scrollAcc);
+            if (whole !== 0) {
+              dd.scrollAcc -= whole;
+              sc.scrollTop += whole;
+              positionLifted(dd);
+              retarget(dd);
+            }
           }
         }
         dd.raf = requestAnimationFrame(step);
@@ -240,7 +291,12 @@ export function useGridReorder({
     const retarget = (d: DragState) => {
       const scroll = scrollRef.current;
       const scrollTop = scroll ? scroll.scrollTop : 0;
-      const slot = slotAt(d, d.lastClientX, d.lastClientY + scrollTop);
+      // Probe with the lifted card's VISUAL centre, not the finger — a card
+      // grabbed by its corner still lands on the cell it visibly covers.
+      const from = d.rects[d.fromIndex];
+      const probeX = from.x + from.w / 2 + (d.lastClientX - d.startX);
+      const probeY = from.y + from.h / 2 + (d.lastClientY + scrollTop - (d.startY + d.startScroll));
+      const slot = slotAt(d, probeX, probeY);
       if (slot !== d.slot) {
         d.slot = slot;
         applyShifts(d);

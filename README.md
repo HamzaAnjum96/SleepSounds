@@ -187,6 +187,33 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.2
+- **Fix: drops land on the box the card visibly covers.** Feedback with a
+  screenshot: drop targeting "favours the right too much — even more so when
+  it's the right one on a lower line". Three compounding causes found and
+  fixed in the drag hit-testing:
+  1. *The row-major probe ignored x below a row's centre-line.* The old score
+     (`y·K + x`) meant hovering the **bottom half** of any card counted its
+     entire row as "passed" — the target jumped a whole row regardless of
+     which column you were over. That was the "worse on a lower line" bias.
+  2. *The probe was the finger, not the card.* Grab a card by its corner and
+     the finger sits half a card away from what the card visibly covers, so
+     drops skewed toward the grab side.
+  3. *Auto-scroll drifted the target under a stationary finger.* The old
+     linear ramp (68 px zone, up to ~12 px/frame immediately) meant dropping
+     on a card near the bottom of a small phone screen scrolled the list away
+     mid-drop (reproduced on the Pixel-profile viewport: the slot ran from 2
+     to 7 while simply holding).
+  Now the **card's visual centre claims the cell it covers**, Voronoi-style —
+  rows banded first (boundaries midway between row centre-lines), then the
+  nearest column, so the decision boundaries sit in the gaps between cards,
+  exactly where the eye expects — and auto-scroll ramps **quadratically from
+  zero** at a smaller (44 px) zone edge with fractional accumulation, so a
+  drop near the screen edge barely drifts while a push to the very edge still
+  travels fast. Verified on the two reported scenarios (corner-grab onto a
+  lower-left cell; bottom-half hover on a same-row right cell) plus a new
+  permanent e2e test on the real device profile.
+
 ### 0.1.1
 - **Fix: dropping a dragged card no longer flashes cards "in" as if new.**
   Listening-to-the-UI feedback on 0.1.0: right after letting go, cards near the
