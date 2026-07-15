@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.44
+- **Ticking Clock: the second contact rings too.** The escapement's secondary
+  contact (~11 ms behind each beat) was rendered as a pure noise burst — a
+  "tk…sh" where a real mechanism goes "tk…t": the second contact excites the
+  same plate/gear resonance as the main one, only weaker and darker. The echo
+  now carries a small damped ring at 0.85× the beat's own frequency under a
+  reduced noise share (energy split so its total level is unchanged), and its
+  delay wobbles ±1.5 ms per beat (mechanical variation — no two beats land
+  identically). Beat structure is untouched (tick counts byte-identical per
+  variant: 19/34/34/60) and per-variant RMS within 0.6 dB. This closes the
+  six-sound refinement pass (0.0.39–0.0.44); as its capstone, the live sweep
+  (`scripts/sweep-sounds.mjs`) confirmed **19/19 sounds audible through the
+  real master bus with no console errors**. Research notes:
+  `docs/research/tail-sounds-refinement.md`.
+
 ### 0.0.43
 - **Wind Chimes: strike points and clapper bounces.** Two things a real
   clapper does that the render didn't. (1) *It lands somewhere different every

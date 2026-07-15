@@ -1690,11 +1690,19 @@ function genClock(params?: Record<string, number>): string {
       buf[at + i] += (ring + noise) * level * 0.5;
     }
     // The escapement's tiny secondary contact right behind the beat.
-    const echoAt = at + Math.floor(SR * 0.011);
-    const echoLen = Math.floor(SR * 0.006);
+    // [0.0.44] It rings, too: a real second contact excites the same
+    // plate/gear resonance as the main one, only weaker and darker — the old
+    // pure-noise burst read "tk…sh" where a mechanism goes "tk…t". The echo
+    // is now a small damped ring at 0.85× the beat's own frequency under a
+    // reduced noise share (energy split so its total level is unchanged),
+    // and its delay wobbles ±1.5 ms per beat (mechanical variation).
+    const echoAt = at + Math.floor(SR * (0.011 + rand(-0.0015, 0.0015)));
+    const echoLen = Math.floor(SR * 0.008);
     for (let i = 0; i < echoLen && echoAt + i < N; i++) {
       const ts = i / SR;
-      buf[echoAt + i] += (random() * 2 - 1) * Math.exp(-ts / 0.0016) * level * 0.14;
+      const ring = Math.sin(2 * Math.PI * f * 0.85 * ts) * Math.exp(-ts / 0.0025) * 0.75;
+      const noise = (random() * 2 - 1) * Math.exp(-ts / 0.0016) * 0.65;
+      buf[echoAt + i] += (ring + noise) * level * 0.14;
     }
   }
 
