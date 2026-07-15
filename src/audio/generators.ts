@@ -1440,13 +1440,19 @@ function genPurr(params?: Record<string, number>): string {
   for (let c = 0; c < cycles; c++) { acc += (weights[c] / weightSum) * N; bounds.push(Math.min(N, Math.round(acc))); }
   bounds[cycles] = N;
 
-  // Per-breath character.
+  // Per-breath character. [0.0.42] The body resonance drifts per breath too:
+  // a real cat against you shifts a little with every breath, and the
+  // chest/throat coupling — the resonant colour the pulses ring — moves with
+  // it. The old render held one fixed body frequency for the whole 32 s.
   const f0Base = 21.5 + rumble * 4.5;
   const breathF0: number[] = [], breathLvl: number[] = [], exShare: number[] = [];
+  const breathBody: number[] = [], breathThroat: number[] = [];
   for (let c = 0; c < cycles; c++) {
     breathF0.push(f0Base + (random() - 0.5) * 1.7);
     breathLvl.push(0.9 + random() * 0.16);
     exShare.push(0.52 + (random() - 0.5) * 0.07);
+    breathBody.push(1 + (random() - 0.5) * 0.08);   // ±4 % resonance drift
+    breathThroat.push(0.32 + random() * 0.12);      // throat partial weight
   }
 
   const GAP = 0.065, INHALE_END = 0.94;
@@ -1492,15 +1498,20 @@ function genPurr(params?: Record<string, number>): string {
   const grainLen = Math.floor(SR * 0.032);
   const attack = Math.floor(SR * 0.0025);      // eased onset — no broadband click
   let t = 0;
+  let cyc = 0; // current breath, for the per-breath body drift
   while (t < N) {
+    while (cyc < cycles - 1 && t >= bounds[cyc + 1]) cyc++;
     const amp = envAmp[t];
     if (amp <= 0.001) { t += Math.floor(SR * 0.004); continue; }
     const jitter = 1 + (random() - 0.5) * 0.09;
     const level = amp * (0.82 + random() * 0.36) * sway[t];
+    const bF = bodyF * breathBody[cyc];
+    const thF = throatF * breathBody[cyc];
+    const thW = breathThroat[cyc];
     for (let i = 0; i < grainLen && t + i < N; i++) {
       const ts = i / SR;
-      const body = Math.sin(2 * Math.PI * bodyF * ts) * Math.exp(-ts / 0.009);
-      const throat = Math.sin(2 * Math.PI * throatF * ts) * Math.exp(-ts / 0.0042) * 0.38;
+      const body = Math.sin(2 * Math.PI * bF * ts) * Math.exp(-ts / 0.009);
+      const throat = Math.sin(2 * Math.PI * thF * ts) * Math.exp(-ts / 0.0042) * thW;
       const on = i < attack ? 0.5 - 0.5 * Math.cos(Math.PI * (i / attack)) : 1;
       buf[t + i] += (body + throat) * level * on * 0.5;
     }

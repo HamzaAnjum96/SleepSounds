@@ -187,6 +187,19 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.42
+- **Cat Purr: a body that shifts.** The purr's pitch, level and exhale share
+  already varied per breath, but the *body* didn't: the chest/throat resonance
+  the glottal pulses ring was one fixed frequency for the whole 32 s — a cat
+  bolted in place. A real cat settled against you shifts a little with every
+  breath, and the resonant colour moves with it. Each breath now draws its own
+  resonance multiplier (±4 %) and throat-partial weight (0.32–0.44, mean equal
+  to the old fixed 0.38), so the timbre breathes with the animal. Pulse rate,
+  breath envelope, muffle voicing and the Sissom-calibrated ~24–26 Hz
+  fundamental are untouched; per-variant RMS within 0.5 dB of 0.0.41 (the
+  purr-to-heartbeat loudness calibration holds). Research notes:
+  `docs/research/tail-sounds-refinement.md`.
+
 ### 0.0.41
 - **Heartbeat: respiratory sinus arrhythmia.** A resting heart doesn't jitter
   white — its rate swings smoothly with breathing (faster on the inhale,
