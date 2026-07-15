@@ -192,6 +192,31 @@ test('a sound card can be dragged to a new position, and it persists', async ({ 
   expect(reloaded[1]).toBe('Rain');
 });
 
+// [0.1.1] Dropping a card must not replay anyone's entrance reveal: a finished
+// CSS animation restarts when React moves the node (and `backwards` fill makes
+// it blink invisible for its stagger delay — "flashes as if new"). The reveal
+// is frozen inline on animationend, so a drop leaves every card at full
+// opacity.
+test('dropping a dragged card does not flash cards back in', async ({ page }) => {
+  await page.waitForTimeout(1600); // let the entrance reveal finish
+  const rain = (await page.locator('[data-sound-id="rain"]').boundingBox())!;
+  const ocean = (await page.locator('[data-sound-id="ocean"]').boundingBox())!;
+  await page.mouse.move(rain.x + rain.width / 2, rain.y + rain.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  await page.mouse.move(ocean.x + ocean.width / 2, ocean.y + ocean.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(320); // inside the window where a replayed reveal sits invisible
+  const dimmed = await page.evaluate(() => {
+    const out: string[] = [];
+    document.querySelectorAll<HTMLElement>('.sounds-grid [data-sound-id]').forEach((el) => {
+      if (getComputedStyle(el).opacity !== '1') out.push(el.dataset.soundId!);
+    });
+    return out;
+  });
+  expect(dimmed, 'cards mid-entrance-replay after drop').toEqual([]);
+});
+
 test('a sound card can be reordered with the keyboard grip', async ({ page }) => {
   const names = () => page.locator('.sounds-grid .card-name').allInnerTexts();
   expect((await names())[0]).toBe('Rain');

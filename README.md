@@ -187,6 +187,25 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.1
+- **Fix: dropping a dragged card no longer flashes cards "in" as if new.**
+  Listening-to-the-UI feedback on 0.1.0: right after letting go, cards near the
+  drop slot flashed like fresh arrivals even though nothing was moving.
+  Mechanism: the entrance reveal (`fadeSlideUp` with `backwards` fill and a
+  per-card stagger delay) is a *finished* CSS animation — and a finished CSS
+  animation restarts whenever its DOM node is moved (React moves the dragged
+  card's node when the reorder commits) or its `animation` declaration is
+  re-resolved (the drag-lift class toggles `animation: none` on and off). A
+  restart under `backwards` fill means the card first blinks invisible for its
+  whole stagger delay, then fades in from below — "as if new". The reveal is
+  now frozen with an inline `animation: none` the moment it finishes
+  (`onAnimationEnd`, self-target guarded), making it one-shot for the life of
+  the node while fresh mounts (category switches) still animate. Verified in
+  the real browser: before, the dropped card sat at computed opacity 0 ~300 ms
+  after release; after, zero cards are below full opacity on short and long
+  drags, all 19 animationend freezes fire, and the initial reveal still plays.
+  Guarded by a new e2e test.
+
 ### 0.1.0
 - **Arrange the library: drag-and-drop sound reordering.** Hold any sound card
   (~⅓ s, touch or mouse) and it lifts — opaque, raised, following your finger —

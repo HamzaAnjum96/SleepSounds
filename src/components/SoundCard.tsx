@@ -48,6 +48,17 @@ function SoundCard({
       className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}${canEdit ? ' has-editor' : ''}`}
       data-cat={sound.category}
       data-sound-id={sound.id}
+      // [0.1.1] The entrance reveal must play exactly once. A *finished* CSS
+      // animation restarts whenever its node is moved in the DOM (React moves
+      // the dragged card on a reorder commit) or its animation is re-resolved
+      // (the drag-lift class toggles `animation: none` on and off) — and with
+      // `backwards` fill + the stagger delay, a restart means the card blinks
+      // invisible and fades in "as if new" right after a drop. Freezing the
+      // completed animation inline makes the reveal one-shot for the life of
+      // the node; fresh mounts (category switches) still animate normally.
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) e.currentTarget.style.animation = 'none';
+      }}
     >
       {/* Keyboard/SR path for reordering: hidden until keyboard-focused, so it
           never competes with touch. Arrows step the card through the grid,
