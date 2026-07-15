@@ -20,6 +20,10 @@ interface SoundCardProps {
   onToggleEditor?: (id: string) => void;
   onToggle: (id: string) => void;
   onVolumeChange: (id: string, value: number) => void;
+  /** [0.1.0] Keyboard reorder: move this card within the visible grid.
+   *  Arrow keys step, Home/End jump. The pointer path (hold to drag) lives in
+   *  useGridReorder and needs only the data-sound-id attribute below. */
+  onMove?: (id: string, dir: -1 | 1 | 'start' | 'end') => void;
 }
 
 function SoundCard({
@@ -33,6 +37,7 @@ function SoundCard({
   onToggleEditor,
   onToggle,
   onVolumeChange,
+  onMove,
 }: SoundCardProps) {
   const icon = SOUND_ICONS[sound.id] ?? 'music_note';
   const canEdit = EDITABLE_SOUND_IDS.includes(sound.id);
@@ -42,7 +47,31 @@ function SoundCard({
       style={cardIndex !== undefined ? { animationDelay: `${0.34 + cardIndex * 0.025}s` } : undefined}
       className={`sound-card${enabled ? ' active' : ''}${playing ? ' playing' : ''}${canEdit ? ' has-editor' : ''}`}
       data-cat={sound.category}
+      data-sound-id={sound.id}
     >
+      {/* Keyboard/SR path for reordering: hidden until keyboard-focused, so it
+          never competes with touch. Arrows step the card through the grid,
+          Home/End jump to the edges; moves are announced by the live region. */}
+      {onMove && (
+        <button
+          type="button"
+          className="card-grip"
+          aria-label={`Reorder ${sound.name}. Use arrow keys to move, Home or End to jump.`}
+          onKeyDown={(e) => {
+            const dir =
+              e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 :
+              e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 :
+              e.key === 'Home' ? 'start' as const :
+              e.key === 'End' ? 'end' as const : null;
+            if (dir === null) return;
+            e.preventDefault();
+            e.stopPropagation();
+            onMove(sound.id, dir);
+          }}
+        >
+          <span className="material-symbols-rounded" aria-hidden="true">drag_indicator</span>
+        </button>
+      )}
       <button type="button" className="sound-card-toggle" onClick={() => onToggle(sound.id)} aria-pressed={enabled}>
         <div className="card-top">
           <span className="material-symbols-rounded card-icon">{icon}</span>

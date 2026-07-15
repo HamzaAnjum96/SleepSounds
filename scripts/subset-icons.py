@@ -48,7 +48,8 @@ ICONS = [
     # inline UI glyphs
     "arrow_back", "auto_awesome", "bedtime", "bookmark_add", "close",
     "install_mobile", "ios_share", "keyboard_arrow_down", "keyboard_arrow_up",
-    "play_arrow", "pause", "restart_alt", "stop", "tune", "volume_down",
+    "drag_indicator", "play_arrow", "pause", "restart_alt", "stop", "tune",
+    "volume_down",
 ]
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

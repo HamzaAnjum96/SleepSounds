@@ -6,4 +6,5 @@
 export const STORAGE_KEYS = {
   savedMixes: 'sleep-mixer-presets-v2',
   lastSession: 'drift-last-session',
+  soundOrder: 'drift-sound-order',
 } as const;

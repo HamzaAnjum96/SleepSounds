@@ -187,6 +187,37 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.0
+- **Arrange the library: drag-and-drop sound reordering.** Hold any sound card
+  (~⅓ s, touch or mouse) and it lifts — opaque, raised, following your finger —
+  while its neighbours glide aside to show where it will land; release to drop,
+  Escape (or a cancelled gesture) glides everything home. The arrangement is
+  yours: it persists on-device (`drift-sound-order`, loaded through the same
+  never-throws migration contract as the rest of storage — unknown ids are
+  dropped, sounds added in later releases append rather than vanish) and works
+  the same inside any category filter (a move within a filtered view splices
+  correctly into the full order). The details that make it complete rather
+  than a proof of concept:
+  - *Scroll-safe*: moving before the hold completes cancels the lift, so
+    scrolling and tapping are untouched; while dragging, native touch scroll
+    is suppressed and dragging near the top/bottom edge auto-scrolls the page.
+  - *No stray toggles*: the release click is swallowed, so a drag never turns
+    the sound on; lifting closes an open sound editor; the long-press context
+    menu and text selection are suppressed.
+  - *Accessible*: every card carries a keyboard grip (hidden until
+    keyboard-focused) — arrows step the card through the grid, Home/End jump —
+    and every pick-up, move, and drop is announced to the live region. Axe
+    scans stay clean.
+  - *Calm motion*: slot-shift and landing glides are short eased transforms
+    over rects cached at lift (no mid-drag layout thrash), the commit swaps
+    transformed-old-DOM for clean-new-DOM with transitions suppressed for one
+    frame (no flicker), and `prefers-reduced-motion` gets instant snaps.
+  - *Discoverable*: the library section header now reads "19 sounds · hold to
+    arrange".
+  Covered by new unit tests (order storage migration, move semantics) and two
+  e2e tests (a real pointer drag with reload persistence + the keyboard grip
+  path); `llms.txt` and the JSON-LD feature list mention the capability.
+
 ### 0.0.47
 - **Ticking Clock: less wood, more mechanism.** Listening feedback: the tick
   "sounds too much like wood" — and acoustically that was exactly right: a

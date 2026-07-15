@@ -12,6 +12,8 @@ import Toast from './components/Toast';
 import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds, editorDefaults } from './data';
 import { features } from './config/features';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession, newMixId } from './storage/savedMixes';
+import { loadSoundOrder, saveSoundOrder, orderSounds, movedOrder } from './storage/soundOrder';
+import { useGridReorder } from './hooks/useGridReorder';
 import { platform } from './platform';
 import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
@@ -307,6 +309,7 @@ export default function App() {
     try { localStorage.setItem('drift-cookie-ack', '1'); } catch { /* private mode */ }
   }, []);
   const soundsGridRef = useRef<HTMLDivElement | null>(null);
+  const appScrollRef = useRef<HTMLDivElement | null>(null);
   const sceneRowRef = useRef<HTMLDivElement | null>(null);
   const miniPlayerRef = useRef<HTMLDivElement | null>(null);
   const [soundsGridColumns, setSoundsGridColumns] = useState(2);
@@ -805,14 +808,71 @@ export default function App() {
   // mode (spam-tap the moon) also reveals the pulled-from-lineup sounds.
   // Memoized so the array identity is stable: a fresh array each render would
   // re-run every effect that depends on the visible list.
-  const library = useMemo(
-    () => releasableSounds(features.experimentalSounds || devMode, devMode),
-    [devMode],
-  );
+  // [0.1.0] The user's own arrangement (hold-to-drag / keyboard grip) applies
+  // over the whole library first, then the visibility filters — so hidden
+  // sounds keep a stable place in the order and reordering works the same in
+  // any category view.
+  const [soundOrder, setSoundOrder] = useState<string[] | null>(loadSoundOrder);
+  const soundOrderRef = useRef(soundOrder);
+  soundOrderRef.current = soundOrder;
+  const library = useMemo(() => {
+    const releasable = new Set(releasableSounds(features.experimentalSounds || devMode, devMode).map((s) => s.id));
+    return orderSounds(SOUND_LIBRARY, soundOrder).filter((s) => releasable.has(s.id));
+  }, [devMode, soundOrder]);
   const visibleSounds = useMemo(
     () => (category === 'All' ? library : library.filter((s) => s.category === category)),
     [library, category],
   );
+  const visibleSoundsRef = useRef(visibleSounds);
+  visibleSoundsRef.current = visibleSounds;
+
+  /** Commit a reorder: splice dragId next to anchorId in the full order. */
+  const commitReorder = useCallback((dragId: string, anchorId: string, side: 'before' | 'after') => {
+    const ids = orderSounds(SOUND_LIBRARY, soundOrderRef.current).map((s) => s.id);
+    const next = movedOrder(ids, dragId, anchorId, side);
+    setSoundOrder(next);
+    saveSoundOrder(next);
+  }, []);
+
+  /** Keyboard reorder from a card's grip: step or jump within the visible grid. */
+  const moveSound = useCallback((id: string, dir: -1 | 1 | 'start' | 'end') => {
+    const visible = visibleSoundsRef.current;
+    const idx = visible.findIndex((s) => s.id === id);
+    if (idx < 0) return;
+    const name = visible[idx].name;
+    let anchor: string; let side: 'before' | 'after'; let to: number;
+    if (dir === -1 || dir === 'start') {
+      if (idx === 0) { announce(`${name} is already first`); return; }
+      to = dir === -1 ? idx - 1 : 0;
+      anchor = visible[to].id; side = 'before';
+    } else {
+      if (idx === visible.length - 1) { announce(`${name} is already last`); return; }
+      to = dir === 1 ? idx + 1 : visible.length - 1;
+      anchor = visible[to].id; side = 'after';
+    }
+    commitReorder(id, anchor, side);
+    haptic(6);
+    announce(`${name} moved to position ${to + 1} of ${visible.length}`);
+  }, [commitReorder, announce]);
+
+  // Pointer path: hold a card to lift it, drag to a new slot. Lifting closes
+  // an open editor (its inline panel would otherwise reflow mid-drag).
+  const handleDragLift = useCallback(() => {
+    haptic(12);
+    setOpenEditorSoundId(null);
+  }, []);
+  const soundNameOf = useCallback(
+    (id: string) => SOUND_LIBRARY.find((s) => s.id === id)?.name ?? id,
+    [],
+  );
+  useGridReorder({
+    gridRef: soundsGridRef,
+    scrollRef: appScrollRef,
+    onCommit: commitReorder,
+    onLift: handleDragLift,
+    announce,
+    getLabel: soundNameOf,
+  });
 
   const openEditorIndex = openEditorSoundId
     ? visibleSounds.findIndex((sound) => sound.id === openEditorSoundId)
@@ -1010,6 +1070,7 @@ export default function App() {
 
       <div className="layout">
       <div
+        ref={appScrollRef}
         className={`app${driftOpen ? ' app-quiet' : ''}${hasPlayer ? ' has-player' : ''}`}
         onScroll={handleAppScroll}
       >
@@ -1074,7 +1135,7 @@ export default function App() {
         <section className="section" style={{ animationDelay: '0.26s' }}>
           <div className="section-head">
             <h2 className="section-title">the library</h2>
-            <span className="section-meta">{library.length} generated sounds</span>
+            <span className="section-meta">{library.length} sounds · hold to arrange</span>
           </div>
 
           <div className="cat-filters">
@@ -1112,6 +1173,7 @@ export default function App() {
                   onToggleEditor={stableToggleEditor}
                   onToggle={stableToggleSound}
                   onVolumeChange={stableSetSoundVolume}
+                  onMove={moveSound}
                 />
                 {i === editorInsertAfter && openEditorSoundId && (
                   <div

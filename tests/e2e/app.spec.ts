@@ -156,6 +156,55 @@ test('a stale scene deep link falls through to resume', async ({ page }) => {
   await expect(page.locator('.mini-player')).toBeVisible();
 });
 
+// [0.1.0] Hold-to-arrange: a long-press lifts a card, dragging drops it in a
+// new slot, and the arrangement persists. The keyboard path lives on each
+// card's grip button.
+test('a sound card can be dragged to a new position, and it persists', async ({ page }) => {
+  const names = () => page.locator('.sounds-grid .card-name').allInnerTexts();
+  const before = await names();
+  expect(before[0]).toBe('Rain');
+
+  // Long-press the first card (Rain), then drag onto the second (Fire).
+  const rain = page.locator('.sounds-grid [data-sound-id="rain"]');
+  const fire = page.locator('.sounds-grid [data-sound-id="fire"]');
+  const from = (await rain.boundingBox())!;
+  const to = (await fire.boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450); // past the 350 ms lift threshold
+  // Steps matter: the hook tracks pointermove.
+  await page.mouse.move(to.x + to.width * 0.75, to.y + to.height / 2, { steps: 8 });
+  await page.waitForTimeout(120);
+  await page.mouse.up();
+  await page.waitForTimeout(400); // landing glide + settle
+
+  const after = await names();
+  expect(after[0]).toBe('Fire');
+  expect(after[1]).toBe('Rain');
+  // The lift-then-drop must not have toggled the sound on.
+  await expect(page.locator('[data-sound-id="rain"]')).not.toHaveClass(/active/);
+
+  // The arrangement survives a reload.
+  await page.reload();
+  await dismissNotice(page);
+  const reloaded = await names();
+  expect(reloaded[0]).toBe('Fire');
+  expect(reloaded[1]).toBe('Rain');
+});
+
+test('a sound card can be reordered with the keyboard grip', async ({ page }) => {
+  const names = () => page.locator('.sounds-grid .card-name').allInnerTexts();
+  expect((await names())[0]).toBe('Rain');
+  await page.locator('[data-sound-id="rain"] .card-grip').focus();
+  await page.keyboard.press('ArrowRight');
+  expect((await names()).slice(0, 2)).toEqual(['Fire', 'Rain']);
+  await page.keyboard.press('End');
+  const atEnd = await names();
+  expect(atEnd[atEnd.length - 1]).toBe('Rain');
+  await page.keyboard.press('Home');
+  expect((await names())[0]).toBe('Rain');
+});
+
 // Guards the tuning-persistence arc (0.0.15 / 0.0.16 / 0.0.20): the last-session
 // writer must keep each layer's tuning, so a resumed mix comes back with the
 // character it was playing rather than reverting tuned layers to defaults.

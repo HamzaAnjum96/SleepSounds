@@ -24,6 +24,8 @@ the reliable machine-readable descriptions.
 - **Scenes**: ten curated one-tap mixes.
 - **Sleep timer**: 15m–8h with a gentle 90-second wind-down fade.
 - **Mixes**: save, reload, and delete custom mixes (stored locally).
+- **Arrange**: reorder the sound library itself — hold a card and drag (or
+  use the keyboard grip on each card); the arrangement persists on-device.
 - **Drift mode**: a full-screen night clock with a screen wake lock.
 
 ## Facts
