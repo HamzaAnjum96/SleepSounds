@@ -1564,6 +1564,12 @@ function genChimes(params?: Record<string, number>): string {
     const pl = Math.cos((pans[tube] + 1) * Math.PI / 4);
     const pr = Math.sin((pans[tube] + 1) * Math.PI / 4);
     const attack = Math.floor(SR * 0.004);
+    // [0.0.43] Strike-point variation: which modes a hit excites depends on
+    // where the clapper lands, so the mode balance is drawn per strike —
+    // barely on the fundamental, progressively wider on the higher modes
+    // (they're far more sensitive to contact position). The mean is the old
+    // fixed balance, so the `tone` voicing is unchanged in expectation.
+    const mj = [1, rand(0.85, 1.15), rand(0.7, 1.3), rand(0.6, 1.4)];
     // Each mode is a damped resonator run as a two-tap recurrence
     // (y[n] = 2r·cos(w)·y[n-1] − r²·y[n-2] ≡ rⁿ·sin(wn)) — the strikes are the
     // whole render cost, and sin·exp per sample per mode is ~10× slower.
@@ -1580,7 +1586,7 @@ function genChimes(params?: Record<string, number>): string {
     for (let i = 1; i < len; i++) {
       let s = 0;
       for (let m = 0; m < 4; m++) {
-        s += y1[m] * modeAmps[m];
+        s += y1[m] * modeAmps[m] * mj[m];
         const nxt = co[m] * y1[m] - r2[m] * y2[m];
         y2[m] = y1[m];
         y1[m] = nxt;
@@ -1600,6 +1606,16 @@ function genChimes(params?: Record<string, number>): string {
   const hop = Math.floor(SR * 0.02);
   const lastStart = N - Math.floor(SR * 0.7);
   const ratePerSec = 0.12 + activity * 1.45;
+  // [0.0.43] A clapper that swings into a tube often re-contacts it ~40–90 ms
+  // later at a fraction of the energy — the soft "to-tok" double every real
+  // set makes. 22 % of strikes get one, never inside the loop-seam guard.
+  const strikeWithBounce = (pos: number, tube: number, amp: number): void => {
+    strike(pos, tube, amp);
+    if (chance(0.22)) {
+      const bPos = pos + Math.floor(SR * rand(0.04, 0.09));
+      if (bPos < lastStart) strike(bPos, tube, amp * rand(0.25, 0.45));
+    }
+  };
   // A lull is part of the character, but a loop can't go dead for ten straight
   // seconds — when the wind has been quiet too long, one soft lone strike
   // bridges it (a real set stirs eventually).
@@ -1614,7 +1630,7 @@ function genChimes(params?: Record<string, number>): string {
     let tube = Math.floor(random() * 5);
     let pos = p;
     let amp = forced ? rand(0.25, 0.45) : rand(0.35, 1.0) * (0.55 + 0.45 * g);
-    strike(pos, tube, amp);
+    strikeWithBounce(pos, tube, amp);
     if (forced) continue; // a lone stir, not a cluster
     let swings = 0;
     while (swings < 3 && chance(0.55)) {
@@ -1622,7 +1638,7 @@ function genChimes(params?: Record<string, number>): string {
       if (pos >= lastStart) break;
       tube = Math.max(0, Math.min(4, tube + (chance(0.5) ? -1 : 1)));
       amp *= rand(0.6, 0.9);
-      strike(pos, tube, amp);
+      strikeWithBounce(pos, tube, amp);
       swings++;
     }
   }

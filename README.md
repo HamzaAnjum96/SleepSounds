@@ -187,6 +187,22 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.43
+- **Wind Chimes: strike points and clapper bounces.** Two things a real
+  clapper does that the render didn't. (1) *It lands somewhere different every
+  time*: which transverse modes a hit excites depends on the contact point, so
+  the mode balance is now drawn per strike — barely on the fundamental,
+  progressively wider on the higher modes (±15 % → ±40 %), mean equal to the
+  old fixed balance so the `tone` voicing is unchanged in expectation. Every
+  note keeps its pitch; its sparkle varies naturally. (2) *It bounces*: a
+  clapper swinging into a tube often re-contacts it 40–90 ms later at a
+  fraction of the energy — the soft "to-tok" double every real set makes. 22 %
+  of strikes now carry one (never inside the loop-seam guard). Systematic
+  energy delta ≈ +0.3 dB (jitter variance + bounce energy); measured variant
+  levels stay inside the family's natural render-to-render spread, and the
+  event-scheduling, tuning, decay physics and stereo hang are untouched.
+  Research notes: `docs/research/tail-sounds-refinement.md`.
+
 ### 0.0.42
 - **Cat Purr: a body that shifts.** The purr's pitch, level and exhale share
   already varied per breath, but the *body* didn't: the chest/throat resonance
