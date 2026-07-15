@@ -1624,20 +1624,42 @@ function genChimes(params?: Record<string, number>): string {
       if (bPos < lastStart) strike(bPos, tube, amp * rand(0.25, 0.45));
     }
   };
+  // [0.0.46] Open with a strike. Without one guaranteed early hit, the sound
+  // could open on nothing but the dying ring tail the loop blend copies
+  // forward — a chime you never heard struck — with the first real strike
+  // 4–22 s away (gust²-gated scheduling). Placement matters twice over: it
+  // sits just past the mixer's 1.6 s fade-in (so it's actually heard on first
+  // play) and past the 1.2 s loop-blend zone (so it isn't copied into the
+  // seam). A likely second swing keeps the opening from reading staged.
+  {
+    const openAt = Math.floor(SR * rand(1.7, 2.6));
+    const openTube = Math.floor(random() * 5);
+    strikeWithBounce(openAt, openTube, rand(0.5, 0.85));
+    if (chance(0.6)) {
+      const swingTube = Math.max(0, Math.min(4, openTube + (chance(0.5) ? -1 : 1)));
+      strikeWithBounce(openAt + Math.floor(SR * rand(0.09, 0.28)), swingTube, rand(0.3, 0.55));
+    }
+  }
   // A lull is part of the character, but a loop can't go dead for ten straight
   // seconds — when the wind has been quiet too long, one soft lone strike
   // bridges it (a real set stirs eventually).
   let sinceStrike = 0;
   let maxLull = Math.floor(SR * rand(3.5, 6.5));
+  // [0.0.46] …and go quiet into the seam: strike chance and strength taper
+  // away over the last ~3 s before the seam guard, so the material the loop
+  // blend copies forward is near-silence rather than a fresh ring. The blend
+  // still runs (seam continuity is untouched); there's just little to smear.
+  const taperStart = N - Math.floor(SR * 3.7);
   for (let p = Math.floor(SR * 0.3); p < lastStart; p += hop) {
     const g = gust[p];
-    const forced = sinceStrike > maxLull;
-    if (!forced && !chance((hop / SR) * ratePerSec * g * g)) { sinceStrike += hop; continue; }
+    const tf = p <= taperStart ? 1 : Math.max(0.05, 1 - (p - taperStart) / (lastStart - taperStart));
+    const forced = sinceStrike > maxLull && tf === 1; // no forced stirs inside the taper
+    if (!forced && !chance((hop / SR) * ratePerSec * g * g * tf)) { sinceStrike += hop; continue; }
     sinceStrike = 0;
     maxLull = Math.floor(SR * rand(3.5, 6.5));
     let tube = Math.floor(random() * 5);
     let pos = p;
-    let amp = forced ? rand(0.25, 0.45) : rand(0.35, 1.0) * (0.55 + 0.45 * g);
+    let amp = (forced ? rand(0.25, 0.45) : rand(0.35, 1.0) * (0.55 + 0.45 * g)) * tf;
     strikeWithBounce(pos, tube, amp);
     if (forced) continue; // a lone stir, not a cluster
     let swings = 0;

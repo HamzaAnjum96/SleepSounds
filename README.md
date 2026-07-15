@@ -187,6 +187,24 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.0.46
+- **Wind Chimes: no longer opens on the end of a ring.** Listening feedback:
+  the chimes "start at the end of a ring every time". Two causes stacked: the
+  loop blend crossfades the buffer's *end* into its first 1.2 s (so the start
+  carries a dying ring tail you never heard struck), and the gust²-gated
+  scheduler could leave the first real strike 4–22 s away (measured per
+  variant). Three changes: (1) strike chance *and* strength now taper away
+  over the ~3 s before the seam guard, so the material the blend copies
+  forward is near-silence (seam-tail RMS 4–8× quieter per variant); forced
+  lull-bridging strikes skip the taper zone. (2) A guaranteed opening strike
+  (with a likely second swing, so it doesn't read staged) lands at ~1.7–2.6 s —
+  placed deliberately past both the mixer's 1.6 s fade-in (so it's actually
+  heard on first play) and the 1.2 s blend zone (so it isn't copied into the
+  seam). (3) The ghost residue before that first strike drops −8…−12 dB.
+  Measured: first onset 4.3/4.8/4.8/22.4 s → 1.9/2.2/2.0/2.2 s across the four
+  variants; RMS within ±0.9 dB; loop-seam continuity untouched (the blend
+  still runs — there's simply nothing left for it to smear).
+
 ### 0.0.45
 - **Train: the keyboard click is gone.** Listening feedback: an occasional
   sharp click that "doesn't sound like anything on a train". Diagnosis: the
