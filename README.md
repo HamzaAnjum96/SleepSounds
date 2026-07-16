@@ -187,6 +187,23 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.4
+- **Fix: nothing moves after the drop lands — the swap is now atomic.**
+  Follow-up to 0.1.3 from on-device testing: cards that were already visually
+  in place at release still slid/jumped into position again a moment later —
+  both the dropped card and the displaced ones. Root cause: the final handoff
+  wasn't atomic. After the landing glide, the code cleared every inline
+  transform immediately (snapping all cards back to the *old* DOM layout) but
+  asked React to commit the new order *asynchronously* — on a slower device a
+  paint slips into that gap, so the whole grid flashed back to the old
+  arrangement and then moved into place again. (Desktop committed fast enough
+  to hide it, which is why earlier traces looked clean.) The commit now runs
+  synchronously (`flushSync`) with the transform-clear in the same JS turn
+  under the settle guard, so the browser paints exactly once across the swap
+  and the visual layout never changes. Verified under **6× CPU throttling**
+  (phone-like commit latency): zero movement on any card after the landing
+  completes, correct final order. Tagged `[0.1.4]` in `useGridReorder.ts`.
+
 ### 0.1.3
 - **Fix: no more side-wipes after a drop, and no wrong-place wipes.** Two more
   drag-feel bugs from feedback:

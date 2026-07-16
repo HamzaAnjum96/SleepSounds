@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 
 // [0.1.0] Grid drag-reorder: hold a card to lift it, drag to a new slot, let
 // go to drop. Pointer-events based (one code path for touch, mouse and pen),
@@ -145,19 +146,26 @@ export function useGridReorder({
     const grid = gridRef.current;
 
     const land = () => {
+      // [0.1.4] The handoff from "old DOM + transforms" to "new DOM, no
+      // transforms" must be ATOMIC. It used to schedule the React commit
+      // asynchronously and clear the transforms immediately — on a slower
+      // device a paint slipped in between, so every card (dropped and
+      // displaced alike) snapped back to the OLD layout for a frame or two
+      // and then moved into place again after the drop. flushSync commits the
+      // reorder synchronously, the transforms come off in the same JS turn
+      // under drag-settle, and the browser paints exactly once: the visual
+      // layout never changes across the swap.
+      if (grid) grid.classList.add('drag-settle');
       if (commit && d.slot !== d.fromIndex) {
         const without = d.ids.filter((id) => id !== d.id);
         const anchor = d.slot < without.length ? without[d.slot] : without[without.length - 1];
         const side: 'before' | 'after' = d.slot < without.length ? 'before' : 'after';
-        onCommit(d.id, anchor, side);
+        flushSync(() => onCommit(d.id, anchor, side));
         announce(`${getLabel(d.id)} moved to position ${d.slot + 1} of ${d.ids.length}`);
       } else {
         announce(commit ? `${getLabel(d.id)} kept its place` : 'reorder cancelled');
       }
-      // The visual layout now matches the (possibly re-rendered) real layout;
-      // drop the inline transforms with transitions off for one frame.
       if (grid) {
-        grid.classList.add('drag-settle');
         clearTransforms();
         requestAnimationFrame(() => grid.classList.remove('drag-settle'));
       }
