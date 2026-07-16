@@ -187,6 +187,28 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.3
+- **Fix: no more side-wipes after a drop, and no wrong-place wipes.** Two more
+  drag-feel bugs from feedback:
+  1. *Displaced cards finished their slide after the finger lifted.* The
+     neighbour-shift glide (180 ms) triggered by the final pointer movement was
+     still running at release, so "after a move the displaced card does a side
+     wipe into place". Now, the moment the finger lifts, every displaced card
+     **snaps** to its final cell (a `drag-drop` class suppresses their
+     transition) — only the dropped card itself glides in. Measured: zero
+     post-release movement on any non-dragged card, where previously the wipe
+     ran ~60–180 ms past release.
+  2. *Dragging with a sound editor open wiped cards to positions from the
+     wrong layout.* The hook cached every card's rect at lift and *then* asked
+     the app to close the open inline editor — which relayouts the whole grid,
+     leaving every cached rect stale by the editor's height. All shift and
+     landing glides then animated to coordinates from a layout that no longer
+     existed (reproduced: cards gliding to the top of the screen). The close
+     now happens **synchronously before measurement** (`flushSync` in the
+     lift callback, measurement after), so the geometry is always the real
+     one. Both cases are covered by the trace-based verification and a new
+     e2e guard.
+
 ### 0.1.2
 - **Fix: drops land on the box the card visibly covers.** Feedback with a
   screenshot: drop targeting "favours the right too much — even more so when

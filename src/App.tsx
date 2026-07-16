@@ -859,7 +859,11 @@ export default function App() {
   // an open editor (its inline panel would otherwise reflow mid-drag).
   const handleDragLift = useCallback(() => {
     haptic(12);
-    setOpenEditorSoundId(null);
+    // [0.1.3] flushSync: the hook measures the grid immediately after this
+    // callback, and closing the inline editor relayouts the whole grid — an
+    // async close left every cached rect stale by the editor's height, so the
+    // shift/landing glides wiped cards to positions from the wrong layout.
+    flushSync(() => setOpenEditorSoundId(null));
   }, []);
   const soundNameOf = useCallback(
     (id: string) => SOUND_LIBRARY.find((s) => s.id === id)?.name ?? id,

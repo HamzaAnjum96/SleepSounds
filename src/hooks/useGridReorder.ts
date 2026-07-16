@@ -84,6 +84,7 @@ export function useGridReorder({
       el.classList.remove('drag-lift');
     });
     grid.classList.remove('dragging');
+    grid.classList.remove('drag-drop');
   }, [gridRef]);
 
   /** The display cell the lifted CARD (not the finger) is over. [0.1.2] The
@@ -166,8 +167,15 @@ export function useGridReorder({
       // Glide the card into its slot, then land. Inserting at `slot` in the
       // without-dragged list puts the card at display index `slot` overall,
       // and display rects are the original slot geometry.
+      // [0.1.3] The displaced cards do NOT glide here: once the finger lifts,
+      // they snap to their final cells (drag-drop suppresses their transition
+      // while keeping the dropped card's landing glide) — a shift still
+      // mid-glide at release used to finish as a visible side-wipe after the
+      // move.
       const to = d.rects[d.slot];
       const from = d.rects[d.fromIndex];
+      grid?.classList.add('drag-drop');
+      applyShifts(d); // ensure every displaced card is AT its final cell, instantly
       d.el.classList.remove('drag-lift');
       d.el.classList.add('drag-landing');
       d.el.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
@@ -208,6 +216,11 @@ export function useGridReorder({
       const scroll = scrollRef.current;
       if (!p || !gridRef.current) return;
       press.current = null;
+      // Let the caller settle the layout FIRST (App closes an open inline
+      // editor with flushSync): everything below is measured geometry, and
+      // measuring before a pending relayout left every rect stale by the
+      // editor's height — cards then wiped to positions from the wrong layout.
+      onLift?.(p.id);
       const els = [...gridRef.current.querySelectorAll<HTMLElement>('[data-sound-id]')];
       const scrollTop = scroll ? scroll.scrollTop : 0;
       const ids = els.map((el) => el.dataset.soundId!);
@@ -246,7 +259,6 @@ export function useGridReorder({
       p.el.classList.add('drag-lift');
       gridRef.current.classList.add('dragging');
       positionLifted(d);
-      onLift?.(p.id);
       announce(`picked up ${getLabel(p.id)}, position ${fromIndex + 1} of ${ids.length}. drag to move, release to drop.`);
       // Auto-scroll loop while dragging near the container edges.
       const step = () => {

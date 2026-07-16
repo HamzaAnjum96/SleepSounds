@@ -219,6 +219,46 @@ test('a corner-grabbed card drops onto the cell it visibly covers', async ({ pag
   expect(names.slice(0, 3)).toEqual(['Rain', 'Fan', 'Fire']);
 });
 
+// [0.1.3] Displaced cards must not slide into place after the finger lifts —
+// they snap at release; only the dropped card glides. And a drag that starts
+// with a sound editor open must measure the post-close layout, not wipe cards
+// to coordinates from the stale one.
+test('displaced cards do not keep moving after the drop', async ({ page }) => {
+  await page.waitForTimeout(1600);
+  const rain = (await page.locator('[data-sound-id="rain"]').boundingBox())!;
+  const fan = (await page.locator('[data-sound-id="fan"]').boundingBox())!;
+  await page.mouse.move(rain.x + rain.width / 2, rain.y + rain.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  await page.mouse.move(fan.x + fan.width / 2, fan.y + fan.height / 2, { steps: 6 });
+  await page.mouse.up(); // release immediately — the old wipe window
+  await page.waitForTimeout(60);
+  const early = (await page.locator('[data-sound-id="fire"]').boundingBox())!;
+  await page.waitForTimeout(250);
+  const late = (await page.locator('[data-sound-id="fire"]').boundingBox())!;
+  expect(Math.abs(late.x - early.x), 'displaced card x drift after release').toBeLessThan(2);
+  expect(Math.abs(late.y - early.y), 'displaced card y drift after release').toBeLessThan(2);
+});
+
+test('a drag that starts with an open editor uses the settled layout', async ({ page }) => {
+  await page.waitForTimeout(1600);
+  await page.locator('[data-sound-id="rain"] .card-editor-icon').click();
+  await expect(page.locator('.sb-panel')).toBeVisible();
+  const rain = (await page.locator('[data-sound-id="rain"]').boundingBox())!;
+  await page.mouse.move(rain.x + rain.width / 2, rain.y + rain.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450); // lift closes the editor synchronously
+  await expect(page.locator('.sb-panel')).toBeHidden();
+  // Aim at where Fan sits in the settled (post-close) layout.
+  const fan = (await page.locator('[data-sound-id="fan"]').boundingBox())!;
+  await page.mouse.move(fan.x + fan.width / 2, fan.y + fan.height / 2, { steps: 6 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const names = await page.locator('.sounds-grid .card-name').allInnerTexts();
+  expect(names.slice(0, 3)).toEqual(['Fire', 'Fan', 'Rain']);
+});
+
 // [0.1.1] Dropping a card must not replay anyone's entrance reveal: a finished
 // CSS animation restarts when React moves the node (and `backwards` fill makes
 // it blink invisible for its stagger delay — "flashes as if new"). The reveal
