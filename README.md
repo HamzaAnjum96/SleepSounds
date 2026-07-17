@@ -187,6 +187,26 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.5
+- **Rearchitected the drop: commit at release.** 0.1.4's atomic swap wasn't
+  enough on device, because the *architecture* still had a swap moment — a
+  190 ms landing glide over the old DOM order, then a handoff. Anything that
+  slipped in that window (a paint, a stretched frame, cached-rect drift) moved
+  cards that were already in place. The drop is now structurally incapable of
+  that: the instant the finger lifts, the new order commits synchronously
+  (`flushSync`) and every transform comes off in the same paint — the
+  displaced cards' new layout positions are *by construction* exactly where
+  their shift transforms already had them, so that swap is invisible — and
+  then the dropped card alone FLIPs from its position under your finger to its
+  **real** new layout position (measured from the committed DOM, not cached
+  rects) in one glide. No timers before the commit, no geometry math at the
+  end, nothing left to race. The interim `drag-drop` snap mechanism from
+  0.1.3 became unnecessary and was removed. Verified under 6× CPU throttling
+  in two scenarios (instant release; release while neighbours were still
+  mid-glide): displaced cards show **zero movement from the moment of
+  release**, the dropped card makes exactly one glide, and nothing moves
+  after it lands. Gate: 118 unit, 30 e2e.
+
 ### 0.1.4
 - **Fix: nothing moves after the drop lands — the swap is now atomic.**
   Follow-up to 0.1.3 from on-device testing: cards that were already visually

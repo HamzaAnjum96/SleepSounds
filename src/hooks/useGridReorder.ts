@@ -85,7 +85,6 @@ export function useGridReorder({
       el.classList.remove('drag-lift');
     });
     grid.classList.remove('dragging');
-    grid.classList.remove('drag-drop');
   }, [gridRef]);
 
   /** The display cell the lifted CARD (not the finger) is over. [0.1.2] The
@@ -145,69 +144,65 @@ export function useGridReorder({
     cancelAnimationFrame(d.raf);
     const grid = gridRef.current;
 
-    const land = () => {
-      // [0.1.4] The handoff from "old DOM + transforms" to "new DOM, no
-      // transforms" must be ATOMIC. It used to schedule the React commit
-      // asynchronously and clear the transforms immediately — on a slower
-      // device a paint slipped in between, so every card (dropped and
-      // displaced alike) snapped back to the OLD layout for a frame or two
-      // and then moved into place again after the drop. flushSync commits the
-      // reorder synchronously, the transforms come off in the same JS turn
-      // under drag-settle, and the browser paints exactly once: the visual
-      // layout never changes across the swap.
-      if (grid) grid.classList.add('drag-settle');
-      if (commit && d.slot !== d.fromIndex) {
+    if (commit && d.lifted && grid) {
+      // [0.1.5] Commit at RELEASE, atomically, then one FLIP glide for the
+      // dropped card alone. The previous shape (a 190 ms landing glide over
+      // the old DOM, then a swap) had a swap moment at all — and any paint or
+      // measurement slip at that moment moved cards that were already in
+      // place. Now: capture where the dropped card visually is, commit the
+      // new order synchronously (flushSync), clear every transform under the
+      // settle guard — the displaced cards' new layout positions are exactly
+      // where their shift transforms already had them, so that swap is one
+      // paint with zero motion — then invert the dropped card from its old
+      // visual spot and let it glide to its REAL new layout position. No
+      // timers before the commit, no cached-rect math at the end, nothing
+      // left to race.
+      const startRect = d.el.getBoundingClientRect();
+      grid.classList.add('drag-settle');
+      if (d.slot !== d.fromIndex) {
         const without = d.ids.filter((id) => id !== d.id);
         const anchor = d.slot < without.length ? without[d.slot] : without[without.length - 1];
         const side: 'before' | 'after' = d.slot < without.length ? 'before' : 'after';
         flushSync(() => onCommit(d.id, anchor, side));
         announce(`${getLabel(d.id)} moved to position ${d.slot + 1} of ${d.ids.length}`);
       } else {
-        announce(commit ? `${getLabel(d.id)} kept its place` : 'reorder cancelled');
+        announce(`${getLabel(d.id)} kept its place`);
       }
+      clearTransforms();
+      const endRect = d.el.getBoundingClientRect();
+      const dx = startRect.left - endRect.left;
+      const dy = startRect.top - endRect.top;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        d.el.style.transform = `translate(${dx}px, ${dy}px) scale(1.045)`;
+        void d.el.offsetWidth; // land the invert before the transition arms
+        d.el.classList.add('drag-landing');
+        grid.classList.remove('drag-settle');
+        d.el.style.transform = '';
+        const el = d.el;
+        window.setTimeout(() => el.classList.remove('drag-landing'), 230);
+      } else {
+        grid.classList.remove('drag-settle');
+      }
+      return;
+    }
+
+    // Cancel (or a lift that never happened): everything glides home, then
+    // the transforms come off under the settle guard — no order change, so
+    // the old DOM is already the truth.
+    d.el.classList.remove('drag-lift');
+    d.el.classList.add('drag-landing');
+    d.el.style.transform = '';
+    const els = gridRef.current?.querySelectorAll<HTMLElement>('[data-sound-id]');
+    els?.forEach((el) => { if (el !== d.el) el.style.transform = ''; });
+    window.setTimeout(() => {
+      d.el.classList.remove('drag-landing');
       if (grid) {
+        grid.classList.add('drag-settle');
         clearTransforms();
         requestAnimationFrame(() => grid.classList.remove('drag-settle'));
       }
-    };
-
-    if (commit && d.lifted) {
-      // Glide the card into its slot, then land. Inserting at `slot` in the
-      // without-dragged list puts the card at display index `slot` overall,
-      // and display rects are the original slot geometry.
-      // [0.1.3] The displaced cards do NOT glide here: once the finger lifts,
-      // they snap to their final cells (drag-drop suppresses their transition
-      // while keeping the dropped card's landing glide) — a shift still
-      // mid-glide at release used to finish as a visible side-wipe after the
-      // move.
-      const to = d.rects[d.slot];
-      const from = d.rects[d.fromIndex];
-      grid?.classList.add('drag-drop');
-      applyShifts(d); // ensure every displaced card is AT its final cell, instantly
-      d.el.classList.remove('drag-lift');
-      d.el.classList.add('drag-landing');
-      d.el.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
-      window.setTimeout(() => {
-        d.el.classList.remove('drag-landing');
-        land();
-      }, SETTLE_MS);
-    } else {
-      // Cancel: everything glides home.
-      d.el.classList.remove('drag-lift');
-      d.el.classList.add('drag-landing');
-      d.el.style.transform = '';
-      const els = gridRef.current?.querySelectorAll<HTMLElement>('[data-sound-id]');
-      els?.forEach((el) => { if (el !== d.el) el.style.transform = ''; });
-      window.setTimeout(() => {
-        d.el.classList.remove('drag-landing');
-        if (grid) {
-          grid.classList.add('drag-settle');
-          clearTransforms();
-          requestAnimationFrame(() => grid.classList.remove('drag-settle'));
-        }
-        announce('reorder cancelled');
-      }, SETTLE_MS);
-    }
+      announce('reorder cancelled');
+    }, SETTLE_MS);
   }, [gridRef, onCommit, announce, getLabel, clearTransforms]);
 
   useEffect(() => {

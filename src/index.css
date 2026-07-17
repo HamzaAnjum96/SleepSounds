@@ -937,12 +937,6 @@ header::after {
 .sounds-grid.drag-settle .sound-card {
   transition: none !important;
 }
-/* [0.1.3] From release to landing: displaced cards SNAP to their final cells
-   (a shift still mid-glide at release used to finish as a side-wipe after the
-   move); only the dropped card, on .drag-landing, keeps its glide. */
-.sounds-grid.drag-drop .sound-card:not(.drag-landing) {
-  transition: none !important;
-}
 /* Keyboard/SR reorder grip: out of the way (and out of touch) until a
    keyboard actually focuses it. */
 .card-grip {
