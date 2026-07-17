@@ -169,19 +169,27 @@ export function useGridReorder({
         announce(`${getLabel(d.id)} kept its place`);
       }
       clearTransforms();
+      // [0.1.6] Keep the lifted (opaque) look through the swap, then hand it
+      // to .drag-landing in the glide-arming turn — so the background fades
+      // opaque → normal ONCE, during the glide, instead of the classes
+      // snapping it opaque/normal/back around the drop.
+      d.el.classList.add('drag-lift');
       const endRect = d.el.getBoundingClientRect();
       const dx = startRect.left - endRect.left;
       const dy = startRect.top - endRect.top;
       if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
         d.el.style.transform = `translate(${dx}px, ${dy}px) scale(1.045)`;
         void d.el.offsetWidth; // land the invert before the transition arms
+        d.el.classList.remove('drag-lift');
         d.el.classList.add('drag-landing');
         grid.classList.remove('drag-settle');
         d.el.style.transform = '';
         const el = d.el;
         window.setTimeout(() => el.classList.remove('drag-landing'), 230);
       } else {
+        // No glide needed: fade the lifted look off in place.
         grid.classList.remove('drag-settle');
+        d.el.classList.remove('drag-lift');
       }
       return;
     }

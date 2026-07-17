@@ -187,6 +187,21 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.6
+- **Fix: no more opaque/normal background flashing on drop.** The lifted card
+  deliberately carries an opaque surface (so cards it passes over don't show
+  through it), but across the drop the drag classes were snapping that
+  background opaque → normal → opaque → normal, each switch instant — the
+  "flashing" reported on device. The shade story is now continuous: the card
+  *fades* to opaque on lift (background joined the lift transition), stays
+  opaque through the entire commit swap (the lifted look is held across the
+  atomic reorder), and then makes **one smooth fade back to the normal
+  translucent surface during the landing glide** — the landing class is no
+  longer opaque and transitions background/border along with its transform.
+  Verified under 6× CPU throttling by sampling the card's computed background
+  alpha every frame after release: a single monotonic fade (1.00 → 0.06),
+  never rising back toward opaque. Gate: 118 unit, 30 e2e.
+
 ### 0.1.5
 - **Rearchitected the drop: commit at release.** 0.1.4's atomic swap wasn't
   enough on device, because the *architecture* still had a swap moment — a
