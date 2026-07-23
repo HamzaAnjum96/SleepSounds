@@ -285,26 +285,29 @@ button, .material-symbols-rounded {
 }
 .moon:focus-visible { outline: none; } /* tabIndex=-1; never keyboard-reached */
 
-/* Dev mode: the moon wanes to a crescent — a night-sky disc fades in from the
-   upper-left, carving the lit edge on the lower-right, and the glow pulls in.
-   [v0.0.31] It also holds still: the gentle drift (moonDrift) is stopped while
-   dev mode is on, so the crescent just goes dark rather than darkening *and*
-   floating. Normal mode keeps its drifting moon. */
+/* Dev mode: the moon wanes to a crescent — a night-sky disc that cross-fades
+   in from the upper-left, carving the lit edge on the lower-right, while the
+   glow pulls in. Both the crescent (.moon-crescent, below) and the glow are
+   driven by transitions, so the change eases symmetrically in *and* out. The
+   gentle drift keeps running the whole time, so nothing snaps position when
+   dev mode toggles. */
 .moon-dev {
   box-shadow:
     0 0 14px rgba(210,180,110,0.35),
     0 0 34px rgba(200,165,100,0.16);
-  animation: none;
 }
-/* .moon.moon-dev so this outranks the later .moon::before crater rule. */
-.moon.moon-dev::before {
+/* The crescent overlay: dark in dev mode, transparent otherwise, cross-fading
+   both directions. Sits above the crater pseudo-elements so it darkens them. */
+.moon-crescent {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-full);
   background: radial-gradient(circle at 32% 36%, rgba(8,12,20,0.97) 0%, rgba(8,12,20,0.97) 61%, transparent 63%);
-  animation: moonWane 0.5s var(--ease) both;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease);
 }
-@keyframes moonWane {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+.moon-dev .moon-crescent { opacity: 1; }
 .moon::before {
   content: '';
   position: absolute;

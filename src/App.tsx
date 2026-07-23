@@ -1069,7 +1069,12 @@ export default function App() {
           className={`moon${devMode ? ' moon-dev' : ''}`}
           tabIndex={-1}
           onClick={handleMoonTap}
-        />
+        >
+          {/* The dev-mode crescent: a night-sky disc that cross-fades in and
+              out with dev mode. A real child (not a one-shot ::before animation)
+              so the fade is symmetric — smooth entering AND leaving. */}
+          <span className="moon-crescent" aria-hidden="true" />
+        </button>
       </div>
 
       <div className="layout">
