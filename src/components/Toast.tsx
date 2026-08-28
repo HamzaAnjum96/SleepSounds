@@ -17,11 +17,22 @@ interface ToastProps {
   actionLabel?: string;
   onAction?: () => void;
   onDismiss: () => void;
+  /** Pause the auto-dismiss while the user is inside the toast (focus or
+   *  pointer), and restart it when they leave — so "undo" cannot expire
+   *  mid-reach. The App owns the timer; these just hold and release it. */
+  onHold?: () => void;
+  onRelease?: () => void;
 }
 
-export default function Toast({ message, actionLabel, onAction, onDismiss }: ToastProps) {
+export default function Toast({ message, actionLabel, onAction, onDismiss, onHold, onRelease }: ToastProps) {
   return (
-    <div className="toast">
+    <div
+      className="toast"
+      onFocusCapture={onHold}
+      onBlurCapture={onRelease}
+      onPointerEnter={onHold}
+      onPointerLeave={onRelease}
+    >
       <span className="toast-text">{message}</span>
       {actionLabel && onAction && (
         <button

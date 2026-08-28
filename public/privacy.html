@@ -4,14 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#080c14" />
+    <meta name="color-scheme" content="dark" />
+    <!-- Already a tuned dark page; don't let Dark Reader re-invert it (same
+         guard the app shell carries). -->
+    <meta name="darkreader-lock" />
     <meta name="description" content="starlight's privacy policy and terms: no accounts, no analytics, no tracking — all sound is generated on your device and nothing leaves it." />
     <title>starlight — privacy & terms</title>
     <link rel="canonical" href="https://starlight.rest/privacy.html" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./fonts.css" />
     <style>
+      /* These mirror the app's text tokens in src/index.css. They drifted once
+         already: --muted was #5e657c, which put the eyebrow under the page
+         title at 3.38:1 — a serious contrast failure that survived because
+         this page keeps its own palette and sat outside the a11y gate. It is
+         covered by that gate now; keep these in step with the app's ramp. */
       :root {
-        --bg:#080c14; --ink:#dfe3ed; --dim:#8c93a8; --muted:#5e657c; --accent:#7ba7e8;
+        color-scheme: dark;
+        --bg:#080c14; --ink:#dfe3ed; --dim:#98a1ba; --muted:#848da7; --accent:#7ba7e8;
         --line:rgba(255,255,255,.08);
         --display:'Cormorant', Georgia, serif;
         --body:'Inter', system-ui, sans-serif;

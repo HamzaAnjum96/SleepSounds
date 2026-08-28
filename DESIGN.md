@@ -22,7 +22,8 @@ reserved for the sleep timer. No second hue competes.
 ## Color
 
 OKLCH-adjacent ink palette, expressed as hex/RGBA tokens. Text tiers are tuned
-for WCAG AA on `--bg` (contrast noted).
+for WCAG AA against `--surface-hover`, the lightest surface they render on —
+not against `--bg`; see the Text table below for why that distinction matters.
 
 ### Surfaces
 | Token | Value | Use |
@@ -255,6 +256,11 @@ Shared interactive vocabulary:
   even at rest), name, dot↔equaliser indicator, reveal-on-active
   volume slider, optional editor handle. `--r-xl`, `--surface`, accent glow when
   active. Two-column grid.
+- **Toast** — `.toast`: one calm snackbar carrying the undo for destructive
+  actions. Deliberately *not* a live region (the app's own status region
+  already speaks the change; making the toast live announced everything
+  twice), but its auto-dismiss is held while focus or the pointer is inside
+  it — undo is the forgiveness mechanism and must never expire mid-reach.
 - **Slider** — `.drift-slider`: a 6px track drawn on the track pseudo-element
   inside a 28px touch box, category/accent fill via the shared `sliderFill()`
   helper (`src/lib/sliderFill.ts`), and a bright 16px thumb (so the knob reads
@@ -305,6 +311,11 @@ real controls to be small: the mini-player play button is a true 44px, since
 it is the control the app is mostly used through, in the dark and one-handed.
 The one link in the shell (`.footer-privacy`) is underlined rather than set
 apart by colour alone.
+
+The **privacy page** (`public/privacy.html`) is a standalone static page with
+its own copy of the palette, since it ships outside the React bundle. Keep its
+`--ink / --dim / --muted / --accent` in step with the app's text ramp; they
+drifted once, leaving its eyebrow at 3.38:1. It is inside the axe gate now.
 
 **Forced colors** (Windows High Contrast) gets its own block. The forced
 palette is mostly kind here — the app degrades to clean black on white — but

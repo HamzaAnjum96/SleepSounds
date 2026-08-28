@@ -382,19 +382,37 @@ export default function App() {
   // a saved one) leave an "undo" here for a few seconds — forgiving in the dark.
   const [toast, setToast] = useState<{ id: number; message: string; actionLabel?: string; onAction?: () => void } | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  // The id of the toast currently on screen, so a hold/release from a toast
+  // that has already been replaced can never dismiss its successor.
+  const toastIdRef = useRef(0);
   const dismissToast = useCallback(() => {
     window.clearTimeout(toastTimer.current);
     setToast(null);
   }, []);
-  const showToast = useCallback((message: string, actionLabel?: string, onAction?: () => void) => {
+  const armToastTimer = useCallback((id: number) => {
     window.clearTimeout(toastTimer.current);
-    const id = Date.now();
-    setToast({ id, message, actionLabel, onAction });
     toastTimer.current = window.setTimeout(
       () => setToast((t) => (t?.id === id ? null : t)),
       5000,
     );
   }, []);
+  const showToast = useCallback((message: string, actionLabel?: string, onAction?: () => void) => {
+    const id = Date.now();
+    toastIdRef.current = id;
+    setToast({ id, message, actionLabel, onAction });
+    armToastTimer(id);
+  }, [armToastTimer]);
+  // Undo is this app's whole forgiveness mechanism, and it was on an
+  // unconditional five-second fuse: a keyboard or screen-reader user who
+  // tabbed toward "undo" could have it vanish from under them mid-reach, which
+  // is exactly the person least able to race a timer. Hold the fuse while focus
+  // is inside the toast, and restart it cleanly when focus leaves.
+  const holdToast = useCallback(() => {
+    window.clearTimeout(toastTimer.current);
+  }, []);
+  const releaseToast = useCallback(() => {
+    armToastTimer(toastIdRef.current);
+  }, [armToastTimer]);
 
   const handleDeletePreset = (id: string) => {
     const index = presets.findIndex((p) => p.id === id);
@@ -402,7 +420,7 @@ export default function App() {
     const removed = presets[index];
     persistPresets(presets.filter((p) => p.id !== id));
     if (activeMixId === id) setActiveMixId(null);
-    announce(`deleted mix ${removed.name}`);
+    announce(`deleted mix ${removed.name}, undo available`);
     showToast(`deleted "${removed.name}"`, 'undo', () => {
       setPresets((cur) => {
         if (cur.some((p) => p.id === removed.id)) return cur;
@@ -1383,6 +1401,8 @@ export default function App() {
           actionLabel={toast.actionLabel}
           onAction={toast.onAction}
           onDismiss={dismissToast}
+          onHold={holdToast}
+          onRelease={releaseToast}
         />
       )}
 

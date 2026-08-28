@@ -42,6 +42,16 @@ test('an open sound editor has no serious accessibility violations', async ({ pa
   await checkA11y(page, 'sound editor');
 });
 
+// Drift mode is the surface this app is *for* — the one left on screen all
+// night — and it was the only primary surface the gate never scanned.
+test('drift mode has no serious accessibility violations', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-body').click();
+  await page.locator('.sheet-action.accent').click();
+  await expect(page.locator('.drift-mode')).toBeVisible();
+  await checkA11y(page, 'drift mode');
+});
+
 // Guards the 0.0.12 focus trap: both modals are aria-modal, so Tab / Shift+Tab
 // must wrap at their edges rather than walk out into the shell behind them —
 // axe can't catch this (it's behavioural), hence the explicit keyboard walk.
@@ -73,6 +83,19 @@ test('keyboard focus stays trapped inside the open modals', async ({ page }) => 
     await page.keyboard.press('Tab');
     expect(await focusInside('.drift-mode'), `Tab #${i + 1} escaped drift mode`).toBe(true);
   }
+});
+
+// The privacy page is a standalone static page with its own copy of the
+// palette, so it drifts independently of the app — and because the gate only
+// ever visited the app shell, it carried a serious contrast failure (the
+// eyebrow under the title at 3.38:1) with every suite passing. It is a real
+// surface, linked from the footer of every screen; gate it like one.
+test.describe('privacy page', () => {
+  test('the privacy page has no serious accessibility violations', async ({ page }) => {
+    await page.goto('./privacy.html');
+    await expect(page.locator('h1.brand')).toBeVisible();
+    await checkA11y(page, 'privacy page');
+  });
 });
 
 test.describe('desktop split layout', () => {
