@@ -2975,6 +2975,60 @@ body:has(.mini-player) .toast {
   animation-timing-function: var(--ease);
 }
 
+/* ── Forced colors (Windows High Contrast) ───────────────────────── */
+/* The forced palette throws away our colours and repaints with the user's own.
+   That is mostly kind to this app — it degrades to clean, legible black on
+   white — but everything here that says something *only* in colour goes silent:
+   the equaliser bars, scene/mix state marks and connectivity dot are all
+   painted in an accent that flattens to the page background (white on white),
+   the active sound card is separated from a resting one by a 3.5% white wash,
+   and every slider draws its track on a pseudo-element background, which the
+   forced palette drops entirely and leaves an invisible control. So a high
+   contrast user could not see which sounds were playing, or find the volume
+   sliders at all. Restate each of those in system colours, which are
+   guaranteed to contrast against whatever palette the user has chosen. */
+@media (forced-colors: active) {
+  /* "This is playing" — the one piece of state the grid exists to show. */
+  .eq-bars span,
+  .scene-state span,
+  .mix-state span,
+  .card-dot.active,
+  .net-dot,
+  .sleep-safe.on .sleep-safe-dot {
+    background: Highlight;
+    box-shadow: none;
+  }
+  /* Active vs resting card, restated as a real outline rather than a wash. */
+  .sound-card.active {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+  /* Sliders: give the track an explicit border so the control is findable, and
+     the thumb a filled system colour so its position is readable. */
+  .drift-slider::-webkit-slider-runnable-track {
+    box-sizing: border-box;
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+  .drift-slider::-webkit-slider-thumb {
+    background: Highlight;
+    border: 1px solid CanvasText;
+  }
+  .drift-slider::-moz-range-track {
+    box-sizing: border-box;
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+  .drift-slider::-moz-range-progress { background: Highlight; }
+  .drift-slider::-moz-range-thumb {
+    background: Highlight;
+    border: 1px solid CanvasText;
+  }
+  /* Filled marks whose meaning is carried by their fill. */
+  .cat-count { background: Highlight; color: HighlightText; }
+  .mp-ring circle { stroke: Highlight; }
+}
+
 /* ── Reduced transparency ────────────────────────────────────────── */
 /* Some users (and OS "reduce transparency" settings) find blur-behind hard to
    read. Swap the glass surfaces for solid panels that still sit in the palette. */

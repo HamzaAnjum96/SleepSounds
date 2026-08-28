@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { SOUND_LIBRARY, CATEGORIES, BUILTIN_PRESETS, defaultVolumeFor, releasableSounds, HIDDEN_SOUND_IDS } from '../src/data';
 import { SCENES, presetSoundIds } from '../src/lib/scenes';
@@ -74,6 +75,31 @@ describe('categories', () => {
         const triplet = CATEGORY_COLORS[c];
         expect(triplet, `${c} colour`).toMatch(/^\d{1,3},\d{1,3},\d{1,3}$/);
       }
+    }
+  });
+
+  // CATEGORY_COLORS is a hand-kept mirror of the `--cat` custom properties in
+  // index.css: the stylesheet tints the cards and filters, while the TS map
+  // derives each saved mix's card gradient in JS, and CSS cannot import TS.
+  // Nothing but this test stops the two copies drifting apart — and drift here
+  // is quiet, showing up only as a saved mix tinted a colour its own category
+  // no longer uses.
+  it('CATEGORY_COLORS matches the --cat triplets in index.css', () => {
+    const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
+
+    const fromCss = new Map<string, string>();
+    for (const m of css.matchAll(/\[data-cat="([^"]+)"\]\s*\{\s*--cat:\s*([\d\s,]+?);/g)) {
+      fromCss.set(m[1], m[2].replace(/\s+/g, ''));
+    }
+    // Water rides the stylesheet's default --cat rather than a [data-cat] rule.
+    const defaultCat = css.match(/\.sound-card,\s*\.layer-row\s*\{\s*--cat:\s*([\d\s,]+?);/);
+    expect(defaultCat, 'default --cat declaration found in index.css').toBeTruthy();
+    fromCss.set('Water', defaultCat![1].replace(/\s+/g, ''));
+
+    for (const c of CATEGORIES) {
+      if (c === 'All') continue;
+      expect(fromCss.get(c), `index.css declares a --cat for ${c}`).toBeTruthy();
+      expect(CATEGORY_COLORS[c], `${c} triplet agrees with index.css`).toBe(fromCss.get(c));
     }
   });
 });

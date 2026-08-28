@@ -1016,13 +1016,38 @@ export default function App() {
     document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · starlight` : base;
   }, [isPlaying, mixTitle]);
 
-  // Teach the horizontal scroll: a gentle wink of the scenes shelf on every
-  // load so it reads as "there's more this way."
+  // Teach the horizontal scroll: a gentle wink of the scenes shelf so it reads
+  // as "there's more this way." It used to run on *every* load, which meant a
+  // nightly user got the same lesson re-taught in the dark forever — unprompted
+  // motion is the one thing this app should never spend on someone who has
+  // already learned. It now stops for good the first time they handle the shelf
+  // themselves, which is the moment the lesson has landed.
   useEffect(() => {
     const row = sceneRowRef.current;
     if (!row) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    if (row.scrollWidth <= row.clientWidth + 8) return;
+    let learned = false;
+    try { learned = localStorage.getItem('drift-scenes-explored') !== null; }
+    catch { /* private mode: just re-teach */ }
+
+    // Any deliberate handling of the shelf counts, however brief. Listening for
+    // gestures rather than the scroll event keeps the wink's own programmatic
+    // scrolling from being mistaken for the user's.
+    const remember = () => {
+      try { localStorage.setItem('drift-scenes-explored', '1'); } catch { /* private mode */ }
+    };
+    const opts = { passive: true, once: true } as const;
+    row.addEventListener('pointerdown', remember, opts);
+    row.addEventListener('wheel', remember, opts);
+    row.addEventListener('keydown', remember, opts);
+    const dropListeners = () => {
+      row.removeEventListener('pointerdown', remember);
+      row.removeEventListener('wheel', remember);
+      row.removeEventListener('keydown', remember);
+    };
+
+    if (learned) return dropListeners;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return dropListeners;
+    if (row.scrollWidth <= row.clientWidth + 8) return dropListeners;
     // Suspend scroll-snap during the wink, or proximity-snap yanks the peek
     // straight back before it's seen; restore it after.
     row.style.scrollSnapType = 'none';
@@ -1030,6 +1055,7 @@ export default function App() {
     const settle = window.setTimeout(() => row.scrollTo({ left: 0, behavior: 'smooth' }), 1650);
     const restore = window.setTimeout(() => { row.style.scrollSnapType = ''; }, 2250);
     return () => {
+      dropListeners();
       window.clearTimeout(peek);
       window.clearTimeout(settle);
       window.clearTimeout(restore);
@@ -1229,9 +1255,15 @@ export default function App() {
         <footer className="app-footer">
           <div className="footer-rest">rest well</div>
           <div className="footer-meta">
-            <span className={`net-badge${online ? '' : ' offline'}`} title={online ? 'Online' : 'Offline — everything still works'}>
+            {/* The reassurance used to live only in a `title`, which never
+                reaches a touch user and is announced inconsistently by screen
+                readers — so the word "offline" arrived bare, reading as a
+                warning in an app that works perfectly well without a network.
+                Say it in the document instead, visually hidden. */}
+            <span className={`net-badge${online ? '' : ' offline'}`}>
               <span className="net-dot" aria-hidden="true" />
               {online ? 'online' : 'offline'}
+              {!online && <span className="sr-only"> — everything still works</span>}
             </span>
             <span className="footer-sep" aria-hidden="true">·</span>
             <a

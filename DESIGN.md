@@ -199,6 +199,15 @@ JS `--moon-scroll` handler as the fallback.
 makes transitions instant, holds the moon and starfield still (no drift, no
 parallax), and freezes the equaliser as a static mark so "playing" still reads.
 
+**Unprompted motion has to earn its keep, and then stop.** The scenes shelf
+winks once on load to teach that it scrolls sideways. It used to do that on
+every load, which re-taught a nightly user the same lesson in the dark forever;
+it now stops for good the first time they handle the shelf themselves (a
+pointer, wheel or key gesture on the row, remembered in
+`drift-scenes-explored`). A teaching animation that keeps playing after the
+lesson has landed is just motion, and this app spends none of that on someone
+trying to fall asleep.
+
 ## Z-index
 
 A semantic scale, never arbitrary values: `--z-bg 0` (background, aurora,
@@ -295,7 +304,17 @@ stays enabled. The halo is for marks that must stay small, not a licence for
 real controls to be small: the mini-player play button is a true 44px, since
 it is the control the app is mostly used through, in the dark and one-handed.
 The one link in the shell (`.footer-privacy`) is underlined rather than set
-apart by colour alone. A first-run whisper above the grid teaches the mixer in one
+apart by colour alone.
+
+**Forced colors** (Windows High Contrast) gets its own block. The forced
+palette is mostly kind here — the app degrades to clean black on white — but
+it discards our colours, and anything that spoke *only* in colour went silent:
+the equaliser bars, scene/mix state marks and connectivity dot all flattened to
+white on white, the active card was a 3.5% wash apart from a resting one, and
+slider tracks (drawn on pseudo-element backgrounds) disappeared entirely. Each
+is restated in system colours (`Highlight`, `CanvasText`, `Canvas`), so which
+sounds are playing, and where every slider sits, stay readable. When adding
+anything whose meaning rides on a fill or an accent, extend that block too. A first-run whisper above the grid teaches the mixer in one
 line, then never returns.
 
 ## Layout
