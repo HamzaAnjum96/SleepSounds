@@ -114,14 +114,31 @@ names, the sheet title, and the drift-mode clock.
 | `--fs-display` | `clamp(2.4rem, 7vw, 3.2rem)` | Wordmark |
 | (serif) | 22px | Section headings, sheet title |
 | (serif) | 15–18px | Scene/mix names, mini-player title, greeting |
-| `--fs-lead` | 13px | Footer line, emphasis |
-| `--fs-body` | 12px | Sound names, inputs, list rows |
-| `--fs-control` | 11px | Chips, buttons, secondary controls |
-| `--fs-eyebrow` | 10px | Uppercase tracked labels, numeric readouts |
+| `--fs-lead` | `0.8125rem` (13px) | Footer line, emphasis |
+| `--fs-body` | `0.75rem` (12px) | Sound names, inputs, list rows |
+| `--fs-control` | `0.6875rem` (11px) | Chips, buttons, secondary controls |
+| `--fs-eyebrow` | `0.625rem` (10px) | Uppercase tracked labels, numeric readouts |
+
+**Text is sized in rem, icons in px.** The scale is anchored to the reader's
+own font size, not to 16px: in px, none of it moved when someone raised their
+browser's default text size, so the app's smallest labels stayed at 10px no
+matter what they asked for. The rem values are identical at the 16px default,
+so nothing shifts for a reader who never changed it (verified pixel-for-pixel).
+
+Icon glyphs (Material Symbols Rounded, 13–32px) deliberately stay in px and are
+not part of the text scale: a glyph is sized to the control box it sits in, not
+to reading, and scaling it would burst the fixed-size buttons around it. The
+same goes for the small marks set in the body face inside fixed boxes — the
+card ✕, the M/S layer toggles.
+
+Because text scales, **containers that hold text must not be fixed-height.**
+The scene and saved-mix cards use `min-height` and let a stretch flex row
+equalise them, and the scene mood carries no line clamp: capping it at two
+16px lines meant a larger text size silently ate the end of most scene
+descriptions rather than giving them room.
 
 Tracking: `--tracking-eyebrow` (0.2em) on all uppercase labels;
-`--tracking-wordmark` (0.06em) on the wordmark. Icon glyph sizes (Material
-Symbols Rounded, 13–32px) are set per-context and are not part of the text scale.
+`--tracking-wordmark` (0.06em) on the wordmark.
 
 ## Spacing
 

@@ -58,11 +58,19 @@
   --font-body:    'Inter', system-ui, sans-serif;
   --font-mono:    'SF Mono', 'Fira Code', ui-monospace, monospace;
 
-  /* ── Type · scale ─────────────────────────────────────────────── */
-  --fs-eyebrow: 10px;   /* uppercase tracked labels, numeric readouts  */
-  --fs-control: 11px;   /* chips, buttons, secondary controls          */
-  --fs-body:    12px;   /* sound names, inputs, list items             */
-  --fs-lead:    13px;   /* footer line, emphasis                       */
+  /* ── Type · scale ─────────────────────────────────────────────────
+     rem, so the scale is anchored to the reader's own font size rather than
+     to 16px. In px none of this moved when someone raised their browser's
+     default text size — the app's smallest labels stayed at 10px no matter
+     what they asked for. Values are the same at the 16px default (0.625rem =
+     10px), so nothing shifts for anyone who never changed it.
+     Icon glyphs deliberately stay in px: a Material Symbol is sized to the
+     control box it sits in, not to reading, and scaling it would burst the
+     fixed-size buttons it lives inside. */
+  --fs-eyebrow: 0.625rem;   /* 10px — uppercase tracked labels, readouts  */
+  --fs-control: 0.6875rem;  /* 11px — chips, buttons, secondary controls  */
+  --fs-body:    0.75rem;    /* 12px — sound names, inputs, list items     */
+  --fs-lead:    0.8125rem;  /* 13px — footer line, emphasis               */
   --fs-display: clamp(2.4rem, 7vw, 3.2rem);  /* wordmark               */
   --tracking-eyebrow: 0.2em;
   --tracking-wordmark: 0.06em;
@@ -162,7 +170,7 @@ button, input { touch-action: manipulation; }
 .crash-line {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--text-secondary);
 }
 .crash-btn {
@@ -446,7 +454,7 @@ button, .material-symbols-rounded {
     font-family: var(--font-display);
     font-style: italic;
     font-weight: 300;
-    font-size: 15px;
+    font-size: 0.9375rem;
     letter-spacing: 0.05em;
     color: var(--text-secondary);
     line-height: 1.5;
@@ -488,7 +496,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 300;
-  font-size: 17px;
+  font-size: 1.0625rem;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
 }
@@ -730,7 +738,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 22px;
+  font-size: 1.375rem;
   letter-spacing: 0.04em;
   color: var(--text-primary);
   line-height: 1.1;
@@ -818,7 +826,7 @@ header::after {
   border-radius: var(--r-full);
   background: rgb(var(--cat));
   color: #0a0f1a;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
@@ -832,7 +840,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 300;
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: 0.06em;
   color: var(--text-secondary);
   animation: fadeSlideUp 0.65s 0.4s var(--ease) backwards;
@@ -1340,7 +1348,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 0.875rem;
   letter-spacing: 0.08em;
   color: var(--text-dim);
 }
@@ -1432,7 +1440,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 18px;
+  font-size: 1.125rem;
   letter-spacing: 0.03em;
   line-height: 1.1;
   color: var(--text-bright);
@@ -1511,7 +1519,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 300;
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
 }
@@ -1877,7 +1885,12 @@ header::after {
 .scene-card {
   position: relative;
   flex: 0 0 168px;
-  height: 140px;
+  /* min-height, not height: the name, mood and layer count inside all scale
+     with the reader's font size, and a hard 140px cropped them the moment it
+     went up (or when a user's text-spacing overrides widened the lines). The
+     shelf is a stretch flex row, so the cards still share one height — that
+     height is now the tallest card's, rather than a number chosen for 16px. */
+  min-height: 140px;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -1969,7 +1982,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 18px;
+  font-size: 1.125rem;
   letter-spacing: 0.03em;
   line-height: 1.15;
   color: #f0f2f8;
@@ -1983,13 +1996,13 @@ header::after {
   letter-spacing: 0.05em;
   color: rgba(235,238,248,0.72);
   line-height: 1.35;
-  /* Two lines, then ellipsis — the card is a fixed height, so a longer mood
-     should taper cleanly rather than clip its top against the bottom edge. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* No line clamp. It was here because the card was a fixed 140px and a long
+     mood would otherwise crop against the bottom edge — but it capped the mood
+     at two lines measured in 16px type, so raising the browser's text size (or
+     applying a text-spacing override) silently ate the end of eight of the ten
+     scene descriptions instead of giving them room. The card is min-height now,
+     and the shelf stretches every card to match the tallest, so the mood simply
+     takes the lines it needs and the row stays even. */
 }
 /* Functional grounding: how many layers the scene is, so the cards read as
    real presets (the icons already show which sounds), not just mood art. */
@@ -1997,7 +2010,7 @@ header::after {
   position: relative;
   z-index: 1;
   margin-top: var(--sp-6);
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -2030,7 +2043,9 @@ header::after {
 .mix-card-body {
   position: relative;
   width: 148px;
-  height: 104px;
+  /* Same reason as .scene-card: the saved mix's name and layer count scale. */
+  min-height: 104px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -2100,7 +2115,7 @@ header::after {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 16px;
+  font-size: 1rem;
   letter-spacing: 0.03em;
   line-height: 1.15;
   color: var(--text-bright);
@@ -2313,7 +2328,7 @@ body:has(.mini-player) .cookie-notice {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: 0.03em;
   color: var(--text-bright);
   overflow: hidden;
@@ -2562,7 +2577,7 @@ body:has(.mini-player) .toast {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 400;
-  font-size: 22px;
+  font-size: 1.375rem;
   letter-spacing: 0.03em;
   line-height: 1.1;
   color: var(--text-bright);
@@ -2696,7 +2711,7 @@ body:has(.mini-player) .toast {
   margin: var(--sp-8) 0;
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
   text-align: center;
