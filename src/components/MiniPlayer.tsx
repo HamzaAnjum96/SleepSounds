@@ -6,7 +6,11 @@
 
 import { forwardRef, memo } from 'react';
 
-const RING_R = 21;
+// The timer ring is drawn just outside the 44px play disc: a 52px box (the
+// button plus the 4px inset in .mp-ring), stroked at r=24 so it clears the
+// disc's edge without touching it.
+const RING_BOX = 52;
+const RING_R = 24;
 const RING_C = 2 * Math.PI * RING_R;
 
 interface MiniPlayerProps {
@@ -45,9 +49,9 @@ const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlay
           </span>
         </button>
         {timerFrac !== null && (
-          <svg className="mp-ring" viewBox="0 0 46 46" aria-hidden="true">
+          <svg className="mp-ring" viewBox={`0 0 ${RING_BOX} ${RING_BOX}`} aria-hidden="true">
             <circle
-              cx="23" cy="23" r={RING_R}
+              cx={RING_BOX / 2} cy={RING_BOX / 2} r={RING_R}
               fill="none"
               stroke="var(--warm)"
               strokeWidth="1.5"
@@ -78,12 +82,17 @@ const MiniPlayer = forwardRef<HTMLDivElement, MiniPlayerProps>(function MiniPlay
         <span className="material-symbols-rounded">bookmark_add</span>
       </button>
 
+      {/* A second, larger tap area for the same action as .mp-body, and the
+          visual cue that the bar opens upward. It carried its own "Open now
+          playing" label, so a screen reader announced the one action twice;
+          it is out of the tab order already, so hide it from the a11y tree
+          entirely and let .mp-body be the single announced control. */}
       <button
         type="button"
         className="mp-expand"
         onClick={onOpen}
-        aria-label="Open now playing"
         tabIndex={-1}
+        aria-hidden="true"
       >
         <span className="material-symbols-rounded">keyboard_arrow_up</span>
       </button>

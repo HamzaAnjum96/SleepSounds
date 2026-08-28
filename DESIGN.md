@@ -41,18 +41,30 @@ for WCAG AA on `--bg` (contrast noted).
 | `--border-strong` | `rgba(255,255,255,.14)` |
 | `--border-active` | `rgba(160,185,255,.22)` |
 
-### Text (contrast on `--bg`)
+### Text (contrast on `--surface-hover`)
 | Token | Value | Contrast | Use |
 |---|---|---|---|
-| `--text-primary` | `#dfe3ed` | 15.2:1 | Body, sound names |
-| `--text-bright` | `#e8eef8` | ~16:1 | Active sound name |
-| `--text-secondary` | `#7e87a1` | 5.5:1 | Labels, readouts, secondary controls |
-| `--text-dim` | `#727b93` | 4.6:1 | De-emphasized marks, meta counts |
+| `--text-primary` | `#dfe3ed` | 13.7:1 | Body, sound names |
+| `--text-bright` | `#e8eef8` | ~15:1 | Active sound name |
+| `--text-secondary` | `#98a1ba` | 6.8:1 | Labels, readouts, secondary controls |
+| `--text-dim` | `#848da7` | 5.3:1 | De-emphasized marks, meta counts |
 
-All three text tiers clear WCAG AA for normal text (≥4.5:1). `--text-dim` was
-raised from 3.4:1 (which failed the floor for the informative meta labels that
-use it) to the 4.6:1 floor, and `--text-secondary` lifted enough to keep the
-tiers visibly ordered.
+**Ratios are measured against `--surface-hover`, not `--bg`.** That is the
+lightest surface these tiers actually render on, and it is the number that
+decides whether they pass. Measuring against the bare background is what let an
+earlier `--text-dim` ship documented at 4.63:1 while rendering at 4.16:1 inside
+a panel: under the AA floor in every place it was really used (section meta,
+footer, category counts, hints). All four tiers now clear AA for normal text
+(≥4.5:1) on the lightest surface, so they clear it everywhere.
+
+Two scoped overrides keep that promise where the canvas changes:
+
+- `html.samsung-browser` lifts `--bg` to `#0d1626` to survive Samsung
+  Internet's dark-mode pass. That lighter canvas costs contrast, so the ink is
+  re-lifted alongside it (`#a3abc2` / `#9099b2`) rather than left to scrape the
+  floor at 3.74:1.
+- `prefers-contrast: more` raises both tiers again (`#b9c0d2` / `#a2aac0`),
+  staying clear of the new baseline.
 
 ### Accent, warm, state
 | Token | Value | Use |
@@ -205,8 +217,14 @@ their side edges (mask fade) instead of hard-clipping mid-card.
 Shared interactive vocabulary:
 
 - **Pill / chip** — category filters, preset chips, timer chips, sound-editor
-  buttons. 1px border, transparent fill, `--fs-control`, accent or warm on
-  active. The recurring control primitive.
+  buttons, "stop mix". 1px border, transparent fill, `--fs-control`, accent or
+  warm on active. The recurring control primitive: **if it can be pressed, it
+  wears this.** Uppercase `--fs-eyebrow` text means "static label" and nothing
+  else, so a control never has to be told apart from the label beside it.
+  Category filters size to their content and wrap; they are never stretched to
+  share a row, which pushed their count badge outside their own border on a
+  small phone and marooned their label on a wide screen. A filter's count badge
+  is drawn only when that family has something playing.
 - **Card** — sound tile: category-tinted icon (a quiet trace of the family hue
   even at rest), name, dot↔equaliser indicator, reveal-on-active
   volume slider, optional editor handle. `--r-xl`, `--surface`, accent glow when
@@ -256,7 +274,11 @@ violations. Drift mode is a proper dialog (focus moved in, restored on exit,
 Esc closes). Reduced motion stills the entire scene, including the canvas sky.
 Small chips keep a calm visual size but carry invisible touch halos toward the
 44px guideline; `touch-action: manipulation` removes tap delay; pinch zoom
-stays enabled. A first-run whisper above the grid teaches the mixer in one
+stays enabled. The halo is for marks that must stay small, not a licence for
+real controls to be small: the mini-player play button is a true 44px, since
+it is the control the app is mostly used through, in the dark and one-handed.
+The one link in the shell (`.footer-privacy`) is underlined rather than set
+apart by colour alone. A first-run whisper above the grid teaches the mixer in one
 line, then never returns.
 
 ## Layout

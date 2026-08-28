@@ -26,14 +26,18 @@
   --border-strong:   rgba(255,255,255,0.14);
   --border-active:   rgba(160,185,255,0.22);
 
-  /* ── Color · text (contrast on --bg: 15.2 / 5.5 / 4.6 : 1) ────── */
-  /* All three tiers clear WCAG AA for normal text (≥4.5:1): the old --text-dim
-     sat at 3.4:1, below the floor for the informative meta labels that use it
-     (counts, footer). dim is raised to the floor and secondary lifted enough to
-     keep the three tiers visibly ordered. */
+  /* ── Color · text ─────────────────────────────────────────────────
+     Ratios are measured against --surface-hover (the LIGHTEST surface these
+     tiers actually render on), not against --bg. Measuring against the bare
+     background is what previously let --text-dim ship at 4.63:1 on paper while
+     rendering at 4.16:1 inside a panel — under the AA floor everywhere it was
+     actually used (section meta, footer, counts, hints).
+       primary 13.7 · secondary 6.8 · dim 5.3   (all ≥4.5:1, AA for body text)
+     Keep this basis when retuning: a tier is only as accessible as the
+     lightest surface it sits on. */
   --text-primary:    #dfe3ed;
-  --text-secondary:  #7e87a1;
-  --text-dim:        #727b93;
+  --text-secondary:  #98a1ba;
+  --text-dim:        #848da7;
   --text-bright:     #e8eef8;
 
   /* ── Color · accent + warm + state ────────────────────────────── */
@@ -708,11 +712,16 @@ header::after {
   flex-shrink: 0;
 }
 
+/* The meta is nowrap, so on a 320px screen it won a flex fight it had no
+   business winning and broke "the library" across two lines. Let the row wrap
+   instead: the title is never squeezed, and the meta drops to its own line only
+   when the two genuinely cannot share one. */
 .section-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--sp-8);
+  gap: var(--sp-2) var(--sp-8);
   margin-bottom: var(--sp-12);
 }
 
@@ -725,6 +734,7 @@ header::after {
   letter-spacing: 0.04em;
   color: var(--text-primary);
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .section-meta {
@@ -738,21 +748,23 @@ header::after {
 
 /* ── Category Pills ──────────────────────────────────────────────── */
 
-/* A fixed 3×3 grid: every family visible, pills stretched to share each row
-   equally, icon + name leading and the count ring anchored to the far edge. */
+/* A wrapping row of content-sized pills. This used to be a fixed 3×1fr grid,
+   which forced every pill to one third of the row: at 320-390px the widest
+   labels ("Wildlife", "Location") overflowed their own border by 3px, and on
+   desktop each pill stretched to ~310px with its label marooned at one end.
+   Sizing to content instead means a pill is exactly as wide as what it holds,
+   so it can never overflow and never sprawl, and the row simply reflows from
+   two columns on a small phone to a single line on a wide screen. */
 .cat-filters {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--sp-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
   margin-bottom: var(--sp-12);
 }
-.cat-filter {
-  white-space: nowrap;
-  min-width: 0;
-}
-.cat-filter .cat-count { margin-left: auto; }
 
 .cat-filter {
+  flex: 0 0 auto;
+  white-space: nowrap;
   --cat: 123,167,232;            /* "All" falls back to the accent blue */
   display: flex;
   align-items: center;
@@ -790,28 +802,27 @@ header::after {
 .cat-filter.active .cat-icon {
   opacity: 1;
 }
-/* The count badge rests as an empty ring — a quiet "nothing from this family
-   yet" — and fills with the category hue once its sounds are playing. */
+/* The count badge appears only for a family with sounds in the mix, wearing
+   that family's hue. It used to rest as an empty ring on every other pill,
+   meant as a quiet "nothing here yet" — but eight hollow circles in a row read
+   as unchecked radio buttons, inviting a tap that does nothing, and they were
+   the 15px that pushed each pill past its own border. Absence is the quieter
+   signal: nothing playing, nothing drawn. */
 .cat-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 15px;
+  min-width: 15px;
   height: 15px;
+  padding: 0 4px;
   border-radius: var(--r-full);
-  border: 1px solid rgba(255,255,255,0.18);
-  background: var(--surface-faint);
-  color: transparent;
+  background: rgb(var(--cat));
+  color: #0a0f1a;
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
   flex-shrink: 0;
-  transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
-}
-.cat-count.active {
-  border-color: transparent;
-  background: rgb(var(--cat));
-  color: #0a0f1a;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── First-run whisper ───────────────────────────────────────────── */
@@ -842,7 +853,13 @@ header::after {
   position: absolute;
   inset: -8px -3px;
 }
-.card-editor-icon::before { inset: -8px; }
+/* The 24px editor handle reached only 40px with an 8px halo; 10px clears the
+   44px guideline. Same for the timer keys, whose short labels ("1h", "2h")
+   left them ~34px wide. */
+.card-editor-icon::before { inset: -10px; }
+.timer-btn::before { inset: -10px -6px; }
+/* A floor under the narrowest timer keys so "1h" is as easy to hit as "+30m". */
+.timer-btn { min-width: 42px; }
 /* The card ✕ controls are small by design; grow their touch halo toward the
    44px guideline (22px glyph + 11px each side = 44px tall) for dark, one-handed
    use, without enlarging the visible mark. */
@@ -1328,13 +1345,29 @@ header::after {
   color: var(--text-dim);
 }
 .footer-sep { opacity: 0.6; }
+/* The only link on the page, sitting in a run of footer text it was separated
+   from by colour alone — and by barely 1.2:1 at that, so it did not read as a
+   link at all. An underline carries it instead (WCAG 1.4.1), kept faint enough
+   for the footer's whisper and warming on hover. */
 .footer-privacy {
+  position: relative;
   color: var(--text-secondary);
-  text-decoration: none;
-  transition: color var(--dur-2);
+  text-decoration: underline;
+  text-decoration-color: rgba(152,161,186,0.45);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: color var(--dur-2), text-decoration-color var(--dur-2);
+}
+/* Touch halo toward the 44px guideline without disturbing the footer baseline. */
+.footer-privacy::before {
+  content: '';
+  position: absolute;
+  inset: -12px -8px;
 }
 @media (hover: hover) {
-  .footer-privacy:hover { color: var(--text-primary);
+  .footer-privacy:hover {
+    color: var(--text-primary);
+    text-decoration-color: var(--text-primary);
   }
 }
 .footer-privacy:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -2215,14 +2248,17 @@ body:has(.mini-player) .cookie-notice {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* 44px, not 40: this is the control the app is mostly used through — found in
+   the dark, one-handed, half-asleep — so it is the last place to sit under the
+   44px target guideline. */
 .mp-play-wrap {
   position: relative;
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   flex-shrink: 0;
 }
 /* Solid bright disc: the one high-contrast focal point that catches the eye. */
 .mp-play {
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   border-radius: var(--r-full);
   border: none;
   background: var(--accent);
@@ -2251,7 +2287,7 @@ body:has(.mini-player) .cookie-notice {
 .mp-ring {
   position: absolute;
   inset: -4px;
-  width: 48px; height: 48px;
+  width: 52px; height: 52px;
   transform: rotate(-90deg);
   pointer-events: none;
   opacity: 0.9;
@@ -2292,6 +2328,7 @@ body:has(.mini-player) .cookie-notice {
 }
 
 .mp-expand {
+  position: relative;
   flex-shrink: 0;
   width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
@@ -2301,6 +2338,12 @@ body:has(.mini-player) .cookie-notice {
   cursor: pointer;
   outline: none;
   transition: color var(--dur-1);
+}
+/* Invisible halo to the 44px guideline without growing the visible chevron. */
+.mp-expand::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 .mp-expand .material-symbols-rounded { font-size: 20px; }
 @media (hover: hover) {
@@ -2414,37 +2457,6 @@ body:has(.mini-player) .toast {
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
 }
-
-/* ── Saved-mixes empty state ─────────────────────────────────────── */
-/* Shown only while a mix is playing and none are saved: teaches the section
-   exists and doubles as the save entry, without cluttering an idle home. */
-.mix-empty {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-10);
-  width: 100%;
-  padding: var(--sp-14) var(--sp-16);
-  background: var(--warm-glow);
-  border: 1px dashed var(--warm-line);
-  border-radius: var(--radius-card-lg);
-  color: var(--text-secondary);
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 15px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  outline: none;
-  transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1);
-}
-.mix-empty .material-symbols-rounded {
-  font-size: 19px;
-  color: var(--warm);
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
-}
-@media (hover: hover) {
-  .mix-empty:hover { color: var(--text-primary); border-color: var(--warm); background: rgba(184,154,106,0.16); }
-}
-.mix-empty:focus-visible { box-shadow: 0 0 0 2px var(--warm-line); }
 
 /* ── Now-playing sheet ───────────────────────────────────────────── */
 
@@ -2803,21 +2815,26 @@ body:has(.mini-player) .toast {
   color: var(--text-secondary);
 }
 
-/* Quiet text affordance: ends and clears the whole mix from the sheet. */
+/* Ends and clears the whole mix. It used to be bare uppercase text in the
+   --fs-eyebrow style — pixel-identical to the "the mix" label directly across
+   from it on the same baseline, so the only static label and the only
+   destructive control on the row looked exactly alike. Uppercase now means
+   "label" and nothing else; anything you can press wears the app's existing
+   chip: bordered, lowercase, and warning-coloured on approach. */
 .sheet-clear {
   position: relative;
-  border: none;
+  padding: var(--sp-4) var(--sp-10);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-sm);
   background: transparent;
-  padding: 0;
   font-family: var(--font-body);
-  font-size: var(--fs-eyebrow);
+  font-size: var(--fs-control);
   font-weight: 400;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-secondary);
   cursor: pointer;
   outline: none;
-  transition: color var(--dur-1);
+  transition: color var(--dur-1), border-color var(--dur-1), background var(--dur-1);
 }
 .sheet-clear::before {
   content: '';
@@ -2825,7 +2842,10 @@ body:has(.mini-player) .toast {
   inset: -10px -6px;
 }
 @media (hover: hover) {
-  .sheet-clear:hover { color: var(--danger);
+  .sheet-clear:hover {
+    color: var(--danger);
+    border-color: var(--danger-line);
+    background: var(--danger-tint);
   }
 }
 .sheet-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -2958,8 +2978,8 @@ body:has(.mini-player) .toast {
   :root {
     --border:         rgba(255,255,255,0.20);
     --border-strong:  rgba(255,255,255,0.34);
-    --text-secondary: #aab2c8;
-    --text-dim:       #8b93ad;
+    --text-secondary: #b9c0d2;
+    --text-dim:       #a2aac0;
   }
 }
 
@@ -2972,6 +2992,12 @@ body:has(.mini-player) .toast {
    the glass panels solid, and drop the edge-fade masks that can blank a shelf. */
 html.samsung-browser {
   --bg: #0d1626;
+  /* Lifting the canvas without lifting the ink costs contrast: on #0d1626 the
+     standard tiers land at 4.77 / 6.12 against --surface-hover instead of
+     5.31 / 6.81. Re-lift them by the same amount so Samsung reads exactly as
+     legible as Chrome rather than merely scraping the AA floor. */
+  --text-secondary: #a3abc2;
+  --text-dim:       #9099b2;
 }
 html.samsung-browser body { background: #0d1626; }
 html.samsung-browser .mini-player,

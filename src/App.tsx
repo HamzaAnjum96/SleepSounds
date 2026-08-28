@@ -1158,11 +1158,16 @@ export default function App() {
                   className={`cat-filter${category === cat ? ' active' : ''}`}
                   data-cat={cat}
                   aria-pressed={category === cat}
+                  // The badge is a bare numeral, which a screen reader would
+                  // read as "Water 1" — 1 what? Spell the count out here and
+                  // hide the visual badge from the a11y tree. The visible label
+                  // still leads the accessible name (WCAG 2.5.3 Label in Name).
+                  aria-label={hasCount ? `${cat}, ${n} playing` : cat}
                   onClick={() => selectCategory(cat)}
                 >
-                  {CATEGORY_ICONS[cat] && <span className="material-symbols-rounded cat-icon">{CATEGORY_ICONS[cat]}</span>}
+                  {CATEGORY_ICONS[cat] && <span className="material-symbols-rounded cat-icon" aria-hidden="true">{CATEGORY_ICONS[cat]}</span>}
                   {cat}
-                  <span className={`cat-count${hasCount ? ' active' : ''}`}>{hasCount ? n : ''}</span>
+                  {hasCount && <span className="cat-count" aria-hidden="true">{n}</span>}
                 </button>
               );
             })}
