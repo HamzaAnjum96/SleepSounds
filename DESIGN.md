@@ -410,6 +410,25 @@ eases both back for a brighter balance. Defaults across the library are tuned
 WAV loops render from their editor `def`s, the single source of truth for a
 default.
 
+## Performance
+
+The one number this app is judged on is what it costs to leave running. The
+starfield is the only thing animating on its own once a mix is playing, so it
+sets that floor: it draws ~30fps and, since 0.1.22, *wakes* only ~30 times a
+second. The cap used to sit inside a display-rate `requestAnimationFrame` loop
+— measured 60 wakeups a second to deliver 21.8 frames, and on a 120Hz phone it
+would have been 120 for the same. Sleeping between frames and only then asking
+for a paint halved the wakeups and, because the old timestamp throttle drifted
+past its own interval, actually raised the delivered rate to the documented 30.
+The loop still stops dead on a hidden tab and still degrades to a single static
+frame under reduced motion.
+
+Measured, and deliberately left alone: the breathing play orb in drift mode
+animates `box-shadow`, normally a repaint smell, but drift mode costs *less*
+main-thread time than the mixer (9.6% vs 11.4% over ten seconds, with identical
+style and layout time), so there is no signal to optimise against. The
+dominant cost while playing is the audio graph itself, which is the product.
+
 ## Atmosphere
 
 Three fixed layers behind the shell: the `bg-layer` gradients, the **aurora**

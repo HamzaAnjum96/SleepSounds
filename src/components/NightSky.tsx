@@ -11,9 +11,9 @@ import { memo, useEffect, useRef } from 'react';
  *   with the mix (the `dim` prop), reinforcing wind-down.
  * - A rare meteor crosses while playing. Never more than one at a time,
  *   never while idle.
- * - Renders at 30fps (twinkle is slow; battery matters at the bedside),
- *   pauses entirely on hidden tabs, and draws a single static frame under
- *   prefers-reduced-motion.
+ * - Renders at ~30fps and *wakes* only that often (twinkle is slow; battery
+ *   matters at the bedside), pauses entirely on hidden tabs, and draws a
+ *   single static frame under prefers-reduced-motion.
  */
 
 interface NightSkyProps {
@@ -93,9 +93,9 @@ function NightSky({ playing, intensity, dim }: NightSkyProps) {
     if (!ctx) return;
 
     let raf = 0;
+    let tick = 0;
     let running = false;
     let brightness = 0.72;            // smoothed global brightness
-    let lastFrame = 0;
     let meteor: Meteor | null = null;
     let nextMeteorAt = performance.now() + 16000;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -169,12 +169,21 @@ function NightSky({ playing, intensity, dim }: NightSkyProps) {
       }
     };
 
+    // Wake ~30 times a second, rather than asking for every frame and throwing
+    // most of them away. The cap used to sit *inside* a display-rate rAF loop:
+    // measured 60 callbacks a second to produce 26 drawn frames, and on a 120Hz
+    // phone it would be 120 for the same 30. That is the main thread being woken
+    // several times a second, all night, to check a timestamp and return — in
+    // the one app that is explicitly meant to sit at a bedside until morning.
+    // Sleeping between frames and only then asking for a paint keeps the same
+    // cadence and the same picture, with a third of the wakeups.
     const loop = (t: number) => {
       if (!running) return;
-      raf = requestAnimationFrame(loop);
-      if (t - lastFrame < FRAME_MS) return; // 30fps cap
-      lastFrame = t;
       draw(t, true);
+      const spent = performance.now() - t;
+      tick = window.setTimeout(() => {
+        if (running) raf = requestAnimationFrame(loop);
+      }, Math.max(0, FRAME_MS - spent));
     };
 
     const start = () => {
@@ -185,6 +194,7 @@ function NightSky({ playing, intensity, dim }: NightSkyProps) {
     const stop = () => {
       running = false;
       cancelAnimationFrame(raf);
+      window.clearTimeout(tick);
     };
 
     const renderStatic = () => {
