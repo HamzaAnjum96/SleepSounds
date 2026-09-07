@@ -438,6 +438,25 @@ test('the privacy page is reachable', async ({ page }) => {
   await expect(link).toHaveAttribute('href', /privacy\.html$/);
 });
 
+// [0.1.24] The wordmark is sized off viewport WIDTH (7vw), so turning a phone
+// sideways grew it to its cap exactly when vertical space ran out: the header
+// took 39% of an 844x390 screen, and at 740x360 the first scene card was cut
+// off by the fold. Short viewports get a compressed header; assert the card
+// that used to be cut off now fits, and that the header stays a modest slice.
+test.describe('short viewport (landscape phone)', () => {
+  test.use({ viewport: { width: 740, height: 360 } });
+
+  test('the header yields and the first scene card is not cut off', async ({ page }) => {
+    const header = page.locator('header');
+    const card = page.locator('.scene-card').first();
+    const h = (await header.boundingBox())!;
+    const c = (await card.boundingBox())!;
+
+    expect(h.height, 'header should not dominate a short viewport').toBeLessThan(360 * 0.3);
+    expect(c.y + c.height, 'first scene card must fit above the fold').toBeLessThanOrEqual(360);
+  });
+});
+
 test.describe('desktop split layout', () => {
   test.use({ viewport: { width: 1280, height: 860 }, isMobile: false, hasTouch: false });
 

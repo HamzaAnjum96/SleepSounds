@@ -410,6 +410,36 @@ eases both back for a brighter balance. Defaults across the library are tuned
 WAV loops render from their editor `def`s, the single source of truth for a
 default.
 
+## Short viewports
+
+The vertical rhythm is tuned for a portrait phone, and one rule made turning
+that phone sideways worse than it had to be: the wordmark is sized off viewport
+*width* (`7vw`), so landscape grew it to its `3.2rem` cap at exactly the moment
+height became scarce. Measured on an 844x390 landscape phone, the header took
+**39%** of the screen and the library — the actual product — began at y=421,
+past the fold; at 740x360 the first scene card was cut off outright.
+
+A `@media (max-height: 500px)` block pins the wordmark to a fixed `2.2rem` and
+tightens the header padding, greeting and section rhythm. Header goes from 39%
+to 23% of the screen, and the scene card that was cut off now fits. It keys off
+the constraint that actually binds (height), not a device guess, so a short
+desktop window gets the same relief; portrait phones (~844px) and desktops
+(~900px) are untouched, verified pixel-for-pixel.
+
+Two things to keep in mind when adding rules there:
+
+- **A media query adds no specificity.** Declared before the base `header` and
+  `.section` rules it simply lost the cascade, and only the token override took
+  effect. It lives after them for that reason.
+- Anything sized in `vw` is worth a second thought: on a phone, width and
+  height swap places.
+
+Known and accepted: with 12+ layers in the mix, the sleep timer and drift-mode
+actions sit below the fold of the now-playing sheet (measured: 1290px of content
+in a 587px window at 19 layers). Everything is still reachable by scrolling, and
+reordering the sheet would disturb its drag-to-close and focus-trap behaviour,
+so this is a note rather than a change.
+
 ## Direction and locale
 
 The shell is built from **logical properties**, so setting `dir="rtl"` on the

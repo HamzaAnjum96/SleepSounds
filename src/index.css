@@ -2962,6 +2962,36 @@ body:has(.mini-player) .toast {
   box-shadow: 0 0 0 2px var(--accent), var(--glow-accent);
 }
 
+/* ── Short viewports (landscape phone, split screen) ─────────────── */
+/* The wordmark is sized off viewport WIDTH (`7vw`), so turning a phone
+   sideways made it grow to its 3.2rem cap at exactly the moment vertical space
+   became scarce. Measured on a 844x390 landscape phone: the header took 39% of
+   the screen, and "the library" — the actual product — started at y=421, well
+   past a 390px fold. At 740x360 the first scene card was cut off outright.
+   Nothing here is a phone-only rule; it keys off the constraint that actually
+   binds (height), so a short desktop window gets the same relief. Portrait
+   phones are ~844px tall and desktops ~900px, so neither is touched.
+   Placed here, after the base header and section rules: a media query adds
+   no specificity, so declared earlier it simply lost the cascade. */
+@media (max-height: 500px) {
+  :root {
+    /* Stop the width-driven growth: a fixed, smaller wordmark. */
+    --fs-display: 2.2rem;
+  }
+  header {
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--sp-16));
+    padding-bottom: var(--sp-12);
+    margin-bottom: var(--sp-8);
+  }
+  .greeting {
+    margin-top: var(--sp-4);
+    font-size: 0.875rem;
+  }
+  /* Tighter rhythm between shelves, so the library clears the fold. */
+  .section { margin-bottom: var(--sp-16); }
+  .first-hint { margin-bottom: var(--sp-8); }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────── */
 /* A sleep app should never insist on movement. Hold the ambient scene
    still and make every state change instant for users who ask for it. */
