@@ -480,6 +480,48 @@ test('the privacy page is reachable', async ({ page }) => {
 // "stopped" — as if they had done it on purpose. Forcing the failure is the
 // only honest way to test it: media-element playback is what the wav-backed
 // sounds use, so rejecting play() is exactly the shape of a real failure.
+// [0.1.27] Saving a mix is confirmed out loud, and the write was wrapped in a
+// swallowing catch — so with storage refused (private browsing, exhausted
+// quota) the app announced "saved mix X", showed it in the shelf, stored
+// nothing, and the mix was gone on the next open with no warning ever given.
+test('a mix that cannot be stored says so instead of confirming', async ({ page }) => {
+  await page.evaluate(() => {
+    const realSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function setItem(this: Storage, k: string, v: string) {
+      if (k === 'sleep-mixer-presets-v2') {
+        const e = new Error('QuotaExceededError');
+        e.name = 'QuotaExceededError';
+        throw e;
+      }
+      return realSet.call(this, k, v);
+    };
+  });
+
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-save').click();
+  await page.locator('.preset-input').fill('Night One');
+  await page.locator('.preset-save-btn').click();
+
+  await expect(page.locator('.toast-text')).toHaveText(/couldn’t save “Night One”/);
+  // and it must NOT claim the save succeeded
+  await expect(page.locator('[role="status"]')).toHaveText(/could not be saved/);
+  // the mix still works for this session rather than vanishing mid-use
+  await expect(page.locator('.mix-name')).toHaveText('Night One');
+});
+
+test('a mix that stores cleanly confirms without a warning', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await page.locator('.mp-save').click();
+  await page.locator('.preset-input').fill('Night One');
+  await page.locator('.preset-save-btn').click();
+
+  await expect(page.locator('[role="status"]')).toHaveText(/saved mix Night One/);
+  await expect(page.locator('.toast')).toHaveCount(0);
+  await page.reload();
+  await dismissNotice(page);
+  await expect(page.locator('.mix-name')).toHaveText('Night One');
+});
+
 test('a sound that fails to start says so, and can be retried', async ({ page }) => {
   await page.evaluate(() => {
     const w = window as unknown as { __broken: boolean };

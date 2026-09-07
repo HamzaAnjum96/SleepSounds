@@ -383,9 +383,11 @@ export default function App() {
   // Open the sheet straight into its save field (mini-player save tap).
   const [sheetStartSaving, setSheetStartSaving] = useState(false);
 
+  /** Update the mixes and write them through. Returns false if the write was
+   *  refused, so a caller that confirms the action can tell the truth. */
   const persistPresets = (next: Preset[]) => {
     setPresets(next);
-    saveSavedMixes(next);
+    return saveSavedMixes(next);
   };
 
   // A single forgiving snackbar. Destructive actions (stopping a mix, deleting
@@ -458,12 +460,21 @@ export default function App() {
       state: bakeForSave(soundState),
       masterVolume,
     };
-    persistPresets([...presets, preset]);
+    const stored = persistPresets([...presets, preset]);
     setActiveMixId(preset.id);
     // [v0.0.29 a11y] Confirm the save to screen readers — deleting a mix already
     // announces ("deleted mix …"), but saving was silent, so a non-sighted user
     // got no acknowledgement that the key action succeeded.
-    announce(`saved mix ${name}`);
+    if (stored) {
+      announce(`saved mix ${name}`);
+      return;
+    }
+    // The write was refused (private browsing, exhausted quota, storage off).
+    // The mix stays in this session — it plays, and dropping it would help
+    // nobody — but confirming a save that did not happen is the one thing not
+    // to do here: the user would find it gone tomorrow with no idea why.
+    announce(`${name} could not be saved`);
+    showToast(`couldn’t save “${name}” — it won’t be here next time`);
   };
 
   // Stop the whole mix, but leave an undo: snapshot the live layers first, so

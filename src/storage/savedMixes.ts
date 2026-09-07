@@ -18,10 +18,20 @@ export function loadSavedMixes(): Preset[] {
   }
 }
 
-export function saveSavedMixes(mixes: Preset[]): void {
+/**
+ * Persist the saved mixes. Returns false when the browser refused the write —
+ * private browsing, an exhausted quota, storage switched off. The caller has to
+ * know: saving a mix is a deliberate act the app confirms out loud, and
+ * swallowing the failure meant confirming a save that had not happened and
+ * would be gone on the next open.
+ */
+export function saveSavedMixes(mixes: Preset[]): boolean {
   try {
     localStorage.setItem(STORAGE_KEYS.savedMixes, JSON.stringify(mixes));
-  } catch { /* private mode / quota */ }
+    return true;
+  } catch {
+    return false; // private mode / quota
+  }
 }
 
 /** Last night's mix (enabled layers + master volume), or null. */

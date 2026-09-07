@@ -412,6 +412,22 @@ default.
 
 ## Failure states
 
+The rule: **never confirm something that did not happen.** The app speaks its
+successes out loud (a status region, a toast), so a swallowed failure does not
+just lose the action — it actively tells the user the opposite.
+
+Two paths were doing exactly that, and both now report:
+
+- **Saving a mix.** The write was wrapped in a swallowing catch, so with
+  storage refused (private browsing, an exhausted quota, storage switched off)
+  the app announced "saved mix X", showed it in the shelf, stored nothing, and
+  the mix was gone on the next open with no warning ever given. It now says
+  `couldn't save "X" — it won't be here next time`, and the announcement no
+  longer claims a save. The mix stays live for the session: it plays, and
+  dropping it would help nobody.
+- **Starting a sound** (below).
+
+
 Sounds are synthesised at runtime rather than fetched, so "it did not start" is
 a real possibility — a worklet that will not load, a generation that throws, a
 context that will not resume — not just a network problem.
@@ -423,14 +439,21 @@ looked broken, while the status line said "stopped" as though the user had done
 it on purpose. The tap is itself a user gesture, so autoplay policy is never the
 cause here; something actually broke, and it is worth saying so.
 
-The resume paths (`playAllActive`, `restoreMixerState`) stay deliberately
-quiet. A blocked autoplay there is expected — the app restores last night's mix
+Two neighbouring paths stay deliberately quiet, for reasons worth keeping
+straight from the two above. The resume paths (`playAllActive`,
+`restoreMixerState`) A blocked autoplay there is expected — the app restores last night's mix
 paused precisely because a gesture is required — and it corrects itself on the
 next tap. Reporting it would cry wolf on every cold open.
 
-Gated by e2e tests that force the failure (rejecting `HTMLMediaElement.play`,
-the real shape of a wav-backed sound failing) and assert both that the failure
-speaks and that the happy path stays silent.
+And the sound-order write (hold-to-arrange) stays quiet because it never
+claims otherwise: the move genuinely happened, and the announcement describes
+the move rather than a save. Losing the arrangement is a smaller harm than
+being told a mix is safe when it is not.
+
+Both reporting paths are gated by e2e tests that force the real failure —
+rejecting `HTMLMediaElement.play`, and a `setItem` that throws
+`QuotaExceededError` — and assert both that the failure speaks and that the
+happy path stays silent and still persists.
 
 ## Dev mode
 
