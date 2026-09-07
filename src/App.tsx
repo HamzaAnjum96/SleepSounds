@@ -262,6 +262,16 @@ export default function App() {
   // Dev mode: spam-tap the moon (5 taps inside 3s) to toggle. Session-only by
   // design — a refresh always lands back in the normal app.
   const [devMode, setDevMode] = useState(false);
+  // Dev mode drains the colour out of the whole app. The class goes on the
+  // document element, not into the React tree, because the things that need
+  // desaturating include every fixed layer painted outside the shell — the
+  // starfield, the aurora, the moon, the player, the sheets and the toast.
+  // Removing it on cleanup keeps a hot reload from stranding the page grey.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dev-mono', devMode);
+    return () => root.classList.remove('dev-mono');
+  }, [devMode]);
   const moonTapsRef = useRef<number[]>([]);
   const handleMoonTap = useCallback(() => {
     const now = Date.now();

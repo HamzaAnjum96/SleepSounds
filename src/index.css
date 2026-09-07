@@ -340,6 +340,21 @@ button, .material-symbols-rounded {
   50%       { transform: translateY(-6px); }
 }
 
+/* ── Dev mode: monochrome ────────────────────────────────────────── */
+/* Spam-tapping the moon drains the colour out of the app: same layout, same
+   components, same everything — just no hue. A filter on the document element
+   is what reaches the whole scene at once, including the fixed layers that sit
+   outside the shell (starfield, aurora, moon, player, sheets, toast) and the
+   inline gradient art on the scene and saved-mix cards, which no token
+   override could touch.
+   The transition lives on `html` rather than inside `.dev-mono` so the fade is
+   symmetric — grey on the way in AND colour on the way out — the same reason
+   the moon's crescent is a real child rather than a one-shot animation.
+   Fixed positioning survives this: verified the player and sky stay pinned
+   while the shell scrolls under them. */
+html { transition: filter 0.5s var(--ease); }
+html.dev-mono { filter: grayscale(1); }
+
 /* ── App Shell ───────────────────────────────────────────────────── */
 
 .app {

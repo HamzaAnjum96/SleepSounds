@@ -410,6 +410,37 @@ eases both back for a brighter balance. Defaults across the library are tuned
 WAV loops render from their editor `def`s, the single source of truth for a
 default.
 
+## Dev mode
+
+Five quick taps on the moon toggles it (session-only by design — a refresh
+always lands back in the normal app). It reveals the held-back sounds, wanes
+the moon to a crescent, marks the greeting, and **drains the colour out of the
+whole app**: same layout, same components, same everything, just no hue.
+
+The monochrome is a `grayscale(1)` filter on the document element, set from a
+`dev-mono` class. It goes on `<html>` rather than into the React tree because
+the things that need desaturating include every fixed layer painted outside the
+shell — starfield, aurora, moon, mini player, sheets, drift mode, toast — and
+the inline gradient art on the scene and saved-mix cards, which no token
+override could reach. The transition lives on `html` rather than inside
+`.dev-mono` so the fade is symmetric, grey on the way in and colour on the way
+out, for the same reason the moon's crescent is a real child rather than a
+one-shot animation.
+
+Two things were checked rather than assumed, because a filter creates a
+containing block and a new stacking context:
+
+- **Fixed positioning survives it.** The mini player stays pinned while the
+  shell scrolls under it, the sheet stays flush to the bottom edge, and drift
+  mode still covers the viewport exactly.
+- **It is free.** Measured 3.8% main-thread time in dev mode against 4.4%
+  normal over eight seconds — the filter composites on the GPU and does not
+  fight the starfield.
+
+Gated by an e2e test that samples real pixels (a grayscale filter is invisible
+to the DOM): colour goes from ~46% of lit pixels to 0.00% and back on toggle,
+while the header and player boxes do not move.
+
 ## Short viewports
 
 The vertical rhythm is tuned for a portrait phone, and one rule made turning

@@ -37,6 +37,35 @@ test('the storage notice waits for the first sound, then shows once', async ({ p
   await expect(page.locator('.cookie-notice')).toBeHidden();
 });
 
+/** Bounding box rounded to whole pixels, for layout-stability assertions. */
+function roundBox(b: { x: number; y: number; width: number; height: number }) {
+  return { x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) };
+}
+
+/** Percentage of the lit pixels on screen that carry any colour at all. A
+ *  grayscale filter leaves the DOM untouched, so the only honest way to check
+ *  it is to look at what was actually painted. */
+async function colouredPixelShare(page: Page): Promise<number> {
+  const shot = await page.screenshot();
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = 'data:image/png;base64,' + b64;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    let lit = 0, coloured = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const mx = Math.max(d[i], d[i + 1], d[i + 2]);
+      const mn = Math.min(d[i], d[i + 1], d[i + 2]);
+      if (mx > 24) { lit++; if (mx - mn > 18) coloured++; }
+    }
+    return lit ? (100 * coloured) / lit : 0;
+  }, shot.toString('base64'));
+}
+
 test('the library renders its sounds', async ({ page }) => {
   expect(await page.locator('.sound-card').count()).toBeGreaterThan(10);
   await expect(page.locator('.scene-card').first()).toBeVisible();
@@ -443,6 +472,45 @@ test('the privacy page is reachable', async ({ page }) => {
 // took 39% of an 844x390 screen, and at 740x360 the first scene card was cut
 // off by the fold. Short viewports get a compressed header; assert the card
 // that used to be cut off now fits, and that the header stays a modest slice.
+// [0.1.25] Dev mode (five quick taps on the moon) drains the colour out of the
+// app but must not move anything: same layout, same components, just no hue.
+// Asserted on real pixels, since a grayscale filter is invisible to the DOM.
+test('dev mode goes monochrome without moving anything', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+  // The player rises in over 0.45s; measuring mid-animation reads its
+  // transform, not its resting place, and leaves the baseline 6px out.
+  await page.waitForTimeout(700);
+
+  // Dev mode also reveals the held-back sounds, so the grid legitimately grows.
+  // Measure the chrome around it instead: that must not shift at all.
+  const header = page.locator('header');
+  const player = page.locator('.mini-player');
+  // Rounded: sub-pixel float noise between two boundingBox() calls is not a
+  // layout change, and asserting on it would make this test flaky.
+  const boxes = async () => ({
+    header: roundBox((await header.boundingBox())!),
+    player: roundBox((await player.boundingBox())!),
+  });
+  const before = await boxes();
+  const colourBefore = await colouredPixelShare(page);
+  expect(colourBefore, 'the app is colourful to begin with').toBeGreaterThan(5);
+
+  const moon = page.locator('.moon');
+  for (let i = 0; i < 5; i++) { await moon.click({ force: true }); await page.waitForTimeout(80); }
+  await expect(page.locator('html')).toHaveClass(/dev-mono/);
+  await page.waitForTimeout(700); // the 0.5s cross-fade
+
+  expect(await colouredPixelShare(page), 'no colour left in dev mode').toBeLessThan(0.5);
+  expect(await boxes(), 'monochrome must not move anything').toEqual(before);
+
+  // ...and it is a toggle, not a one-way door.
+  for (let i = 0; i < 5; i++) { await moon.click({ force: true }); await page.waitForTimeout(80); }
+  await expect(page.locator('html')).not.toHaveClass(/dev-mono/);
+  await page.waitForTimeout(700);
+  expect(await colouredPixelShare(page), 'colour returns when toggled off').toBeGreaterThan(5);
+});
+
 test.describe('short viewport (landscape phone)', () => {
   test.use({ viewport: { width: 740, height: 360 } });
 
