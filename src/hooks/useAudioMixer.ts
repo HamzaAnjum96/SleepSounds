@@ -221,8 +221,20 @@ export const useAudioMixer = (sounds: Sound[]) => {
     [clearFade, doFadeIn],
   );
 
+  /**
+   * Toggle a layer in or out of the mix.
+   *
+   * Returns false only when a layer the user deliberately switched ON failed to
+   * start. That case is worth reporting: the tap is itself a user gesture, so
+   * autoplay policy is not the cause — something actually broke (a worklet that
+   * would not load, a generation that threw, a dead context). Turning the card
+   * back off without a word leaves the user tapping a control that appears to
+   * do nothing. The resume paths (playAllActive, restoreMixerState) stay quiet
+   * on purpose: a blocked autoplay there is expected and fixes itself on the
+   * next tap.
+   */
   const toggleSound = useCallback(
-    async (soundId: string) => {
+    async (soundId: string): Promise<boolean> => {
       const nextEnabled = !soundState[soundId]?.enabled;
       setSoundState((prev) => ({
         ...prev,
@@ -230,7 +242,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
       }));
 
       const source = audioMapRef.current[soundId];
-      if (!source) return;
+      if (!source) return false;
 
       if (nextEnabled) {
         const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume * masterFade));
@@ -240,6 +252,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
             ...prev,
             [soundId]: { ...prev[soundId], enabled: false },
           }));
+          return false;
         }
       } else {
         clearFade(soundId);
@@ -249,6 +262,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         setSoloIds((prev) => prev.filter((id) => id !== soundId));
         doFadeOut(soundId, () => source.stop());
       }
+      return true;
     },
     [clearFade, doFadeOut, startSource, masterVolume, masterFade, soundState],
   );

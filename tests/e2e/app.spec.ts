@@ -475,6 +475,42 @@ test('the privacy page is reachable', async ({ page }) => {
 // [0.1.25] Dev mode (five quick taps on the moon) drains the colour out of the
 // app but must not move anything: same layout, same components, just no hue.
 // Asserted on real pixels, since a grayscale filter is invisible to the DOM.
+// [0.1.26] A layer the user deliberately switches on that fails to start used
+// to flip itself back off with no explanation, while the live region said
+// "stopped" — as if they had done it on purpose. Forcing the failure is the
+// only honest way to test it: media-element playback is what the wav-backed
+// sounds use, so rejecting play() is exactly the shape of a real failure.
+test('a sound that fails to start says so, and can be retried', async ({ page }) => {
+  await page.evaluate(() => {
+    const w = window as unknown as { __broken: boolean };
+    const real = HTMLMediaElement.prototype.play;
+    w.__broken = true;
+    HTMLMediaElement.prototype.play = function play(this: HTMLMediaElement) {
+      return w.__broken ? Promise.reject(new Error('forced failure')) : real.call(this);
+    };
+  });
+
+  await page.locator('[data-sound-id="fan"] .sound-card-toggle').click();
+
+  await expect(page.locator('.toast-text')).toHaveText(/couldn’t start Fan/);
+  await expect(page.locator('[role="status"]')).toHaveText(/Fan could not start/);
+  // The card does not pretend it is playing.
+  await expect(page.locator('[data-sound-id="fan"]')).not.toHaveClass(/active/);
+
+  // Once whatever broke is better, retry brings it in.
+  await page.evaluate(() => { (window as unknown as { __broken: boolean }).__broken = false; });
+  await page.locator('.toast-action').click();
+  await expect(page.locator('[data-sound-id="fan"]')).toHaveClass(/active/);
+  await expect(page.locator('.mini-player')).toBeVisible();
+});
+
+// A sound that starts normally must stay silent — no toast for the happy path.
+test('starting a sound normally shows no error', async ({ page }) => {
+  await page.locator('[data-sound-id="fan"] .sound-card-toggle').click();
+  await expect(page.locator('[data-sound-id="fan"]')).toHaveClass(/active/);
+  await expect(page.locator('.toast')).toHaveCount(0);
+});
+
 test('dev mode goes monochrome without moving anything', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await expect(page.locator('.mini-player')).toBeVisible();

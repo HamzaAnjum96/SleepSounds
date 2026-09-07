@@ -410,6 +410,28 @@ eases both back for a brighter balance. Defaults across the library are tuned
 WAV loops render from their editor `def`s, the single source of truth for a
 default.
 
+## Failure states
+
+Sounds are synthesised at runtime rather than fetched, so "it did not start" is
+a real possibility — a worklet that will not load, a generation that throws, a
+context that will not resume — not just a network problem.
+
+A layer the user **deliberately switches on** and which then fails to start
+gets a toast (`couldn't start Fan`) with a **retry**, plus a live-region
+announcement. It previously just flipped itself back off, leaving a control that
+looked broken, while the status line said "stopped" as though the user had done
+it on purpose. The tap is itself a user gesture, so autoplay policy is never the
+cause here; something actually broke, and it is worth saying so.
+
+The resume paths (`playAllActive`, `restoreMixerState`) stay deliberately
+quiet. A blocked autoplay there is expected — the app restores last night's mix
+paused precisely because a gesture is required — and it corrects itself on the
+next tap. Reporting it would cry wolf on every cold open.
+
+Gated by e2e tests that force the failure (rejecting `HTMLMediaElement.play`,
+the real shape of a wav-backed sound failing) and assert both that the failure
+speaks and that the happy path stays silent.
+
 ## Dev mode
 
 Five quick taps on the moon toggles it (session-only by design — a refresh
@@ -515,6 +537,22 @@ the components. A message catalogue is an architectural change, and shipping
 one with no translations in it would be scaffolding. What is here is the part
 that is expensive to retrofit later — layout, geometry, and formatting — so
 adding a locale becomes a translation job rather than a rebuild.
+
+## Known trade: the volume taper
+
+Layer and master volume map **linearly to amplitude** — the slider value goes
+straight to `HTMLMediaElement.volume` / `GainNode.gain` with no perceptual
+curve. Measured, that puts the whole top half of a fader's travel inside 6 dB
+(slider 0.5 is -6 dB, roughly 66% as loud, not 50%), while the bottom tenth
+spans silence to -20 dB. So the quiet end is hypersensitive and the loud end is
+mushy — the opposite of what balancing layers at bedtime wants.
+
+A perceptual taper (`gain = x²`, or a proper dB curve) is the standard fix, and
+it is deliberately **not** applied here: every saved mix stores its raw slider
+values, and all ten built-in scenes were hand-tuned by ear against the current
+mapping. Changing the curve silently re-voices all of them, quieter. That is a
+product decision about how the library should sound, with a data migration
+attached — not a refactor to make unilaterally.
 
 ## Performance
 

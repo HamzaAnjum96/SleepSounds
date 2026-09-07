@@ -750,8 +750,19 @@ export default function App() {
       if (WORKLET_SOUND_IDS.has(soundId)) setSoundTuning(soundId, editorValuesBySound[soundId]);
       if (isPaused) setIsPaused(false);
     }
-    await toggleSound(soundId);
-  }, [soundState, isPaused, toggleSound, dismissHint, setSoundTuning, editorValuesBySound]);
+    const started = await toggleSound(soundId);
+    // A layer the user deliberately switched on that fails to start used to
+    // just flip itself back off, leaving a control that looks broken and a
+    // status line that said "stopped" — as if they had done it on purpose.
+    // Say what happened, and offer the tap back.
+    if (!started) {
+      const name = SOUND_LIBRARY.find((s) => s.id === soundId)?.name ?? 'that sound';
+      showToast(`couldn’t start ${name}`, 'retry', () => {
+        void handleSoundToggleRef.current(soundId);
+      });
+      announce(`${name} could not start`);
+    }
+  }, [soundState, isPaused, toggleSound, dismissHint, setSoundTuning, editorValuesBySound, showToast, announce]);
 
   // [v0.0.11 perf] Stable, id-parameterized card handlers. handleSoundToggle
   // and setSoundVolume both change identity whenever soundState (or master
