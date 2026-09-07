@@ -33,11 +33,17 @@ export default function Toast({ message, actionLabel, onAction, onDismiss, onHol
       onPointerEnter={onHold}
       onPointerLeave={onRelease}
     >
-      <span className="toast-text">{message}</span>
+      {/* The message duplicates what the app's status region has already
+          spoken, so it is hidden from assistive tech rather than read twice —
+          which also keeps this transient bar out of landmark navigation. The
+          action carries the context instead, as its own accessible name
+          ("undo: mix stopped"), so the button is never a bare "undo". */}
+      <span className="toast-text" aria-hidden="true">{message}</span>
       {actionLabel && onAction && (
         <button
           type="button"
           className="toast-action"
+          aria-label={`${actionLabel}: ${message}`}
           onClick={() => { onAction(); onDismiss(); }}
         >{actionLabel}</button>
       )}

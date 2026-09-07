@@ -237,7 +237,7 @@ button, .material-symbols-rounded {
   /* Viewport units, not %: the moon is anchored to the top of the SCREEN and
      nothing about page length can move it. */
   top: 7vh;
-  right: 4vw;
+  inset-inline-end: 4vw;
   width: 52px; height: 52px;
   /* Above the app shell so real taps can reach the disc (it is the dev-mode
      latch); the track itself stays pointer-transparent, so only the 52px moon
@@ -251,7 +251,7 @@ button, .material-symbols-rounded {
    panel column + the grid gap so it sits in the content column's sky. */
 @media (min-width: 1000px) {
   .moon-track {
-    right: calc(max(0px, (100vw - 1180px) / 2) + clamp(340px, 30vw, 400px) + var(--sp-32) * 2);
+    inset-inline-end: calc(max(0px, (100vw - 1180px) / 2) + clamp(340px, 30vw, 400px) + var(--sp-32) * 2);
   }
 }
 
@@ -474,7 +474,7 @@ header {
 header::after {
   content: '';
   position: absolute;
-  left: 0; right: 0; bottom: 0;
+  inset-inline: 0; bottom: 0;
   height: 1px;
   background: linear-gradient(to right,
     transparent, rgba(255,255,255,0.09) 28%, rgba(255,255,255,0.09) 72%, transparent);
@@ -633,7 +633,7 @@ header::after {
   border-style: dashed;
 }
 .timer-off {
-  margin-left: var(--sp-4);
+  margin-inline-start: var(--sp-4);
 }
 @media (hover: hover) {
   .timer-off:hover {
@@ -668,6 +668,15 @@ header::after {
   height: 6px;
   border-radius: var(--r-full);
   background: linear-gradient(to right,
+    var(--fill) 0%, var(--fill) var(--fill-pct, 50%), var(--track) var(--fill-pct, 50%));
+}
+/* Chromium reverses a range input under RTL — the thumb runs from the right —
+   but a gradient angle is physical, so the painted fill stayed on the left and
+   ended up on the opposite side of the thumb from the part it represents.
+   (Firefox's ::-moz-range-progress follows the direction itself and needs
+   nothing.) */
+[dir="rtl"] .drift-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to left,
     var(--fill) 0%, var(--fill) var(--fill-pct, 50%), var(--track) var(--fill-pct, 50%));
 }
 .drift-slider::-webkit-slider-thumb {
@@ -910,7 +919,7 @@ header::after {
   outline: none;
   transition: background var(--dur-2), border-color var(--dur-2), box-shadow var(--dur-2),
               transform var(--dur-1);
-  text-align: left;
+  text-align: start;
   width: 100%;
   /* `backwards` (not `both`): the end keyframe equals the natural state, and
      holding it would block the :active press transform below. */
@@ -973,7 +982,7 @@ header::after {
 .card-grip {
   position: absolute;
   top: var(--sp-8, 8px);
-  left: var(--sp-8, 8px);
+  inset-inline-start: var(--sp-8, 8px);
   z-index: 4;
   width: 28px;
   height: 28px;
@@ -1131,7 +1140,7 @@ header::after {
   content: '';
   position: absolute;
   top: 0;
-  right: 0;
+  inset-inline-end: 0;
   width: 65%;
   height: 65%;
   background: radial-gradient(ellipse at top right,
@@ -1163,14 +1172,14 @@ header::after {
   display: flex;
   align-items: center;
   gap: var(--sp-8);
-  padding-right: 0;
+  padding-inline-end: 0;
   opacity: 0;
   max-height: 0;
   overflow: hidden;
   transition: opacity var(--dur-3), max-height var(--dur-3);
 }
 .sound-card.has-editor .card-vol {
-  padding-right: 30px;
+  padding-inline-end: 30px;
 }
 .sound-card.active .card-vol {
   opacity: 1;
@@ -1188,7 +1197,7 @@ header::after {
    at once read as buttons shouting from every tile. */
 .card-editor-icon {
   position: absolute;
-  right: var(--sp-10);
+  inset-inline-end: var(--sp-10);
   bottom: var(--sp-10);
   width: 24px;
   height: 24px;
@@ -1682,7 +1691,7 @@ header::after {
 .sb-finetune-icon { font-size: 18px; }
 .sb-finetune-caret {
   font-size: 18px;
-  margin-left: auto;            /* pushed to the right edge of the full-width row */
+  margin-inline-start: auto;            /* pushed to the right edge of the full-width row */
   transition: transform var(--dur-3) var(--ease);
 }
 .sb-finetune.open .sb-finetune-caret { transform: rotate(180deg); }
@@ -1902,7 +1911,7 @@ header::after {
   cursor: pointer;
   outline: none;
   overflow: hidden;
-  text-align: left;
+  text-align: start;
   /* Translucent colour gradient straight over the night sky — no backdrop
      blur, and no outer drop shadow: the snap-scroll row clips vertically, so
      a soft shadow gets sliced into a hard band below the shelf. The border
@@ -1943,7 +1952,7 @@ header::after {
 .scene-icons {
   position: absolute;
   top: var(--sp-10);
-  left: var(--sp-12);
+  inset-inline-start: var(--sp-12);
   display: flex;
   gap: var(--sp-5);
   color: rgba(255,255,255,0.55);
@@ -1957,7 +1966,7 @@ header::after {
 .scene-state {
   position: absolute;
   top: var(--sp-10);
-  right: var(--sp-12);
+  inset-inline-end: var(--sp-12);
   display: flex;
   align-items: flex-end;
   gap: 2px;
@@ -2057,7 +2066,7 @@ header::after {
   border-radius: var(--radius-card-lg);
   cursor: pointer;
   outline: none;
-  text-align: left;
+  text-align: start;
   overflow: hidden;
   /* Layer-tinted glass via the inline gradient over the --surface film, with
      the shared light-catching hairline; no outer shadow (the scroll row
@@ -2081,7 +2090,7 @@ header::after {
 .mix-icons {
   position: absolute;
   top: var(--sp-10);
-  left: var(--sp-12);
+  inset-inline-start: var(--sp-12);
   display: flex;
   gap: var(--sp-5);
   color: rgba(235,238,248,0.55);
@@ -2092,7 +2101,7 @@ header::after {
 }
 .mix-state {
   position: absolute;
-  right: var(--sp-12);
+  inset-inline-end: var(--sp-12);
   bottom: var(--sp-14);
   display: flex;
   align-items: flex-end;
@@ -2131,7 +2140,7 @@ header::after {
 .mix-del {
   position: absolute;
   top: var(--sp-6);
-  right: var(--sp-6);
+  inset-inline-end: var(--sp-6);
   width: 22px;
   height: 22px;
   display: flex;
@@ -2156,7 +2165,16 @@ header::after {
 /* Italic serif overhangs its advance width; ellipsized titles need a hair of
    inner end-padding or overflow:hidden shaves the last letter's slant. */
 .mix-name, .mp-title, .sheet-title, .sb-title {
-  padding-right: 0.14em;
+  padding-inline-end: 0.14em;
+  /* These carry user-saved mix names, whose script we cannot know. Isolate the
+     run so a right-to-left name cannot reorder the counts and punctuation
+     around it (and vice versa).
+     `unicode-bidi: isolate` rather than a <bdi> element: <bdi> also implies
+     dir="auto", which re-detects direction from the text's first strong
+     character and had the title aligning to its own edge — an English name in
+     a mirrored layout left-aligned while its subtitle stayed right, 119px
+     apart. Isolation is what is wanted here; re-detection is not. */
+  unicode-bidi: isolate;
 }
 
 /* ── Cookie / storage notice ─────────────────────────────────────── */
@@ -2164,6 +2182,10 @@ header::after {
 .cookie-notice {
   position: fixed;
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--sp-12));
+  /* `left: 50%` with a translateX(-50%) is deliberately physical, not logical:
+     transforms are always physical, so this pair centres correctly in both
+     writing directions. `inset-inline-start` here would break RTL. Same for
+     the mini player and the toast. */
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-toast);
@@ -2198,7 +2220,7 @@ body:has(.mini-player) .cookie-notice {
   display: flex;
   align-items: center;
   gap: var(--sp-14);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .cookie-link {
   font-size: var(--fs-eyebrow);
@@ -2321,7 +2343,7 @@ body:has(.mini-player) .cookie-notice {
   padding: 0;
   cursor: pointer;
   outline: none;
-  text-align: left;
+  text-align: start;
 }
 .mp-title {
   width: 100%;
@@ -2788,7 +2810,7 @@ body:has(.mini-player) .toast {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 .sleep-safe-hint {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: var(--fs-eyebrow);
   letter-spacing: 0.1em;
   text-transform: uppercase;

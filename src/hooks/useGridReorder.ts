@@ -55,6 +55,8 @@ interface DragState {
    *  space), so the drop cell is picked row-band-first, then column. */
   rowYs: number[];
   colXs: number[];
+  /** Grid is right-to-left: column indices mirror (see slotAt). */
+  rtl: boolean;
   fromIndex: number;
   /** Current insertion slot in the without-dragged list (0..n-1). */
   slot: number;
@@ -106,7 +108,13 @@ export function useGridReorder({
       return centers.length - 1;
     };
     const row = band(contentY, d.rowYs);
-    const col = band(contentX, d.colXs);
+    // colXs is sorted left-to-right, but slots run in DOM order. Under RTL the
+    // first card in the DOM paints rightmost, so the leftmost column is the
+    // *last* slot in its row: mirror the column index or every drop lands in
+    // the horizontally-opposite cell.
+    const col = d.rtl
+      ? d.colXs.length - 1 - band(contentX, d.colXs)
+      : band(contentX, d.colXs);
     return Math.min(d.rects.length - 1, row * d.colXs.length + col);
   }, []);
 
@@ -259,10 +267,11 @@ export function useGridReorder({
       };
       const rowYs = cluster(rects.map((r) => r.y + r.h / 2), rects[0].h * 0.5);
       const colXs = cluster(rects.map((r) => r.x + r.w / 2), rects[0].w * 0.5);
+      const rtl = getComputedStyle(gridRef.current).direction === 'rtl';
       const d: DragState = {
         id: p.id, el: p.el, pointerId: p.pointerId,
         startX: p.x, startY: p.y, startScroll: scrollTop,
-        ids, rects, rowYs, colXs, fromIndex, slot: fromIndex, lifted: true,
+        ids, rects, rowYs, colXs, rtl, fromIndex, slot: fromIndex, lifted: true,
         raf: 0, lastClientX: p.x, lastClientY: p.y, scrollAcc: 0,
       };
       drag.current = d;

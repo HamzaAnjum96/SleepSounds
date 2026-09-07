@@ -5,6 +5,7 @@ import { features } from '../config/features';
 import { sliderFill } from '../lib/sliderFill';
 import { haptic } from '../lib/haptics';
 import { formatCountdown } from '../lib/time';
+import { formatPercent } from '../lib/format';
 
 // [v0.0.35 perf] One layer's row, memoized so dragging a single layer's slider
 // (or master, or the timer ticking) only repaints the row whose own volume /
@@ -35,7 +36,7 @@ const LayerRow = memo(function LayerRow({
       <div className="layer-main">
         <div className="layer-head">
           <span className="layer-name">{sound.name}</span>
-          <span className="layer-pct">{Math.round(volume * 100)}%</span>
+          <span className="layer-pct">{formatPercent(volume)}</span>
         </div>
         <input
           type="range"
@@ -202,7 +203,7 @@ export default function MixControls({
       <div className="sheet-master">
         <div className="sheet-row-head">
           <span className="sheet-label">master volume</span>
-          <span className="sheet-value">{Math.round(masterVolume * 100)}%</span>
+          <span className="sheet-value">{formatPercent(masterVolume)}</span>
         </div>
         <input
           type="range"

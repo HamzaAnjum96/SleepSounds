@@ -410,6 +410,51 @@ eases both back for a brighter balance. Defaults across the library are tuned
 WAV loops render from their editor `def`s, the single source of truth for a
 default.
 
+## Direction and locale
+
+The shell is built from **logical properties**, so setting `dir="rtl"` on the
+document mirrors it: `inset-inline-start/end` rather than `left/right`,
+`padding-inline-end` rather than `padding-right`, `text-align: start` rather
+than `left`. Converting the 22 physical properties that were left changed
+nothing in LTR (verified pixel-for-pixel across a full-page render) and is the
+whole reason the mirrored layout works at all.
+
+Three things stay deliberately physical, because they are:
+
+- `left: 50%` paired with `translateX(-50%)` on the mini player, toast and
+  storage notice. Transforms are always physical, so this pair centres
+  correctly in both directions; `inset-inline-start` here would break RTL.
+- Icon and moon geometry that is scenery rather than reading order.
+- The starfield canvas, which is painted, not laid out.
+
+Mirroring is not only CSS. Four behaviours read direction at runtime, and each
+was wrong before:
+
+- **Slider fill.** Chromium reverses a range input under RTL, but a gradient
+  angle is physical, so the painted fill sat on the opposite side of the thumb
+  from the portion it represents. A `[dir="rtl"]` track rule flips it.
+- **Drag-and-drop reorder.** Column centres cluster left-to-right while slots
+  run in DOM order, so every drop landed in the horizontally-opposite cell
+  until the column index is mirrored.
+- **Keyboard reorder.** Left/right are physical keys against a logical order,
+  so the arrow that moves a card back is the right one under RTL.
+- **The scenes-shelf wink.** `scrollLeft` runs negative under RTL, so a hard
+  `+56` shoved the shelf into its already-visible edge.
+
+Both the mirrored layout and the mirrored drop geometry are gated by e2e tests.
+
+User-supplied text (saved mix names) is wrapped in `<bdi>`: a name in the
+opposite script would otherwise reorder the punctuation and counts around it.
+Percentages go through `Intl.NumberFormat` (`src/lib/format.ts`) rather than
+`${Math.round(v * 100)}%`, since digits and percent-sign placement are
+locale-specific even before anything is translated.
+
+**Not done, deliberately:** the interface strings are still English literals in
+the components. A message catalogue is an architectural change, and shipping
+one with no translations in it would be scaffolding. What is here is the part
+that is expensive to retrofit later — layout, geometry, and formatting — so
+adding a locale becomes a translation job rather than a rebuild.
+
 ## Performance
 
 The one number this app is judged on is what it costs to leave running. The

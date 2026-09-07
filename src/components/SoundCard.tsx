@@ -69,9 +69,15 @@ function SoundCard({
           className="card-grip"
           aria-label={`Reorder ${sound.name}. Use arrow keys to move, Home or End to jump.`}
           onKeyDown={(e) => {
+            // Left/right are physical keys but the grid's order is logical, so
+            // under RTL the arrow that moves a card back is the right one.
+            // Up/down and Home/End never flip.
+            const rtl = getComputedStyle(e.currentTarget).direction === 'rtl';
+            const back = rtl ? 'ArrowRight' : 'ArrowLeft';
+            const fwd = rtl ? 'ArrowLeft' : 'ArrowRight';
             const dir =
-              e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 :
-              e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 :
+              e.key === back || e.key === 'ArrowUp' ? -1 :
+              e.key === fwd || e.key === 'ArrowDown' ? 1 :
               e.key === 'Home' ? 'start' as const :
               e.key === 'End' ? 'end' as const : null;
             if (dir === null) return;

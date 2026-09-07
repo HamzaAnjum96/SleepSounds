@@ -3,6 +3,7 @@ import { SOUND_EDITOR_MODELS, type SoundVariant } from './soundEditorDefs';
 import { SOUND_ICONS } from '../lib/soundIcons';
 import { VariantMark, variantToken } from '../lib/variantIcons';
 import { sliderFill } from '../lib/sliderFill';
+import { formatPercent } from '../lib/format';
 
 interface SoundEditorProps {
   soundId: string;
@@ -20,7 +21,7 @@ interface SoundEditorProps {
 function asPercent(value: number, min: number, max: number): string {
   const span = max - min;
   const pct = span > 0 ? ((value - min) / span) * 100 : 0;
-  return `${Math.round(Math.min(100, Math.max(0, pct)))}%`;
+  return formatPercent(Math.min(100, Math.max(0, pct)) / 100);
 }
 
 export default function SoundEditor({

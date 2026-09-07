@@ -42,6 +42,17 @@ test('an open sound editor has no serious accessibility violations', async ({ pa
   await checkA11y(page, 'sound editor');
 });
 
+// The shell is built from logical properties so it mirrors under dir="rtl".
+// Scan it there too: a mirrored layout is where overlapping controls, clipped
+// text and stranded focus rings show up, and none of that is visible from the
+// LTR pass.
+test('the mirrored (RTL) layout has no serious accessibility violations', async ({ page }) => {
+  await page.evaluate(() => { document.documentElement.dir = 'rtl'; });
+  await page.locator('.scene-card').first().click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+  await checkA11y(page, 'RTL layout');
+});
+
 // Drift mode is the surface this app is *for* — the one left on screen all
 // night — and it was the only primary surface the gate never scanned.
 test('drift mode has no serious accessibility violations', async ({ page }) => {

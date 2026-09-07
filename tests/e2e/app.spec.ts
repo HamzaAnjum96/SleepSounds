@@ -192,6 +192,40 @@ test('a sound card can be dragged to a new position, and it persists', async ({ 
   expect(reloaded[1]).toBe('Rain');
 });
 
+// [0.1.23] Under RTL the grid paints right-to-left, but slots run in DOM order,
+// and the drop geometry clusters column centres left-to-right — so without
+// mirroring the column index every drop landed in the horizontally-opposite
+// cell. Same gesture as the LTR test above, mirrored: drag Rain (which now
+// paints at the right edge) onto Fire to its left, and it must still land in
+// the second slot.
+test('a card dropped in an RTL grid lands in the cell it covers', async ({ page }) => {
+  await page.evaluate(() => { document.documentElement.dir = 'rtl'; });
+  await page.waitForTimeout(200);
+
+  const names = () => page.locator('.sounds-grid .card-name').allInnerTexts();
+  expect((await names())[0]).toBe('Rain');
+
+  const rain = page.locator('.sounds-grid [data-sound-id="rain"]');
+  const fire = page.locator('.sounds-grid [data-sound-id="fire"]');
+  const from = (await rain.boundingBox())!;
+  const to = (await fire.boundingBox())!;
+  // Sanity: RTL really is mirrored, so Fire paints to the LEFT of Rain.
+  expect(to.x).toBeLessThan(from.x);
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  await page.mouse.move(to.x + to.width * 0.25, to.y + to.height / 2, { steps: 8 });
+  await page.waitForTimeout(120);
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  const after = await names();
+  expect(after[0]).toBe('Fire');
+  expect(after[1]).toBe('Rain');
+  await expect(page.locator('[data-sound-id="rain"]')).not.toHaveClass(/active/);
+});
+
 // [0.1.2] The drop target is the cell the CARD visibly covers — probed by the
 // card's visual centre with row-band-first geometry — not wherever the finger
 // happens to be. Grabbing by a corner and hovering the bottom half of a cell
