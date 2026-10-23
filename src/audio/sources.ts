@@ -65,6 +65,10 @@ class CrossfadeAudio implements MixerSource {
    *  Lazily built with the first element so unplayed sounds cost nothing. */
   private _layerBus: LayerBus | null = null;
   private _shaping: Shaping = TRANSPARENT;
+  /** Bumped by every play / pause / stop / destroy. A play() still awaiting
+   *  its first render compares against it afterwards, so a layer switched off
+   *  while it was loading stays off instead of starting on its own later. */
+  private _intent = 0;
 
   constructor(getUrl: () => Promise<string>) {
     this._getUrl = getUrl;
@@ -216,16 +220,27 @@ class CrossfadeAudio implements MixerSource {
   }
 
   async play() {
+    const intent = ++this._intent;
     // The element is routed through the graph, so its audio only reaches the
     // speakers while the context is running — resume it (we're inside the play
     // gesture). No-op if routing fell back to direct element output.
     await resumeAudio();
     await this._resolveUrl();
+    // Paused or stopped while the loop was still rendering: stay silent.
+    if (intent !== this._intent) return;
     this._ensureEls();
     this._active = true;
     this._startMonitor();
     this._primary.volume = Math.min(1, this._targetVol);
-    await this._primary.play();
+    try {
+      await this._primary.play();
+    } catch (err) {
+      if (intent === this._intent) {
+        this._active = false;
+        this._stopMonitor();
+      }
+      throw err;
+    }
   }
 
   swapUrl(newUrl: string) {
@@ -307,6 +322,7 @@ class CrossfadeAudio implements MixerSource {
   }
 
   pause() {
+    this._intent++;
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
@@ -314,6 +330,7 @@ class CrossfadeAudio implements MixerSource {
   }
 
   stop() {
+    this._intent++;
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
@@ -325,6 +342,7 @@ class CrossfadeAudio implements MixerSource {
   }
 
   destroy() {
+    this._intent++;
     this._active = false;
     this._stopMonitor();
     this._clearXfade();
@@ -392,6 +410,8 @@ class WorkletSource implements MixerSource {
   private started = false;
   private playing = false;
   private pending: Record<string, number> | null = null;
+  /** Bumped by every play / pause / destroy (see CrossfadeAudio._intent). */
+  private intent = 0;
 
   constructor(private cfg: WorkletConfig) {}
 
@@ -443,9 +463,12 @@ class WorkletSource implements MixerSource {
   get paused() { return !this.playing; }
 
   async play() {
+    const intent = ++this.intent;
     await this.ensureNode();
     const ctx = getWorkletCtx();
     await ctx.resume();
+    // Paused or stopped while the module was loading: stay silent.
+    if (intent !== this.intent) return;
     this.started = true;
     this.playing = true;
     this.node?.parameters.get('running')?.setValueAtTime(1, ctx.currentTime);
@@ -453,6 +476,7 @@ class WorkletSource implements MixerSource {
   }
 
   pause() {
+    this.intent++;
     if (!this.started) return;
     this.playing = false;
     // The worklet fades itself to silence on running=0; no hard gain cut.
@@ -462,6 +486,7 @@ class WorkletSource implements MixerSource {
   stop() { this.pause(); }
 
   destroy() {
+    this.intent++;
     this.playing = false;
     this.node?.parameters.get('running')?.setValueAtTime(0, getWorkletCtx().currentTime);
     this.node?.disconnect();
@@ -489,6 +514,9 @@ class WorkletWithFallback implements MixerSource {
   private active: MixerSource;
   private _volume = 0;
   private failedOver = false;
+  /** Bumped by every play / pause / stop, so a failover that lands after the
+   *  layer was switched off doesn't start the fallback behind the user's back. */
+  private intent = 0;
 
   constructor(cfg: WorkletConfig, getFallbackUrl: () => Promise<string>) {
     this.primary = new WorkletSource(cfg);
@@ -501,6 +529,7 @@ class WorkletWithFallback implements MixerSource {
   get paused() { return this.active.paused; }
 
   async play() {
+    const intent = ++this.intent;
     this.active.volume = this._volume;
     if (this.failedOver) { await this.active.play(); return; }
     try {
@@ -510,6 +539,7 @@ class WorkletWithFallback implements MixerSource {
       this.primary.destroy();
       this.active = this.fallback;
       this.active.volume = this._volume;
+      if (intent !== this.intent) return;
       await this.active.play();
     }
   }
@@ -529,8 +559,8 @@ class WorkletWithFallback implements MixerSource {
     if (this.failedOver) this.fallback.swapUrl(newUrl);
   }
 
-  pause() { this.active.pause(); }
-  stop() { this.active.stop(); }
+  pause() { this.intent++; this.active.pause(); }
+  stop() { this.intent++; this.active.stop(); }
   destroy() { this.primary.destroy(); this.fallback.destroy(); }
 }
 

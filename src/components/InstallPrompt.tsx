@@ -112,7 +112,9 @@ export default function InstallPrompt({ ready }: InstallPromptProps) {
       <span className="material-symbols-rounded install-icon" aria-hidden="true">install_mobile</span>
       {ios ? (
         <span className="install-text">
-          add to your home screen: tap <span className="install-kbd material-symbols-rounded">ios_share</span> then “Add to Home Screen”
+          {/* The glyph is a ligature: unhidden, a screen reader reads out
+              "ios_share". Hide it and say what it is. */}
+          add to your home screen: tap <span className="install-kbd material-symbols-rounded" aria-hidden="true">ios_share</span><span className="sr-only">Share</span> then “Add to Home Screen”
         </span>
       ) : (
         <span className="install-text">install for a faster start and offline nights</span>

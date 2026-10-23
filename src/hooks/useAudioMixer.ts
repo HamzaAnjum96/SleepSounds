@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sound, SoundState } from '../types';
-import { generateSoundWav, defaultVolumeFor } from '../data';
+import { generateSoundWav, defaultVolumeFor, editorDefaults } from '../data';
 import { logger } from '../utils/logger';
 import { makeSource, type MixerSource } from '../audio/sources';
 import { layerShaping } from '../audio/layerMeta';
@@ -20,6 +20,22 @@ const createInitialState = (sounds: Sound[]) =>
 const FADE_IN_MS = 1600;
 const FADE_OUT_MS = 700;
 const FADE_STEPS = 28;
+
+/** How a start attempt ended. 'superseded' means the layer was paused, stopped
+ *  or restarted while it was still loading — not a failure, nothing to report. */
+type StartResult = 'started' | 'failed' | 'superseded';
+
+/** Whether two tunings play the same loop, each read over the sound's editor
+ *  defaults (undefined = the defaults themselves). */
+function sameTuning(soundId: string, a?: Record<string, number>, b?: Record<string, number>): boolean {
+  if (a === b) return true;
+  const def = editorDefaults(soundId);
+  const ra = { ...def, ...a };
+  const rb = { ...def, ...b };
+  const keys = new Set([...Object.keys(ra), ...Object.keys(rb)]);
+  for (const k of keys) if (Math.abs((ra[k] ?? 0) - (rb[k] ?? 0)) > 1e-9) return false;
+  return true;
+}
 
 export const useAudioMixer = (sounds: Sound[]) => {
   const [soundState, setSoundState] = useState<Record<string, SoundState>>(() => createInitialState(sounds));
@@ -61,10 +77,52 @@ export const useAudioMixer = (sounds: Sound[]) => {
   const fadeTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const tuningTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const lastTuningRef = useRef<Record<string, Record<string, number>>>({});
+  // WAV-only layers bake their tuning into the rendered loop, and keep that loop
+  // until something renders another. Track what each one holds (undefined = the
+  // default render) and the render in flight, so a mix that wants a different
+  // character re-renders first — instead of replaying whatever was tuned last.
+  const renderedTuningRef = useRef<Record<string, Record<string, number> | undefined>>({});
+  const renderJobRef = useRef<Record<string, Promise<void>>>({});
   // The slider values a sound should play with right now (its global editor
   // config, or a preset's override). Worklet params persist on the node across
   // plays, so startSource re-asserts these every time the sound starts.
   const tuningRef = useRef<Record<string, Record<string, number>>>({});
+  // A layer's first start can wait seconds on its render. Every start, stop and
+  // pause bumps the layer's sequence number, so a start that resolves after the
+  // user has already moved on knows to stand down rather than fade in a sound
+  // whose card says it is off.
+  const startSeqRef = useRef<Record<string, number>>({});
+  const supersede = useCallback((soundId: string) => {
+    startSeqRef.current[soundId] = (startSeqRef.current[soundId] ?? 0) + 1;
+    return startSeqRef.current[soundId];
+  }, []);
+
+  /** Make a WAV-only layer's loop match `tuning` (undefined = defaults),
+   *  re-rendering only when it doesn't already. Worklet layers take their
+   *  params live and are left alone. Best-effort: a failed render keeps the
+   *  current loop playing rather than taking anything down. */
+  const ensureRendered = useCallback((soundId: string, tuning: Record<string, number> | undefined): Promise<void> => {
+    const source = audioMapRef.current[soundId];
+    if (!source || source.setParams || !source.swapUrl) return Promise.resolve();
+    const had = renderedTuningRef.current[soundId];
+    if (sameTuning(soundId, had, tuning)) return renderJobRef.current[soundId] ?? Promise.resolve();
+    // Claim it now, so a repeat request doesn't render twice and a newer one
+    // can tell this render is stale when it lands.
+    renderedTuningRef.current[soundId] = tuning;
+    const job = (async () => {
+      try {
+        const url = await generateSoundWav(soundId, tuning ?? editorDefaults(soundId));
+        if (!url) return;
+        if (renderedTuningRef.current[soundId] === tuning) source.swapUrl?.(url);
+        else URL.revokeObjectURL(url);
+      } catch (err) {
+        logger.error('sound render failed:', err);
+        if (renderedTuningRef.current[soundId] === tuning) renderedTuningRef.current[soundId] = had;
+      }
+    })();
+    renderJobRef.current[soundId] = job;
+    return job;
+  }, []);
 
   useEffect(() => {
     const map: Record<string, MixerSource> = {};
@@ -159,6 +217,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
     (soundId: string, targetVol: number) => {
       const source = audioMapRef.current[soundId];
       if (!source) return;
+      clearFade(soundId);
       source.volume = 0;
       let step = 0;
       fadeTimersRef.current[soundId] = setInterval(() => {
@@ -179,6 +238,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
     (soundId: string, onDone: () => void) => {
       const source = audioMapRef.current[soundId];
       if (!source) return;
+      clearFade(soundId);
       const start = source.volume;
       let step = 0;
       fadeTimersRef.current[soundId] = setInterval(() => {
@@ -194,31 +254,40 @@ export const useAudioMixer = (sounds: Sound[]) => {
   );
 
   /** Start one source from silence and fade it in, flipping its loading flag
-   *  around the (async) play. Returns whether playback actually started, so
-   *  callers can roll back optimistic UI on failure. Shared by the toggle,
-   *  resume-all, and restore-mix paths. */
+   *  around the (async) play. Reports how it ended, so callers can roll back
+   *  optimistic UI on a real failure. Shared by the toggle, resume-all, and
+   *  restore-mix paths. */
   const startSource = useCallback(
-    async (soundId: string, targetVol: number): Promise<boolean> => {
+    async (soundId: string, targetVol: number): Promise<StartResult> => {
       const source = audioMapRef.current[soundId];
-      if (!source) return false;
+      if (!source) return 'failed';
       clearFade(soundId);
+      const seq = supersede(soundId);
       // Re-assert the sound's intended worklet params (they linger on the node
       // from a previous mix/preset otherwise).
       const tuning = tuningRef.current[soundId];
       if (tuning && source.setParams) source.setParams(tuning);
       setLoadingState((prev) => ({ ...prev, [soundId]: true }));
       source.volume = 0;
+      const current = () => startSeqRef.current[soundId] === seq;
       try {
+        // A WAV layer re-rendering for this mix plays the new loop, not the old.
+        await renderJobRef.current[soundId];
+        if (!current()) return 'superseded';
         await source.play();
+        if (!current()) return 'superseded';
         doFadeIn(soundId, targetVol);
-        return true;
+        return 'started';
       } catch {
-        return false;
+        // A pause or stop during a pending play() rejects it (AbortError);
+        // that is the user's own action, not a failure to report.
+        return current() ? 'failed' : 'superseded';
       } finally {
-        setLoadingState((prev) => ({ ...prev, [soundId]: false }));
+        // A newer start owns the flag now; the stop paths clear it themselves.
+        if (current()) setLoadingState((prev) => ({ ...prev, [soundId]: false }));
       }
     },
-    [clearFade, doFadeIn],
+    [clearFade, doFadeIn, supersede],
   );
 
   /**
@@ -246,8 +315,8 @@ export const useAudioMixer = (sounds: Sound[]) => {
 
       if (nextEnabled) {
         const targetVol = Math.min(1, Math.max(0, (soundState[soundId]?.volume ?? 0.5) * masterVolume * masterFade));
-        const ok = await startSource(soundId, targetVol);
-        if (!ok) {
+        const result = await startSource(soundId, targetVol);
+        if (result === 'failed') {
           setSoundState((prev) => ({
             ...prev,
             [soundId]: { ...prev[soundId], enabled: false },
@@ -256,6 +325,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
         }
       } else {
         clearFade(soundId);
+        supersede(soundId);
         setLoadingState((prev) => ({ ...prev, [soundId]: false }));
         // A removed layer shouldn't carry a stale mute/solo into its next life.
         setMutedIds((prev) => prev.filter((id) => id !== soundId));
@@ -264,7 +334,7 @@ export const useAudioMixer = (sounds: Sound[]) => {
       }
       return true;
     },
-    [clearFade, doFadeOut, startSource, masterVolume, masterFade, soundState],
+    [clearFade, doFadeOut, startSource, supersede, masterVolume, masterFade, soundState],
   );
 
   const setSoundVolume = useCallback(
@@ -299,42 +369,35 @@ export const useAudioMixer = (sounds: Sound[]) => {
     tuningTimerRef.current[soundId] = setTimeout(() => {
       delete tuningTimerRef.current[soundId];
       const params = lastTuningRef.current[soundId];
-      if (!params) return;
-      // Synthesis (loads the code-split generator) + element swap is best-effort:
-      // a failure here must never take the app down, it just leaves the current
-      // loop playing.
-      void (async () => {
-        try {
-          const newUrl = await generateSoundWav(soundId, params);
-          if (!newUrl) return;
-          audioMapRef.current[soundId]?.swapUrl?.(newUrl);
-        } catch (err) {
-          logger.error('sound retune failed:', err);
-        }
-      })();
+      if (params) void ensureRendered(soundId, params);
     }, 300);
-  }, []);
+  }, [ensureRendered]);
 
   const pauseAll = useCallback(() => {
-    Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
+    Object.keys(audioMapRef.current).forEach((id) => { clearFade(id); supersede(id); });
     Object.values(audioMapRef.current).forEach((source) => source.pause());
     setLoadingState((prev) => {
       const next: Record<string, boolean> = {};
       for (const key of Object.keys(prev)) next[key] = false;
       return next;
     });
-  }, [clearFade]);
+  }, [clearFade, supersede]);
 
+  // Every layer starts at once, as restoreMixerState does: one layer still
+  // rendering its first loop no longer holds back the ones that are ready.
   const playAllActive = useCallback(async () => {
-    for (const [soundId, state] of Object.entries(soundState)) {
-      if (!state.enabled) continue;
-      const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume * masterFade));
-      await startSource(soundId, targetVol); // transient autoplay failures are ignored
-    }
+    await Promise.all(
+      Object.entries(soundState)
+        .filter(([, state]) => state.enabled)
+        .map(([soundId, state]) => {
+          const targetVol = Math.min(1, Math.max(0, state.volume * masterVolume * masterFade));
+          return startSource(soundId, targetVol); // transient autoplay failures are ignored
+        }),
+    );
   }, [startSource, masterVolume, masterFade, soundState]);
 
   const stopAll = useCallback(() => {
-    Object.keys(audioMapRef.current).forEach((id) => clearFade(id));
+    Object.keys(audioMapRef.current).forEach((id) => { clearFade(id); supersede(id); });
     Object.values(audioMapRef.current).forEach((source) => source.stop());
     setMutedIds([]);
     setSoloIds([]);
@@ -354,42 +417,38 @@ export const useAudioMixer = (sounds: Sound[]) => {
       for (const key of Object.keys(prev)) next[key] = false;
       return next;
     });
-  }, [clearFade]);
+  }, [clearFade, supersede]);
 
   const restoreMixerState = useCallback(
     async (nextState: Record<string, SoundState>, nextMasterVolume?: number, shouldPlay = false) => {
       const effectiveMaster = nextMasterVolume ?? masterVolume;
       stopAll();
+      // A slider retune still waiting on its debounce belongs to the old mix.
+      Object.values(tuningTimerRef.current).forEach((timer) => clearTimeout(timer));
+      tuningTimerRef.current = {};
       setSoundState(nextState);
       if (nextMasterVolume != null) setMasterVolume(nextMasterVolume);
       // Record each enabled sound's intended tuning up front, so it applies on
-      // play now and on any later resume.
+      // play now and on any later resume. WAV loops bake their params into the
+      // buffer, so start any re-render they need now (even when restoring
+      // paused); startSource waits for it, and worklets apply theirs live.
       Object.entries(nextState).forEach(([soundId, state]) => {
-        if (state.enabled && state.tuning) tuningRef.current[soundId] = state.tuning;
+        if (!state.enabled) return;
+        if (state.tuning) tuningRef.current[soundId] = state.tuning;
+        void ensureRendered(soundId, state.tuning);
       });
       if (shouldPlay) {
         await Promise.all(
           Object.entries(nextState)
             .filter(([, s]) => s.enabled)
-            .map(async ([soundId, state]) => {
-              const source = audioMapRef.current[soundId];
-              // WAV loops bake their params into the buffer, so regenerate
-              // before play; worklet params are applied live in startSource.
-              if (state.tuning && source && !source.setParams) {
-                try {
-                  const url = await generateSoundWav(soundId, state.tuning);
-                  if (url) source.swapUrl?.(url);
-                } catch (err) {
-                  logger.error('preset tuning failed:', err);
-                }
-              }
+            .map(([soundId, state]) => {
               const targetVol = Math.min(1, Math.max(0, state.volume * effectiveMaster * masterFade));
               return startSource(soundId, targetVol); // autoplay constraints are ignored
             }),
         );
       }
     },
-    [startSource, masterVolume, masterFade, stopAll],
+    [startSource, ensureRendered, masterVolume, masterFade, stopAll],
   );
 
   const activeSounds = useMemo(() => sounds.filter((sound) => soundState[sound.id]?.enabled), [soundState, sounds]);

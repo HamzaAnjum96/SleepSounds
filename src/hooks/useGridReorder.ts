@@ -14,10 +14,11 @@ import { flushSync } from 'react-dom';
 //   cached at lift, so no layout thrash), the lifted card follows the
 //   pointer, and dragging near the top/bottom of the scroll container
 //   auto-scrolls it.
-// - Escape (or pointercancel) cancels and everything glides home; on drop the
-//   card glides into its slot, then the real order commits and the inline
-//   transforms are cleared with transitions suppressed for one frame, so the
-//   handoff from "transformed old DOM" to "clean new DOM" is invisible.
+// - Escape (or pointercancel) cancels and everything glides home. On drop the
+//   new order commits at once (flushSync) with every transform cleared in the
+//   same paint — the displaced cards are already where the new layout puts
+//   them — and then the dropped card alone glides from under the finger into
+//   its real slot (see [0.1.5]).
 // - Screen-reader users hear pick-up / position / drop announcements; the
 //   keyboard path lives on each card's grip button (see SoundCard).
 //

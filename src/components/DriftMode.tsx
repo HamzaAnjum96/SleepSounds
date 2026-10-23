@@ -9,8 +9,8 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
  * shows through, and what remains is a clock, the mix, a breathing play
  * control, and the wind-down countdown.
  *
- * - Controls quiet down after a few seconds of stillness; any touch wakes them.
- *   The clock always stays.
+ * - Controls quiet down after a few seconds of stillness; any touch or key
+ *   wakes them. The clock always stays.
  * - Requests a screen wake lock while open (released on exit / re-acquired on
  *   tab return), so the bedside display stays softly lit.
  * - Esc or the close control exits. Focus is moved in on open and restored
@@ -87,15 +87,17 @@ function DriftMode({
     }
   }, [open]);
 
-  // Esc to exit.
+  // Esc exits; any other key wakes the quiet controls, so a keyboard user
+  // isn't left tabbing through controls dimmed for a sleeping room.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      else wake();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, wake]);
 
   // Screen wake lock: keep the bedside display softly lit while drifting. The
   // platform bridge owns acquiring, re-acquiring on tab return, and releasing.

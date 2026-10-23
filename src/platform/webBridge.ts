@@ -3,7 +3,10 @@ import { logger } from '../utils/logger';
 
 const SUPPORT_URL = 'https://github.com/HamzaAnjum96/SleepSounds';
 
-interface WakeLockSentinel { release: () => Promise<void>; }
+interface WakeLockSentinel extends EventTarget {
+  readonly released: boolean;
+  release: () => Promise<void>;
+}
 type WakeLockNavigator = Navigator & {
   wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinel> };
 };
@@ -14,18 +17,30 @@ class WebBridge implements PlatformBridge {
   readonly platform = 'web' as const;
 
   private sentinel: WakeLockSentinel | null = null;
+  private requesting = false;
   private wantLock = false;
   private onVisible: (() => void) | null = null;
 
   private async acquire(): Promise<void> {
     const nav = navigator as WakeLockNavigator;
-    if (!nav.wakeLock || this.sentinel || document.hidden) return;
+    if (!nav.wakeLock || document.hidden || this.requesting) return;
+    if (this.sentinel && !this.sentinel.released) return;
+    this.requesting = true;
     try {
-      this.sentinel = await nav.wakeLock.request('screen');
-      if (!this.wantLock) { void this.sentinel.release().catch(() => {}); this.sentinel = null; }
+      const sentinel = await nav.wakeLock.request('screen');
+      // The browser drops the lock whenever the page is hidden. Forget it then,
+      // so the next return to the foreground asks for a fresh one instead of
+      // mistaking the released sentinel for a lock still held.
+      sentinel.addEventListener('release', () => {
+        if (this.sentinel === sentinel) this.sentinel = null;
+      });
+      if (this.wantLock) this.sentinel = sentinel;
+      else void sentinel.release().catch(() => {});
     } catch (err) {
       // Best-effort: low battery / unsupported just means no lock. Carry on.
       logger.debug('wake lock unavailable:', err);
+    } finally {
+      this.requesting = false;
     }
   }
 

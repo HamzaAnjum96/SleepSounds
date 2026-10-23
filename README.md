@@ -187,6 +187,62 @@ which must be kept in sync by hand when features change:
 
 ## Changelog
 
+### 0.1.28
+A full-repo review. Four bugs that failed silently, each reproduced against
+the 0.1.27 build before it was fixed and now guarded by a test that fails
+on the old code:
+- **Fix: a sound switched off while it was loading started anyway.** A
+  layer's first start waits on its render (seconds on a slow phone). The
+  engine's `play()` didn't notice a pause or stop issued during that wait, so
+  the render landed, the sound faded in at full level, and its card said off
+  with no player on screen to stop it. Measured with a slowed render: master
+  peak 0.095 from a switched-off card. Each source now carries a play intent
+  that pause/stop/destroy bump, and `useAudioMixer` tracks a start sequence
+  per layer, so a superseded start stands down instead of fading in (and is
+  not misreported as "couldn't start"). Resume also starts every layer at
+  once, as scene loading already did.
+- **Fix: reading the privacy page could replace the offline app.** The
+  service worker filed every navigation's response under the shell key, so
+  if the privacy page was the last thing opened online, the next offline
+  launch opened on the privacy page. Only the app itself refreshes the
+  shell now; other pages are cached under their own path, and error
+  responses are never cached.
+- **Fix: hand tuning leaked into scenes, and resumed sessions lost it.** A
+  WAV-rendered layer keeps whichever loop it last rendered: tune Ocean to
+  Storm Surf, then load Ocean Night, and the scene played Storm Surf while
+  the editor said Rolling Waves. The reverse hit "resume your night": it
+  restores paused, never rendered a hand-tuned WAV layer's tuning, and the
+  first tap played the default loop. The mixer now tracks what each WAV
+  loop was rendered with and re-renders only when a mix needs something
+  else; starts wait for that render. Resumed layers' editors now show what
+  is actually playing, and stop-mix undo restores hand tuning.
+- **Fix: drift mode's wake lock was never re-acquired.** Browsers release a
+  screen wake lock whenever the page is hidden; the bridge kept the released
+  sentinel and took it for a held lock, so after the first trip to the
+  background the bedside screen could sleep. New unit test with a mocked
+  Wake Lock API.
+
+UX:
+- **Undo wherever the night can end.** Removing the last layer from the
+  player, and drift mode's stop button (the easiest one to hit by mistake in
+  the dark), used to end the mix with no way back. Both now behave like
+  "stop mix" and leave its undo.
+- Drift mode's dimmed controls wake on any key, not only a touch.
+- The iOS install hint no longer reads "ios_share" aloud; it says "Share".
+- A sound editor that fails to load now shows its "couldn't open these
+  controls" line (it was closed in the same instant, so it never showed).
+
+Code:
+- `App.tsx` 1,448 → ~1,100 lines: the scene/mix cards (`ShelfCards.tsx`),
+  media session, toast, app update, greeting/online, shelf hint, idle
+  scheduling and media artwork moved to their own modules.
+- The sound editor no longer calls its parent from inside a state updater,
+  the delete-undo no longer writes storage from one, and toast ids come from
+  a counter rather than `Date.now()`.
+- Playwright's local-Chromium fallback finds `chrome-linux64/` builds too.
+
+Gate: 121 unit, 45 e2e (1 skipped behind the mute/solo flag).
+
 ### 0.1.6
 - **Fix: no more opaque/normal background flashing on drop.** The lifted card
   deliberately carries an opaque surface (so cards it passes over don't show

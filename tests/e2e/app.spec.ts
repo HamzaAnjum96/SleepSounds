@@ -376,6 +376,83 @@ test('a resumed session keeps each layer\'s tuning', async ({ page }) => {
   expect(Object.keys(rain.tuning).length).toBeGreaterThan(0);
 });
 
+/** Tune Ocean (a WAV-rendered sound) to Storm Surf from its editor. Returns
+ *  once the editor shows the variant; the re-render lands shortly after. */
+async function tuneOceanToStormSurf(page: Page) {
+  const ocean = page.locator('[data-sound-id="ocean"]');
+  await ocean.locator('.sound-card-toggle').click();
+  await expect(ocean).toHaveClass(/active/);
+  await ocean.locator('.card-editor-icon').click();
+  await page.locator('.sb-variant', { hasText: 'Storm Surf' }).click();
+  await expect(page.locator('.sb-variant.active')).toHaveText(/Storm Surf/);
+}
+
+// A WAV-rendered layer keeps whichever loop it last rendered. Hand-tuning Ocean
+// and then loading a scene that plays Ocean at its defaults used to replay the
+// hand-tuned loop, while the editor showed the scene's default character.
+test('a scene plays its own character, not a layer\'s earlier hand tuning', async ({ page }) => {
+  // Record the loop each layer element plays (the keep-alive is the only
+  // looping element, so it is left out).
+  await page.evaluate(() => {
+    const w = window as unknown as { __played: string[] };
+    w.__played = [];
+    const real = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function play(this: HTMLMediaElement) {
+      if (!this.loop && this.src.startsWith('blob:')) w.__played.push(this.src);
+      return real.call(this);
+    };
+  });
+  const played = () => page.evaluate(() => (window as unknown as { __played: string[] }).__played);
+
+  await tuneOceanToStormSurf(page);
+  // The Storm Surf render crossfades in as a second loop.
+  await expect.poll(async () => new Set(await played()).size, { timeout: 15_000 }).toBeGreaterThan(1);
+  const tuned = (await played()).at(-1)!;
+
+  await page.locator('.mp-body').click();
+  await page.locator('.sheet-clear').click();
+  await expect(page.locator('.mini-player')).toHaveCount(0);
+  const before = (await played()).length;
+
+  await page.locator('.scene-card', { hasText: 'Ocean Night' }).click();
+  // Ocean, Wind and Night Insects all start.
+  await expect.poll(async () => (await played()).length - before, { timeout: 15_000 }).toBeGreaterThanOrEqual(3);
+  expect((await played()).slice(before), 'the scene must not replay the hand-tuned loop').not.toContain(tuned);
+});
+
+// The resume path restores last night's mix paused, and used to skip the
+// re-render a hand-tuned WAV layer needs — the first tap played its default
+// loop — and left every resumed layer's editor showing the defaults.
+test('a resumed session replays a hand-tuned layer as tuned', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __renders: { soundId: string; params: Record<string, number> }[] };
+    w.__renders = [];
+    const post = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function postMessage(this: Worker, ...args: unknown[]) {
+      const msg = args[0] as { soundId?: string; params?: Record<string, number> };
+      if (msg?.soundId && msg.params) w.__renders.push({ soundId: msg.soundId, params: msg.params });
+      return (post as (...a: unknown[]) => void).apply(this, args);
+    };
+  });
+  await page.goto('./');
+  const oceanRenders = () => page.evaluate(() =>
+    (window as unknown as { __renders: { soundId: string; params: Record<string, number> }[] }).__renders
+      .filter((r) => r.soundId === 'ocean').map((r) => r.params));
+
+  await tuneOceanToStormSurf(page);
+  await expect.poll(async () => (await oceanRenders()).length, { timeout: 15_000 }).toBeGreaterThan(1);
+  const stormSurf = (await oceanRenders()).at(-1);
+  await page.waitForTimeout(800); // let the debounced last-session save land
+
+  await page.reload();
+  await page.locator('.mp-play').click();
+  await expect(page.locator('[data-sound-id="ocean"]')).toHaveClass(/playing/);
+  expect(await oceanRenders(), 'the resumed loop is rendered with its tuning').toContainEqual(stormSurf);
+
+  await page.locator('[data-sound-id="ocean"] .card-editor-icon').click();
+  await expect(page.locator('.sb-variant.active')).toHaveText(/Storm Surf/);
+});
+
 test('stop mix stops the mix, and undo brings it back', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await page.locator('.mp-body').click();
@@ -383,6 +460,28 @@ test('stop mix stops the mix, and undo brings it back', async ({ page }) => {
   await expect(page.locator('.mini-player')).toBeHidden();
   // A forgiving snackbar offers undo, which restores the mix playing.
   await page.locator('.toast-action', { hasText: 'undo' }).click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+});
+
+// Removing the last layer from the player, or stopping from drift mode, ends
+// the night just as "stop mix" does — so they leave the same undo, instead of
+// one stray tap in the dark taking the whole mix with no way back.
+test('ending the mix from its last layer or from drift mode can be undone', async ({ page }) => {
+  const fan = page.locator('[data-sound-id="fan"]');
+  await fan.locator('.sound-card-toggle').click();
+  await expect(fan).toHaveClass(/active/);
+  await page.locator('.mp-body').click();
+  await page.locator('.layer-remove').click();
+  await expect(page.locator('.mini-player')).toHaveCount(0);
+  await page.locator('.toast-action', { hasText: 'undo' }).click();
+  await expect(fan).toHaveClass(/active/);
+
+  await page.locator('.mp-body').click();
+  await page.locator('.sheet-action', { hasText: 'drift mode' }).click();
+  await page.locator('.drift-stop').click();
+  await expect(page.locator('.drift-mode')).toHaveCount(0);
+  await page.locator('.toast-action', { hasText: 'undo' }).click();
+  await expect(fan).toHaveClass(/active/);
   await expect(page.locator('.mini-player')).toBeVisible();
 });
 
@@ -467,19 +566,6 @@ test('the privacy page is reachable', async ({ page }) => {
   await expect(link).toHaveAttribute('href', /privacy\.html$/);
 });
 
-// [0.1.24] The wordmark is sized off viewport WIDTH (7vw), so turning a phone
-// sideways grew it to its cap exactly when vertical space ran out: the header
-// took 39% of an 844x390 screen, and at 740x360 the first scene card was cut
-// off by the fold. Short viewports get a compressed header; assert the card
-// that used to be cut off now fits, and that the header stays a modest slice.
-// [0.1.25] Dev mode (five quick taps on the moon) drains the colour out of the
-// app but must not move anything: same layout, same components, just no hue.
-// Asserted on real pixels, since a grayscale filter is invisible to the DOM.
-// [0.1.26] A layer the user deliberately switches on that fails to start used
-// to flip itself back off with no explanation, while the live region said
-// "stopped" — as if they had done it on purpose. Forcing the failure is the
-// only honest way to test it: media-element playback is what the wav-backed
-// sounds use, so rejecting play() is exactly the shape of a real failure.
 // [0.1.27] Saving a mix is confirmed out loud, and the write was wrapped in a
 // swallowing catch — so with storage refused (private browsing, exhausted
 // quota) the app announced "saved mix X", showed it in the shelf, stored
@@ -522,6 +608,11 @@ test('a mix that stores cleanly confirms without a warning', async ({ page }) =>
   await expect(page.locator('.mix-name')).toHaveText('Night One');
 });
 
+// [0.1.26] A layer the user deliberately switches on that fails to start used
+// to flip itself back off with no explanation, while the live region said
+// "stopped" — as if they had done it on purpose. Forcing the failure is the
+// only honest way to test it: media-element playback is what the wav-backed
+// sounds use, so rejecting play() is exactly the shape of a real failure.
 test('a sound that fails to start says so, and can be retried', async ({ page }) => {
   await page.evaluate(() => {
     const w = window as unknown as { __broken: boolean };
@@ -553,6 +644,47 @@ test('starting a sound normally shows no error', async ({ page }) => {
   await expect(page.locator('.toast')).toHaveCount(0);
 });
 
+// A layer's first start waits on its render, which takes seconds on a slow
+// phone. Switching it off in that window used to let the render land later and
+// start the sound anyway — at full level, with its card off and no player on
+// screen to stop it. Slow every render down so the window is easy to hit.
+test('a sound switched off while it is still loading stays silent', async ({ page }) => {
+  await page.addInitScript(() => {
+    const post = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function postMessage(this: Worker, ...args: unknown[]) {
+      setTimeout(() => (post as (...a: unknown[]) => void).apply(this, args), 4000);
+    };
+  });
+  await page.goto('./');
+  const peak = () => page.evaluate(() => (window as unknown as { __driftMasterPeak?: () => number }).__driftMasterPeak?.() ?? 0);
+
+  const card = page.locator('[data-sound-id="ocean"]');
+  const toggle = card.locator('.sound-card-toggle');
+  await toggle.click();
+  await expect(card.locator('.card-loader')).toBeVisible();
+  await toggle.click();
+  await expect(card).not.toHaveClass(/active/);
+
+  // Let the slowed render land, then listen for anything getting through.
+  await page.waitForTimeout(5000);
+  let loudest = 0;
+  for (let i = 0; i < 15; i++) {
+    loudest = Math.max(loudest, await peak());
+    await page.waitForTimeout(100);
+  }
+  expect(loudest, 'a switched-off sound must not start on its own').toBeLessThan(0.002);
+  await expect(page.locator('.mini-player')).toHaveCount(0);
+  await expect(page.locator('.toast'), 'switching off is not a failure to start').toHaveCount(0);
+
+  // ...and switching it on again still works.
+  await toggle.click();
+  await expect(card).toHaveClass(/active/);
+  await expect.poll(peak, { timeout: 8000 }).toBeGreaterThan(0.002);
+});
+
+// [0.1.25] Dev mode (five quick taps on the moon) drains the colour out of the
+// app but must not move anything: same layout, same components, just no hue.
+// Asserted on real pixels, since a grayscale filter is invisible to the DOM.
 test('dev mode goes monochrome without moving anything', async ({ page }) => {
   await page.locator('.scene-card').first().click();
   await expect(page.locator('.mini-player')).toBeVisible();
@@ -589,6 +721,11 @@ test('dev mode goes monochrome without moving anything', async ({ page }) => {
   expect(await colouredPixelShare(page), 'colour returns when toggled off').toBeGreaterThan(5);
 });
 
+// [0.1.24] The wordmark is sized off viewport WIDTH (7vw), so turning a phone
+// sideways grew it to its cap exactly when vertical space ran out: the header
+// took 39% of an 844x390 screen, and at 740x360 the first scene card was cut
+// off by the fold. Short viewports get a compressed header; assert the card
+// that used to be cut off now fits, and that the header stays a modest slice.
 test.describe('short viewport (landscape phone)', () => {
   test.use({ viewport: { width: 740, height: 360 } });
 
@@ -624,5 +761,22 @@ test('the shell loads offline after the first visit', async ({ page, context }) 
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('.sounds-grid')).toBeVisible();
+  await context.setOffline(false);
+});
+
+// The service worker refreshes its cached shell on every online navigation,
+// and it used to file *any* page under the shell's key — so if the privacy page
+// was the last thing read online, the next offline launch opened on it.
+test('reading the privacy page does not replace the offline app', async ({ page, context }) => {
+  await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 10_000 }).catch(() => {});
+  await page.reload();
+  await page.goto('./privacy.html');
+  await expect(page).toHaveTitle(/privacy/);
+  await context.setOffline(true);
+  await page.goto('./');
+  await expect(page.locator('.sounds-grid')).toBeVisible();
+  // ...and the privacy page itself is still readable offline.
+  await page.goto('./privacy.html');
+  await expect(page).toHaveTitle(/privacy/);
   await context.setOffline(false);
 });

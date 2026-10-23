@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SOUND_EDITOR_MODELS, type SoundVariant } from './soundEditorDefs';
 import { SOUND_ICONS } from '../lib/soundIcons';
 import { VariantMark, variantToken } from '../lib/variantIcons';
@@ -47,18 +47,19 @@ export default function SoundEditor({
   const [expanded, setExpanded] = useState(false);
   useEffect(() => { setExpanded(false); }, [soundId]);
 
-  const handleChange = useCallback((key: string, value: number) => {
-    setValues((prev) => {
-      const next = { ...prev, [key]: value };
-      onValuesChange?.(next);
-      return next;
-    });
-  }, [onValuesChange]);
-
+  // The parent is told outside the state updater: React may run an updater
+  // twice, and each call here re-tunes a live sound.
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
   const applyValues = useCallback((next: Record<string, number>) => {
+    valuesRef.current = next;
     setValues(next);
     onValuesChange?.(next);
   }, [onValuesChange]);
+
+  const handleChange = useCallback((key: string, value: number) => {
+    applyValues({ ...valuesRef.current, [key]: value });
+  }, [applyValues]);
 
   const variants = soundType?.variants;
   /** Full slider values for a variant: its overrides on top of the defaults. */

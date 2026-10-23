@@ -1,4 +1,4 @@
-import { Fragment, lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { version } from '../package.json';
 import CookieNotice from './components/CookieNotice';
@@ -9,23 +9,27 @@ import NightSky from './components/NightSky';
 import SoundCard from './components/SoundCard';
 import SidePanel from './components/SidePanel';
 import Toast from './components/Toast';
-import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds, editorDefaults } from './data';
+import { MixCard, SceneCard } from './components/ShelfCards';
+import { CATEGORIES, SOUND_LIBRARY, WORKLET_SOUND_IDS, releasableSounds, editorDefaults, type Category } from './data';
 import { features } from './config/features';
 import { loadSavedMixes, saveSavedMixes, loadLastSession, saveLastSession, newMixId } from './storage/savedMixes';
 import { loadSoundOrder, saveSoundOrder, orderSounds, movedOrder } from './storage/soundOrder';
 import { useGridReorder } from './hooks/useGridReorder';
-import { platform } from './platform';
-import type { Category } from './data';
 import { useAudioMixer } from './hooks/useAudioMixer';
 import { useSleepTimer } from './hooks/useSleepTimer';
+import { useToast } from './hooks/useToast';
+import { useMediaSession } from './hooks/useMediaSession';
+import { useAppUpdate } from './hooks/useAppUpdate';
+import { useGreeting, useOnline } from './hooks/useAmbient';
+import { useShelfHint } from './hooks/useShelfHint';
 import type { Preset, SoundState } from './types';
 import { EDITABLE_SOUND_IDS, SOUND_EDITOR_MODELS } from './components/soundEditorDefs';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from './lib/categoryIcons';
-import { SOUND_ICONS } from './lib/soundIcons';
+import { CATEGORY_ICONS } from './lib/categoryIcons';
 import { haptic } from './lib/haptics';
+import { whenIdle } from './lib/idle';
 import { primeBackgroundAudio, setKeepAlive, setKeepAliveInterruptionHandler } from './lib/backgroundAudio';
 import { setAudioInterruptionHandler, setAudioIntent } from './audio/graph';
-import { SCENES, presetSoundIds, type Scene } from './lib/scenes';
+import { SCENES } from './lib/scenes';
 import { formatCountdown } from './lib/time';
 
 // Post-interaction surfaces are split out of the initial bundle: the sound
@@ -40,162 +44,6 @@ const LazyDriftMode = lazy(() => import('./components/DriftMode'));
  *  stands down. */
 const CSS_SCROLL_TIMELINE =
   typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()');
-
-// Saved mixes and "resume your night" persistence live in src/storage, behind
-// migrations that keep bad/old localStorage from ever breaking startup.
-
-/** The categories of a preset's layers, in library order, deduplicated. */
-function presetCategories(preset: Preset): string[] {
-  const cats: string[] = [];
-  for (const sound of SOUND_LIBRARY) {
-    if (preset.state[sound.id]?.enabled && !cats.includes(sound.category)) {
-      cats.push(sound.category);
-    }
-  }
-  return cats;
-}
-
-/** A saved mix's card tint, derived from the hues of its own layers — each
- *  blend gets a quiet color identity, the way scenes carry their art. */
-function mixArt(preset: Preset): string {
-  const colors = presetCategories(preset).map((cat) => CATEGORY_COLORS[cat] ?? '123,167,232');
-  const a = colors[0] ?? '184,154,106';
-  const b = colors[1] ?? a;
-  return `linear-gradient(135deg, rgba(${a},0.16) 0%, rgba(${b},0.09) 52%, rgba(8,12,20,0.25) 100%)`;
-}
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h >= 4 && h < 12) return 'good morning';
-  if (h >= 12 && h < 18) return 'good afternoon';
-  if (h >= 18 && h < 23) return 'good evening';
-  return 'up late, rest soon';
-}
-
-/** Generate the media-session artwork: a crescent-moon night scene matching
- *  the app icon. Android extracts a palette from this image to colour the
- *  notification, so the deep navy keeps the player on-brand. */
-function buildMediaArtwork(size: number): string {
-  try {
-    const c = document.createElement('canvas');
-    c.width = c.height = size;
-    const ctx = c.getContext('2d');
-    if (!ctx) return `${import.meta.env.BASE_URL}icon-512.png`;
-    const sky = ctx.createRadialGradient(
-      0.4 * size, 0.32 * size, 0,
-      0.5 * size, 0.5 * size, 0.85 * size,
-    );
-    sky.addColorStop(0, '#15264f');
-    sky.addColorStop(0.55, '#0b1430');
-    sky.addColorStop(1, '#070b18');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    for (const [x, y, r] of [[0.16, 0.18, 0.006], [0.30, 0.10, 0.004], [0.80, 0.20, 0.005],
-                              [0.86, 0.74, 0.004], [0.14, 0.66, 0.005], [0.74, 0.12, 0.004],
-                              [0.58, 0.80, 0.004]] as const) {
-      ctx.beginPath(); ctx.arc(x * size, y * size, r * size, 0, Math.PI * 2); ctx.fill();
-    }
-    const halo = ctx.createRadialGradient(
-      0.58 * size, 0.45 * size, 0,
-      0.58 * size, 0.45 * size, 0.34 * size,
-    );
-    halo.addColorStop(0, 'rgba(217,189,128,0.5)');
-    halo.addColorStop(1, 'rgba(217,189,128,0)');
-    ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, size, size);
-    const moon = ctx.createLinearGradient(0.4 * size, 0.25 * size, 0.75 * size, 0.7 * size);
-    moon.addColorStop(0, '#f4ead0');
-    moon.addColorStop(1, '#bd9a55');
-    ctx.fillStyle = moon;
-    ctx.beginPath(); ctx.arc(0.57 * size, 0.45 * size, 0.225 * size, 0, Math.PI * 2); ctx.fill();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath(); ctx.arc(0.67 * size, 0.38 * size, 0.2 * size, 0, Math.PI * 2); ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-    return c.toDataURL('image/png');
-  } catch { return `${import.meta.env.BASE_URL}icon-512.png`; }
-}
-
-// [v0.0.21 perf] The scenes shelf and saved-mixes row are extracted into memo'd
-// cards. App re-renders once a second while a sleep-timer counts down (and on
-// every volume/master change), which re-ran these whole rows each time even
-// though a card's own inputs — its scene/preset, whether it's the current mix,
-// and play state — hadn't changed. Memo + stable (ref-backed) handlers mean a
-// countdown tick now repaints none of them.
-const SceneCard = memo(function SceneCard({ scene, current, isPlaying, onPlay }: {
-  scene: Scene;
-  current: boolean;
-  isPlaying: boolean;
-  onPlay: (preset: Preset) => void;
-}) {
-  const ids = presetSoundIds(scene.preset);
-  return (
-    <div role="listitem" className="scene-item">
-      <button
-        type="button"
-        className={`scene-card${current ? ' current' : ''}`}
-        style={{ background: scene.art }}
-        onClick={() => onPlay(scene.preset)}
-        aria-label={`${current && isPlaying ? 'Pause' : 'Play'} scene ${scene.preset.name}`}
-      >
-        <span className="scene-icons" aria-hidden="true">
-          {ids.slice(0, 3).map((id) => (
-            <span key={id} className="material-symbols-rounded">{SOUND_ICONS[id] ?? 'music_note'}</span>
-          ))}
-        </span>
-        {current && (
-          <span className={`scene-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
-            <span /><span /><span />
-          </span>
-        )}
-        <span className="scene-name">{scene.preset.name}</span>
-        <span className="scene-mood">{scene.mood}</span>
-        <span className="scene-count">{ids.length} layer{ids.length === 1 ? '' : 's'}</span>
-      </button>
-    </div>
-  );
-});
-
-const MixCard = memo(function MixCard({ preset, current, isPlaying, onPlay, onDelete }: {
-  preset: Preset;
-  current: boolean;
-  isPlaying: boolean;
-  onPlay: (preset: Preset) => void;
-  onDelete: (id: string) => void;
-}) {
-  const ids = presetSoundIds(preset);
-  const count = ids.length;
-  return (
-    <div role="listitem" className={`mix-card${current ? ' current' : ''}`}>
-      <button
-        type="button"
-        className="mix-card-body"
-        style={{ backgroundImage: mixArt(preset) }}
-        onClick={() => onPlay(preset)}
-        aria-label={`${current && isPlaying ? 'Pause' : 'Play'} mix ${preset.name}`}
-      >
-        <span className="mix-icons" aria-hidden="true">
-          {ids.slice(0, 3).map((id) => (
-            <span key={id} className="material-symbols-rounded">{SOUND_ICONS[id] ?? 'music_note'}</span>
-          ))}
-        </span>
-        {current && (
-          <span className={`mix-state${isPlaying ? ' playing' : ''}`} aria-hidden="true">
-            <span /><span /><span />
-          </span>
-        )}
-        <span className="mix-name">{preset.name}</span>
-        <span className="mix-count">{count} layer{count === 1 ? '' : 's'}</span>
-      </button>
-      <button
-        type="button"
-        className="mix-del"
-        onClick={() => onDelete(preset.id)}
-        aria-label={`Delete mix ${preset.name}`}
-      >✕</button>
-    </div>
-  );
-});
 
 export default function App() {
   const {
@@ -220,45 +68,9 @@ export default function App() {
     setSleepSafe,
   } = useAudioMixer(SOUND_LIBRARY);
 
-  // [v0.0.19 perf] The crescent-moon lock-screen artwork is a ~one-off canvas
-  // draw + synchronous PNG encode (~12 ms here, more on a low-end phone) that
-  // isn't needed until the first play — so build it after first paint, on idle,
-  // instead of in a useMemo during the first render. The media-session effect
-  // folds it in the moment it's ready (it already depends on mediaArtwork), and
-  // until then the on-brand icon PNGs stand in.
-  const [mediaArtwork, setMediaArtwork] = useState<string | null>(null);
-  useEffect(() => {
-    const build = () => setMediaArtwork(buildMediaArtwork(512));
-    const ric = (window as Window & {
-      requestIdleCallback?: (cb: () => void) => number;
-      cancelIdleCallback?: (id: number) => void;
-    }).requestIdleCallback;
-    if (ric) {
-      const id = ric(build);
-      return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
-    }
-    const t = window.setTimeout(build, 200);
-    return () => window.clearTimeout(t);
-  }, []);
-
   const [isPaused, setIsPaused] = useState(false);
   const [category, setCategory] = useState<Category>('All');
-  // [v0.0.25 fix] Keep the greeting honest over time. It used to be recomputed
-  // only when App happened to re-render, so a phone left playing overnight (no
-  // timer, nothing forcing a render) could still say "good evening" past
-  // midnight, and returning to a long-backgrounded tab showed the wrong line.
-  // Hold it in state and refresh on a one-minute cadence (boundaries are on the
-  // hour, and setting the same string is a no-op in React, so this only actually
-  // re-renders the handful of times a day the greeting changes) plus an
-  // immediate refresh whenever the tab returns to the foreground.
-  const [greetingText, setGreetingText] = useState(greeting);
-  useEffect(() => {
-    const refresh = () => setGreetingText(greeting());
-    const id = window.setInterval(refresh, 60000);
-    const onVisible = () => { if (!document.hidden) refresh(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
-  }, []);
+  const greetingText = useGreeting();
   // Dev mode: spam-tap the moon (5 taps inside 3s) to toggle. Session-only by
   // design — a refresh always lands back in the normal app.
   const [devMode, setDevMode] = useState(false);
@@ -323,13 +135,9 @@ export default function App() {
   const sceneRowRef = useRef<HTMLDivElement | null>(null);
   const miniPlayerRef = useRef<HTMLDivElement | null>(null);
   const [soundsGridColumns, setSoundsGridColumns] = useState(2);
+  // Each editable sound's current slider values (its "global editor config").
   const [editorValuesBySound, setEditorValuesBySound] = useState<Record<string, Record<string, number>>>(() => (
-    Object.fromEntries(
-      Object.entries(SOUND_EDITOR_MODELS).map(([id, model]) => ([
-        id,
-        Object.fromEntries(model.groups.flatMap((group) => group.params).map((param) => [param.key, param.def])),
-      ])),
-    )
+    Object.fromEntries(Object.keys(SOUND_EDITOR_MODELS).map((id) => [id, editorDefaults(id)]))
   ));
 
   useEffect(() => { if (sheetOpen) setSheetMounted(true); }, [sheetOpen]);
@@ -350,23 +158,11 @@ export default function App() {
 
   // Warm the split surfaces once the page is idle, so the first open is instant
   // even before the service worker has them cached.
-  useEffect(() => {
-    const prefetch = () => {
-      void import('./components/NowPlayingSheet');
-      void import('./components/DriftMode');
-      void import('./components/SoundEditor');
-    };
-    const ric = (window as Window & {
-      requestIdleCallback?: (cb: () => void) => number;
-      cancelIdleCallback?: (id: number) => void;
-    }).requestIdleCallback;
-    if (ric) {
-      const id = ric(prefetch);
-      return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id);
-    }
-    const t = window.setTimeout(prefetch, 2500);
-    return () => window.clearTimeout(t);
-  }, []);
+  useEffect(() => whenIdle(() => {
+    void import('./components/NowPlayingSheet');
+    void import('./components/DriftMode');
+    void import('./components/SoundEditor');
+  }, 2500), []);
 
   const dismissHint = useCallback(() => {
     setShowHint((shown) => {
@@ -390,41 +186,20 @@ export default function App() {
     return saveSavedMixes(next);
   };
 
-  // A single forgiving snackbar. Destructive actions (stopping a mix, deleting
-  // a saved one) leave an "undo" here for a few seconds — forgiving in the dark.
-  const [toast, setToast] = useState<{ id: number; message: string; actionLabel?: string; onAction?: () => void } | null>(null);
-  const toastTimer = useRef<number | undefined>(undefined);
-  // The id of the toast currently on screen, so a hold/release from a toast
-  // that has already been replaced can never dismiss its successor.
-  const toastIdRef = useRef(0);
-  const dismissToast = useCallback(() => {
-    window.clearTimeout(toastTimer.current);
-    setToast(null);
+  // Screen-reader status line: playback and timer state are otherwise only
+  // conveyed visually. A polite live region speaks the changes.
+  const [status, setStatus] = useState('');
+  const announce = useCallback((msg: string) => {
+    // Re-set even if identical so repeated actions still announce.
+    setStatus('');
+    requestAnimationFrame(() => setStatus(msg));
   }, []);
-  const armToastTimer = useCallback((id: number) => {
-    window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(
-      () => setToast((t) => (t?.id === id ? null : t)),
-      5000,
-    );
-  }, []);
-  const showToast = useCallback((message: string, actionLabel?: string, onAction?: () => void) => {
-    const id = Date.now();
-    toastIdRef.current = id;
-    setToast({ id, message, actionLabel, onAction });
-    armToastTimer(id);
-  }, [armToastTimer]);
-  // Undo is this app's whole forgiveness mechanism, and it was on an
-  // unconditional five-second fuse: a keyboard or screen-reader user who
-  // tabbed toward "undo" could have it vanish from under them mid-reach, which
-  // is exactly the person least able to race a timer. Hold the fuse while focus
-  // is inside the toast, and restart it cleanly when focus leaves.
-  const holdToast = useCallback(() => {
-    window.clearTimeout(toastTimer.current);
-  }, []);
-  const releaseToast = useCallback(() => {
-    armToastTimer(toastIdRef.current);
-  }, [armToastTimer]);
+
+  // The single forgiving snackbar (see useToast): destructive actions leave an
+  // "undo" there for a few seconds.
+  const { toast, showToast, dismissToast, holdToast, releaseToast } = useToast();
+  const presetsRef = useRef(presets);
+  presetsRef.current = presets;
 
   const handleDeletePreset = (id: string) => {
     const index = presets.findIndex((p) => p.id === id);
@@ -434,13 +209,11 @@ export default function App() {
     if (activeMixId === id) setActiveMixId(null);
     announce(`deleted mix ${removed.name}, undo available`);
     showToast(`deleted "${removed.name}"`, 'undo', () => {
-      setPresets((cur) => {
-        if (cur.some((p) => p.id === removed.id)) return cur;
-        const next = [...cur];
-        next.splice(Math.min(index, next.length), 0, removed);
-        saveSavedMixes(next);
-        return next;
-      });
+      const cur = presetsRef.current;
+      if (cur.some((p) => p.id === removed.id)) return;
+      const next = [...cur];
+      next.splice(Math.min(index, next.length), 0, removed);
+      persistPresets(next);
       announce(`restored mix ${removed.name}`);
     });
   };
@@ -477,20 +250,6 @@ export default function App() {
     showToast(`couldn’t save “${name}” — it won’t be here next time`);
   };
 
-  // Stop the whole mix, but leave an undo: snapshot the live layers first, so
-  // a mistaken stop in the dark is one tap to bring back, playing.
-  const handleStopMix = useCallback(() => {
-    const snapshot = { state: soundState, master: masterVolume };
-    const restoredId = activeMixId;
-    stopAll();
-    setIsPaused(false);
-    showToast('mix stopped', 'undo', () => {
-      restoreMixerState(snapshot.state, snapshot.master, true);
-      setActiveMixId(restoredId);
-      setIsPaused(false);
-    });
-  }, [soundState, masterVolume, activeMixId, stopAll, restoreMixerState, showToast]);
-
   // Open the sheet straight into its save field (from the mini-player save tap).
   const handleSaveIntent = useCallback(() => {
     haptic(8);
@@ -499,15 +258,6 @@ export default function App() {
   }, []);
 
   const isPlaying = activeSounds.length > 0 && !isPaused;
-
-  // Screen-reader status line: playback and timer state are otherwise only
-  // conveyed visually. A polite live region speaks the changes.
-  const [status, setStatus] = useState('');
-  const announce = useCallback((msg: string) => {
-    // Re-set even if identical so repeated actions still announce.
-    setStatus('');
-    requestAnimationFrame(() => setStatus(msg));
-  }, []);
 
   // Sleep timer — a playing-time countdown that winds the mix down and stops it.
   const onTimerExpire = useCallback(() => { stopAll(); setIsPaused(false); }, [stopAll]);
@@ -574,6 +324,35 @@ export default function App() {
     return out;
   }, [editorValuesBySound]);
 
+  /** Point each enabled layer's editor at what the mix actually plays, so the
+   *  sound editor shows the real variant (e.g. rain's "At a Window") instead of
+   *  a stale default ("Steady") — and so manually re-toggling a layer keeps
+   *  that character rather than reverting to defaults. */
+  const syncEditorValues = useCallback((state: Record<string, SoundState>) => {
+    setEditorValuesBySound((prev) => {
+      const next = { ...prev };
+      for (const [id, s] of Object.entries(state)) {
+        if (s.enabled) next[id] = { ...editorDefaults(id), ...(s.tuning ?? {}) };
+      }
+      return next;
+    });
+  }, []);
+
+  // Stop the whole mix, but leave an undo: snapshot the live layers first, so
+  // a mistaken stop in the dark is one tap to bring back, playing. The snapshot
+  // is baked like a save, so a hand-tuned layer comes back with its tuning.
+  const handleStopMix = useCallback(() => {
+    const snapshot = { state: bakeForSave(soundState), master: masterVolume };
+    const restoredId = activeMixId;
+    stopAll();
+    setIsPaused(false);
+    showToast('mix stopped', 'undo', () => {
+      restoreMixerState(snapshot.state, snapshot.master, true);
+      setActiveMixId(restoredId);
+      setIsPaused(false);
+    });
+  }, [soundState, masterVolume, activeMixId, stopAll, restoreMixerState, showToast, bakeForSave]);
+
   const handlePlayPreset = useCallback((preset: Preset) => {
     dismissHint();
     haptic(10);
@@ -586,20 +365,10 @@ export default function App() {
     // About to play a fresh preset — prime within the gesture.
     primeBackgroundAudio();
     restoreMixerState(enrichPresetState(preset.state), preset.masterVolume, true);
-    // Sync each layer's editor values to what the preset actually plays, so the
-    // sound editor shows the real variant (e.g. rain's "At a Window") instead of
-    // a stale default ("Steady") — and so manually re-toggling a layer keeps that
-    // character rather than reverting to defaults.
-    setEditorValuesBySound((prev) => {
-      const next = { ...prev };
-      for (const [id, s] of Object.entries(preset.state)) {
-        if (s.enabled) next[id] = { ...editorDefaults(id), ...(s.tuning ?? {}) };
-      }
-      return next;
-    });
+    syncEditorValues(preset.state);
     setActiveMixId(preset.id);
     setIsPaused(false);
-  }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState, enrichPresetState]);
+  }, [activeMixId, activeSounds.length, dismissHint, handleMasterToggle, restoreMixerState, enrichPresetState, syncEditorValues]);
 
   // [v0.0.21 perf] Stable handlers for the memo'd scene/mix cards. handlePlayPreset
   // and handleDeletePreset both change identity as the mix changes; routing through
@@ -674,9 +443,10 @@ export default function App() {
     const last = loadLastSession();
     if (last) {
       restoreMixerState(enrichPresetState(last.state), last.masterVolume, false);
+      syncEditorValues(last.state);
       setIsPaused(true);
     }
-  }, [handlePlayPreset, restoreMixerState, enrichPresetState]);
+  }, [handlePlayPreset, restoreMixerState, enrichPresetState, syncEditorValues]);
 
   // Persist the live mix so it survives a reload or a closed tab. Debounced so
   // a volume drag doesn't hammer storage; clears itself when the mix is empty.
@@ -689,61 +459,23 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [soundState, masterVolume, bakeForSave]);
 
-  // Media Session API — powers lock-screen / notification player on Android & iOS.
-  // [v0.0.30 perf] Split into three narrow effects so a volume drag — which mints
-  // a fresh activeSounds array and a fresh playAllActive every tick — no longer
-  // rebuilds the metadata and re-registers every action handler each frame. The
-  // title/artwork update only when they change (mediaTitle is a string, so an
-  // identical active set is a no-op dep), playbackState only on play/pause, and
-  // the transport handlers register once and read the latest fns through a ref.
+  // The lock-screen / notification player (see useMediaSession). Prime first on
+  // play: an explicit resume must mark the keep-alive as intended before the
+  // element plays, so the auto-resume guard doesn't suppress it.
   const mediaTitle = useMemo(
     () => (activeSounds.length > 0 ? activeSounds.map((s) => s.name).join(' · ') : 'starlight'),
     [activeSounds],
   );
-  const mediaTransportRef = useRef({ playAllActive, pauseAll, stopAll, setIsPaused });
-  mediaTransportRef.current = { playAllActive, pauseAll, stopAll, setIsPaused };
+  useMediaSession(mediaTitle, isPlaying, {
+    play: () => { primeBackgroundAudio(); void playAllActive(); setIsPaused(false); },
+    pause: () => { pauseAll(); setIsPaused(true); },
+    stop: () => { stopAll(); setIsPaused(false); },
+  });
 
   // [v0.0.36 perf] Stable names array for the memo'd DriftMode — the inline
   // `activeSounds.map(...)` minted a fresh array every render, which would
   // defeat its memo on every unrelated update.
   const mixNames = useMemo(() => activeSounds.map((s) => s.name), [activeSounds]);
-
-  useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
-    const base = import.meta.env.BASE_URL;
-    platform.setMediaMetadata({
-      title: mediaTitle,
-      artist: 'starlight',
-      album: 'sleep sounds',
-      artwork: [
-        { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png' },
-        { src: `${base}icon-512.png`, sizes: '512x512', type: 'image/png' },
-        // Folded in once the idle build (above) has produced it.
-        ...(mediaArtwork ? [{ src: mediaArtwork, sizes: '512x512', type: 'image/png' }] : []),
-      ],
-    });
-  }, [mediaTitle, mediaArtwork]);
-
-  useEffect(() => {
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-  }, [isPlaying]);
-
-  useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
-    const t = mediaTransportRef;
-    // Prime first: an explicit resume must mark the keep-alive as intended before
-    // the element plays, so the auto-resume guard doesn't suppress it.
-    navigator.mediaSession.setActionHandler('play',  () => { primeBackgroundAudio(); t.current.playAllActive(); t.current.setIsPaused(false); });
-    navigator.mediaSession.setActionHandler('pause', () => { t.current.pauseAll();  t.current.setIsPaused(true); });
-    navigator.mediaSession.setActionHandler('stop',  () => { t.current.stopAll();   t.current.setIsPaused(false); });
-    try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch { /* ok */ }
-    try { navigator.mediaSession.setActionHandler('seekforward',  null); } catch { /* ok */ }
-    try { navigator.mediaSession.setActionHandler('seekto',       null); } catch { /* ok */ }
-    try {
-      (navigator.mediaSession as MediaSession & { setPositionState?: (s: object) => void })
-        .setPositionState?.({ duration: Infinity, playbackRate: 1, position: 0 });
-    } catch { /* ok */ }
-  }, []);
 
   const handleSoundToggle = useCallback(async (soundId: string) => {
     haptic(8);
@@ -807,6 +539,15 @@ export default function App() {
   const stopMixRef = useRef(handleStopMix);
   stopMixRef.current = handleStopMix;
   const stableStopMix = useCallback(() => stopMixRef.current(), []);
+  // Removing a layer from the player. Taking out the last one empties the mix,
+  // which is stopping it — so it goes the same way as "stop mix" and leaves the
+  // same undo, rather than ending the night with no way back.
+  const activeCountRef = useRef(0);
+  activeCountRef.current = activeSounds.length;
+  const stableRemoveLayer = useCallback((id: string) => {
+    if (activeCountRef.current <= 1) stopMixRef.current();
+    else void handleSoundToggleRef.current(id);
+  }, []);
   const saveMixRef = useRef(handleSaveMix);
   saveMixRef.current = handleSaveMix;
   const stableSaveMix = useCallback((name: string) => saveMixRef.current(name), []);
@@ -824,7 +565,9 @@ export default function App() {
   const stableDriftFromSheet = useCallback(() => { setSheetOpen(false); setDriftOpen(true); }, []);
   const stableDriftFromPanel = useCallback(() => setDriftOpen(true), []);
   const stableDriftClose = useCallback(() => setDriftOpen(false), []);
-  const stableDriftStop = useCallback(() => { haptic(10); stopAll(); setIsPaused(false); }, [stopAll]);
+  // Drift mode's stop is the easiest one to hit by mistake in the dark, so it
+  // leaves the same undo as "stop mix" (the toast waits on the main screen).
+  const stableDriftStop = useCallback(() => { haptic(10); stopMixRef.current(); }, []);
 
   // Space plays/pauses when no control has focus.
   useEffect(() => {
@@ -995,62 +738,11 @@ export default function App() {
 
   const hasPlayer = activeSounds.length > 0;
 
-  // Connectivity badge. The app is fully offline-capable, so this is reassurance
-  // ("offline — still works"), not a warning.
-  const [online, setOnline] = useState(() => navigator.onLine);
-  useEffect(() => {
-    const up = () => setOnline(true);
-    const down = () => setOnline(false);
-    window.addEventListener('online', up);
-    window.addEventListener('offline', down);
-    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
-  }, []);
+  // Connectivity badge: reassurance ("offline — still works"), not a warning.
+  const online = useOnline();
 
-  // Silent auto-update. The active service worker reports its build version;
-  // if it's newer than the running app, this session is behind. The app is
-  // tiny and fully cached, so we just refresh into the new version — but only
-  // while nothing is playing, so an update can never cut off a mix.
-  const [updatePending, setUpdatePending] = useState(false);
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-    let cancelled = false;
-    const swVersion = (): Promise<string | null> => new Promise((resolve) => {
-      const ctrl = navigator.serviceWorker.controller;
-      if (!ctrl) { resolve(null); return; }
-      const ch = new MessageChannel();
-      const t = window.setTimeout(() => resolve(null), 2000);
-      ch.port1.onmessage = (e) => { window.clearTimeout(t); resolve(e.data as string); };
-      ctrl.postMessage({ type: 'GET_VERSION' }, [ch.port2]);
-    });
-    const check = async () => {
-      const v = await swVersion();
-      if (!cancelled && v && v !== version) setUpdatePending(true);
-    };
-    void check();
-    const onChange = () => { void check(); };
-    navigator.serviceWorker.addEventListener('controllerchange', onChange);
-    return () => { cancelled = true; navigator.serviceWorker.removeEventListener('controllerchange', onChange); };
-  }, []);
-
-  // Apply a pending update at a safe moment: foreground, online, and only when
-  // no mix is loaded — so the refresh is invisible, never interrupts playback,
-  // and never updates in the background while the screen is off. Once per
-  // session (sessionStorage) so it can never loop, even if a stale offline
-  // shell is served.
-  useEffect(() => {
-    if (!updatePending) return;
-    const tryReload = () => {
-      if (activeSounds.length !== 0) return;
-      if (!navigator.onLine) return;
-      if (document.visibilityState !== 'visible') return;
-      if (sessionStorage.getItem('drift-reloaded')) return;
-      sessionStorage.setItem('drift-reloaded', '1');
-      window.location.reload();
-    };
-    tryReload();
-    document.addEventListener('visibilitychange', tryReload);
-    return () => document.removeEventListener('visibilitychange', tryReload);
-  }, [updatePending, activeSounds.length]);
+  // Refresh into a newer deployed build, but only while nothing is playing.
+  useAppUpdate(activeSounds.length === 0);
 
   const firstStatusRef = useRef(true);
   useEffect(() => {
@@ -1066,56 +758,8 @@ export default function App() {
     document.title = isPlaying && mixTitle ? `▸ ${mixTitle} · starlight` : base;
   }, [isPlaying, mixTitle]);
 
-  // Teach the horizontal scroll: a gentle wink of the scenes shelf so it reads
-  // as "there's more this way." It used to run on *every* load, which meant a
-  // nightly user got the same lesson re-taught in the dark forever — unprompted
-  // motion is the one thing this app should never spend on someone who has
-  // already learned. It now stops for good the first time they handle the shelf
-  // themselves, which is the moment the lesson has landed.
-  useEffect(() => {
-    const row = sceneRowRef.current;
-    if (!row) return;
-    let learned = false;
-    try { learned = localStorage.getItem('drift-scenes-explored') !== null; }
-    catch { /* private mode: just re-teach */ }
-
-    // Any deliberate handling of the shelf counts, however brief. Listening for
-    // gestures rather than the scroll event keeps the wink's own programmatic
-    // scrolling from being mistaken for the user's.
-    const remember = () => {
-      try { localStorage.setItem('drift-scenes-explored', '1'); } catch { /* private mode */ }
-    };
-    const opts = { passive: true, once: true } as const;
-    row.addEventListener('pointerdown', remember, opts);
-    row.addEventListener('wheel', remember, opts);
-    row.addEventListener('keydown', remember, opts);
-    const dropListeners = () => {
-      row.removeEventListener('pointerdown', remember);
-      row.removeEventListener('wheel', remember);
-      row.removeEventListener('keydown', remember);
-    };
-
-    if (learned) return dropListeners;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return dropListeners;
-    if (row.scrollWidth <= row.clientWidth + 8) return dropListeners;
-    // Suspend scroll-snap during the wink, or proximity-snap yanks the peek
-    // straight back before it's seen; restore it after.
-    row.style.scrollSnapType = 'none';
-    // Peek toward the shelf's own end: scrollLeft runs negative under RTL, so a
-    // hard +56 would shove the shelf the wrong way (into its already-visible
-    // start edge) and teach nothing.
-    const peek56 = getComputedStyle(row).direction === 'rtl' ? -56 : 56;
-    const peek = window.setTimeout(() => row.scrollTo({ left: peek56, behavior: 'smooth' }), 900);
-    const settle = window.setTimeout(() => row.scrollTo({ left: 0, behavior: 'smooth' }), 1650);
-    const restore = window.setTimeout(() => { row.style.scrollSnapType = ''; }, 2250);
-    return () => {
-      dropListeners();
-      window.clearTimeout(peek);
-      window.clearTimeout(settle);
-      window.clearTimeout(restore);
-      row.style.scrollSnapType = '';
-    };
-  }, []);
+  // Teach the scenes shelf's horizontal scroll, until the user has handled it.
+  useShelfHint(sceneRowRef);
 
   // Keep the footer clear of the floating mini player. Its height varies with
   // safe-area insets, font scaling, and how the subtitle wraps, so measure the
@@ -1274,9 +918,10 @@ export default function App() {
                     className="sound-editor-inline"
                     data-cat={SOUND_LIBRARY.find((s) => s.id === openEditorSoundId)?.category}
                   >
+                    {/* Stays open on a failure so its line is actually read; the
+                        card's tune button closes it like any other editor. */}
                     <ErrorBoundary
                       key={openEditorSoundId}
-                      onError={() => setOpenEditorSoundId(null)}
                       fallback={<div className="sb-loading">couldn’t open these controls — the mix keeps playing</div>}
                     >
                       <Suspense fallback={<div className="sb-loading">opening the controls…</div>}>
@@ -1342,7 +987,7 @@ export default function App() {
             activeSounds={activeSounds}
             soundState={soundState}
             onSoundVolume={stableSetSoundVolume}
-            onRemoveSound={stableToggleSound}
+            onRemoveSound={stableRemoveLayer}
             masterVolume={masterVolume}
             onMasterVolume={setMasterVolume}
             secondsLeft={secondsLeft}
@@ -1388,7 +1033,7 @@ export default function App() {
             isPlaying={isPlaying}
             onTogglePlay={stableMasterToggle}
             onSoundVolume={stableSetSoundVolume}
-            onRemoveSound={stableToggleSound}
+            onRemoveSound={stableRemoveLayer}
             masterVolume={masterVolume}
             onMasterVolume={setMasterVolume}
             secondsLeft={secondsLeft}

@@ -72,18 +72,27 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // App navigations: network-first (via the preloaded response when started)
-  // with the cached shell as the offline fallback.
+  // Navigations: network-first (via the preloaded response when started),
+  // falling back to the cache offline. Only the app itself refreshes the cached
+  // shell; any other page (privacy.html) is filed under its own path. Filing
+  // every page under './' meant that reading the privacy page last turned the
+  // next offline launch into the privacy page. Error responses are never kept.
   if (req.mode === 'navigate') {
+    const scopePath = new URL(self.registration.scope).pathname;
+    const isShell = url.origin === location.origin &&
+      (url.pathname === scopePath || url.pathname === `${scopePath}index.html`);
+    const key = isShell ? './' : url.origin + url.pathname;
     event.respondWith(
       (async () => {
         try {
           const res = (await event.preloadResponse) || (await fetch(req));
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('./', copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(key, copy));
+          }
           return res;
         } catch {
-          return (await caches.match('./')) || Response.error();
+          return (await caches.match(key)) || (await caches.match('./')) || Response.error();
         }
       })(),
     );

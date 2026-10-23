@@ -13,8 +13,11 @@ function localChromium(): string | undefined {
   const root = '/opt/pw-browsers';
   if (!existsSync(root)) return undefined;
   for (const dir of readdirSync(root).filter((d) => d.startsWith('chromium-')).sort().reverse()) {
-    const bin = `${root}/${dir}/chrome-linux/chrome`;
-    if (existsSync(bin)) return bin;
+    // Older Chromium builds unpack to chrome-linux/, newer ones to chrome-linux64/.
+    for (const sub of ['chrome-linux64', 'chrome-linux']) {
+      const bin = `${root}/${dir}/${sub}/chrome`;
+      if (existsSync(bin)) return bin;
+    }
   }
   return undefined;
 }
