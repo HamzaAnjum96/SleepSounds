@@ -43,6 +43,13 @@ Every library sound resolves to one `MixerSource` (`audio/sources.ts`):
   browser, blocked module script) the source fails over seamlessly. This is why
   every worklet sound also has a generator in `generators.ts`.
 
+A source's first `play()` can wait seconds — on the generator module, the
+render, or the worklet module. Every source therefore keeps a *play intent*
+that `pause()`, `stop()` and `destroy()` bump: a `play()` that finds its intent
+superseded when its awaits return bows out without starting. Without it, a
+layer switched off while still loading would start on its own once the render
+landed, with its card showing off.
+
 The WAV loops are synthesized on demand from `audio/generators.ts` over the
 `audio/dsp.ts` helpers, code-split so the DSP module loads on a sound's first
 play rather than at startup. Renders are seeded (a stable PRNG keyed on sound id
@@ -77,6 +84,14 @@ together; it's recomputed whenever the active set changes.
   mid-fade sticks;
 - re-asserts worklet params on every (re)start (worklet params persist on the
   node across plays), and debounces WAV regeneration when a slider is dragged;
+- tracks what each WAV-only layer's loop was rendered with (`ensureRendered`).
+  A rendered loop keeps its tuning until something renders another, so when a
+  scene, saved mix or resumed session wants a different character — including
+  plain defaults — the layer re-renders first, and its start waits for that
+  render; when the loop already matches, nothing re-renders;
+- numbers every start per layer, and every stop/pause bumps the number, so a
+  start that resolves after the user has moved on stands down instead of
+  fading in — and isn't reported as a failure to start;
 - gates each layer's level by mute/solo and applies masking shaping.
 
 ## Backgrounding and interruptions
@@ -110,9 +125,16 @@ list and the "resume your night" last session (debounced writes).
 
 The app is a fully offline-capable PWA. A precache manifest is injected at build
 (`scripts/inject-precache.mjs`). The running app asks the active service worker
-for its build version; if a newer one is cached, it silently reloads — but only
-while **nothing is playing**, online, and foregrounded, and at most once per
-session — so an update can never cut off a mix.
+for its build version (`hooks/useAppUpdate.ts`); if a newer one is cached, it
+silently reloads — but only while **nothing is playing**, online, and
+foregrounded, and at most once per session — so an update can never cut off a
+mix.
+
+Navigations are network-first with the cache as the offline fallback. Only a
+navigation to the app itself refreshes the cached shell (`./`); any other page
+(the privacy page) is cached under its own path, and error responses are never
+cached — otherwise whichever page was opened last online would become the app
+on the next offline launch.
 
 **Cache correctness for stable-named assets.** Vite content-hashes JS/CSS, but
 everything under `public/` ships with a stable name — the fonts, the icon
@@ -133,22 +155,29 @@ text), subset from ~510 KB down to ~7 KB by `scripts/subset-icons.py`, which
 resolves each name in its `ICONS` list through the font's ligature table and
 keeps only those glyphs. Any new glyph referenced in `src/` must be added to
 that list and the script re-run, or the icon renders as its raw name in text.
-The full process is documented in the script's docstring and the README's
-"Icons" section.
+The full process is documented in the script's docstring and in
+[CONTRIBUTING.md](CONTRIBUTING.md#icons-the-material-symbols-subset).
 
 ## Testing
 
 - **`tests/*.test.ts`** (vitest, node env): generator validity (no NaN, audible,
   non-clipping, deterministic), per-variant distinctness, stereo width, storage
-  migrations, config invariants, and the audio interruption / keep-alive guards
+  migrations, config invariants, the audio interruption / keep-alive guards
   (driven through mocked `AudioContext` / `Audio`, since headless can't reach the
-  `'interrupted'` state).
-- **`tests/e2e/*.spec.ts`** (Playwright): the real flows — a scene starts, the
-  mini player appears, the sheet opens, master volume changes, a timer can be
-  set, save/restore survives reload, audio flows through the master bus.
-  `a11y.spec.ts` is an axe-core gate over the same build: no serious or
-  critical violations on the main page, the now-playing sheet, an open sound
-  editor, or the desktop split layout.
+  `'interrupted'` state), and the drift-mode wake lock surviving a trip to the
+  background (a mocked Wake Lock API).
+- **`tests/e2e/*.spec.ts`** (Playwright, over the production build): the real
+  flows — scenes, the player and sheet, the sleep timer on wall-clock time,
+  save/restore across reloads, undo, drag and keyboard reordering (including
+  RTL), audio reaching the master bus, failures that must speak (a sound that
+  can't start, a save that can't be stored) and ones that must stay silent (a
+  sound switched off mid-load), tuning surviving scenes and resumes, and the
+  offline shell. Hard-to-reach failures are forced rather than reasoned about:
+  a slowed render, a rejected `play()`, a throwing `setItem`.
+  `a11y.spec.ts` is an axe-core gate: no serious or critical violations on the
+  main page, the now-playing sheet, an open sound editor, the mirrored (RTL)
+  layout, drift mode, the privacy page, or the desktop split layout — plus a
+  keyboard walk proving focus stays trapped inside the open modals.
 - **Worklets aren't type-checked or unit-tested** (they load as classic scripts
   in the audio thread), so changes to `public/worklets/*` are verified with Node
   DSP probes that load the processor via `new Function(...)` and assert
@@ -156,7 +185,7 @@ The full process is documented in the script's docstring and the README's
 
 ## Versioning
 
-`package.json` is the single source of version truth (rendered in the footer).
-Every change bumps it and adds a `## Changelog` entry in the README. The working
-convention used during development: patch on each push to the working branch,
-minor on each push to `main`, major for milestone releases.
+`package.json` is the single source of version truth (rendered in the footer,
+and compared with the service worker's to detect an update). Every change bumps
+it and adds an entry to [CHANGELOG.md](CHANGELOG.md); the conventions are in
+[CONTRIBUTING.md](CONTRIBUTING.md#versioning-and-the-changelog).

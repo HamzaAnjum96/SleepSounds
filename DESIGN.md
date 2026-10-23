@@ -99,7 +99,7 @@ All ≥7:1 on `--bg`.
 Two families on a contrast axis (serif display + humanist sans), plus mono for
 the dev sound-editor readouts. Never more than these three.
 
-- `--font-display`: **Cormorant** italic — the `drift` wordmark, the brand
+- `--font-display`: **Cormorant** italic — the `starlight` wordmark, the brand
   moments in the scale below, and the whole footer (rest-well line, privacy
   link, version).
 - `--font-body`: **Inter** (300/400/500) — everything else.

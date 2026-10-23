@@ -47,7 +47,7 @@ Each step is one small edit; miss one and something specific breaks:
 | `src/components/soundEditorDefs.ts` | editor model: sliders + variants | no editor; defaults come from here (they are the single source of truth for what plays) |
 | `src/audio/layerMeta.ts` `LAYER_META` | role (`bed`/`motion`/`accent`) + mask group | masking ignores it (and config test fails) |
 | `src/lib/soundIcons.ts` | Material Symbols glyph name | card shows no icon |
-| `scripts/subset-icons.py` `ICONS` + re-run | add the glyph to the subset font | icon renders as its raw name in text — see README "Icons" |
+| `scripts/subset-icons.py` `ICONS` + re-run | add the glyph to the subset font | icon renders as its raw name in text — see CONTRIBUTING "Icons" |
 | `src/data.ts` `DEFAULT_VOLUME` | only if the render runs hot/cold | starts at 0.5 like everything else |
 
 Editor model conventions: variants are **characters, not intensity tiers**
@@ -79,7 +79,7 @@ the stereo-width or centred-mono lists there. Beyond the suite:
 
 ## 4. Ship
 
-Bump `package.json`, add the README changelog entry (what changed and *why*,
+Bump `package.json`, add the CHANGELOG.md entry (what changed and *why*,
 with the measured evidence), and — only if a kept param key changed meaning
-incompatibly — see the saved-mixes note at the top of the README before
+incompatibly — see "Saved mixes and storage" in CONTRIBUTING.md before
 touching `STORAGE_KEYS`.

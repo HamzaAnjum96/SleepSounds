@@ -1,12 +1,17 @@
 name: CI
 
-# Quality gate on every push and PR: typecheck, unit tests, and a full build.
-# The deploy workflow only publishes from main; this runs everywhere so broken
-# changes are caught before they reach GitHub Pages.
+# Quality gate on every push and PR: typecheck, lint, unit tests, a full
+# build, and the e2e + accessibility suite. The deploy workflow only publishes
+# from main; this runs on every branch so broken changes are caught before they
+# reach GitHub Pages.
 on:
   push:
-    branches: [main, master, 'claude/**']
   pull_request:
+
+# A newer push to the same branch supersedes a run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -40,3 +45,10 @@ jobs:
         run: sudo grep -rl packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | sudo xargs -r rm -f || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      # On failure, keep Playwright's traces and screenshots for diagnosis.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
