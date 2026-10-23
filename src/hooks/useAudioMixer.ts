@@ -121,6 +121,9 @@ export const useAudioMixer = (sounds: Sound[]) => {
       }
     })();
     renderJobRef.current[soundId] = job;
+    void job.finally(() => {
+      if (renderJobRef.current[soundId] === job) delete renderJobRef.current[soundId];
+    });
     return job;
   }, []);
 
@@ -272,8 +275,14 @@ export const useAudioMixer = (sounds: Sound[]) => {
       const current = () => startSeqRef.current[soundId] === seq;
       try {
         // A WAV layer re-rendering for this mix plays the new loop, not the old.
-        await renderJobRef.current[soundId];
-        if (!current()) return 'superseded';
+        // Only await when a render is in flight: otherwise play() (and the
+        // context resume inside it) must run in the tap's own call stack,
+        // where strict browsers still count it as part of the gesture.
+        const pending = renderJobRef.current[soundId];
+        if (pending) {
+          await pending;
+          if (!current()) return 'superseded';
+        }
         await source.play();
         if (!current()) return 'superseded';
         doFadeIn(soundId, targetVol);

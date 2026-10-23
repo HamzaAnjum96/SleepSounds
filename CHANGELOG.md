@@ -12,6 +12,20 @@ version number on its own is ambiguous, so say which era you mean.
 
 ## starlight
 
+### 0.1.30
+- **Fix: 0.1.28 moved a layer's start out of the tap.** To let a start wait
+  for a re-render, `startSource` began with an `await` — on every start, since
+  finished render jobs were never cleared. That one microtask hop put
+  `play()` (and the `AudioContext.resume()` inside it) outside the tap's own
+  call stack, which strict browsers (iOS Safari) may not count as part of the
+  gesture. Finished jobs are cleared now, and a start only waits when a
+  render is actually in flight.
+- **CI: e2e pinned to `ubuntu-24.04`.** `ubuntu-latest` moved to Ubuntu
+  26.04, where Playwright 1.60 refuses to install Chromium's dependencies, so
+  the e2e job failed before running a test. (Unrelated to any code change;
+  `main` would have hit it on its next push.) Move it forward together with a
+  Playwright upgrade.
+
 ### 0.1.29
 - **Docs and repo organisation.** The README had become a 2,400-line
   changelog with an app attached, and its newest ten releases (0.1.18–0.1.27)

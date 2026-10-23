@@ -29,7 +29,10 @@ jobs:
       - run: npm run build
 
   e2e:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where Playwright 1.60 refuses to
+    # install Chromium's system dependencies ("does not support chromium on
+    # ubuntu26.04-x64"). Move this forward together with a Playwright upgrade.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
