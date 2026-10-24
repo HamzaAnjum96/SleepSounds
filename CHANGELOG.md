@@ -12,6 +12,47 @@ version number on its own is ambiguous, so say which era you mean.
 
 ## starlight
 
+### 0.1.31
+A design review (impeccable critique, scored 32/40) and the polish it called for.
+- **The last two scenes are no longer muddy.** Curled Up read as grey-brown
+  and Evening Porch as khaki. Both paired a gold glow with a cool one over a
+  brown base: dark gold spread thin over the night-blue reads as brown, and
+  where it meets the cool glow the two cancel to grey. Measured per-pixel OKLCH
+  chroma: 0.013 and 0.011, against 0.018–0.032 on the clean cards, with 16% of
+  Evening Porch's pixels warm-but-grey. The warmth is now a concentrated,
+  lamp-like core in its own corner over a cool ink base: chroma 0.023 / 0.022,
+  under 1% khaki, and each keeps its own identity (a lamp-lit room under rain;
+  a porch light under a teal night).
+- **Saved-mix tints had the same mud** whenever a warm family was involved
+  ("just chimes", "fire & chimes" around 0.010). `mixArt` now gives each layer
+  hue its own corner over a cool ink wash; every combination holds ≥ 0.020.
+- **Fix: frosted glass never rendered on Chrome or Firefox.** Lightning CSS
+  (Vite 8's minifier) keeps only the last of a property and its `-webkit-`
+  twin, and the stylesheet wrote the standard one first, so the build shipped
+  only `-webkit-backdrop-filter`. Since 0.0.38 the sheet, mini player, toast
+  and storage notice had no blur, and page text read straight through the
+  sheet. Prefixed-first order restores it; an e2e test now asserts the
+  computed blur. The toast also joins the reduced-transparency and Samsung
+  solid-panel fallbacks it had been missing.
+- **Reading text is no longer label-sized.** The 10px uppercase-label step had
+  spread to sentences: scene moods, the sheet's fade note, and the mini-player
+  subtitle that carries the sleep-timer countdown. Those are body size (12px)
+  now, numeric readouts 11px, and the off-scale 9px scene layer count joins
+  the 10px label step. The saved-mix layer count uses the same label style as
+  the scene one (same datum, sibling card).
+- Scene names line up across a row however the moods wrap: the card anchors
+  its name under the icon row and pins the layer count to the bottom.
+- Em dashes out of user-facing copy (save-failure toast, editor fallback,
+  offline badge).
+- Test: the open-editor drag test parks the grid mid-screen first. Its target
+  sat inside the 44px auto-scroll zone, so taller scene cards made the list
+  (correctly) scroll away from the held finger.
+- DESIGN.md records the three rules (glass prefix order, reading text never
+  label-sized, warm hue as a contained core), and the critique snapshot is in
+  `.impeccable/critique/`.
+
+Gate: typecheck, lint, 121 unit, 46 e2e (1 skipped behind a flag).
+
 ### 0.1.30
 - **Fix: 0.1.28 moved a layer's start out of the tap.** To let a start wait
   for a re-render, `startSource` began with an `await` — on every start, since

@@ -247,7 +247,7 @@ export default function App() {
     // nobody — but confirming a save that did not happen is the one thing not
     // to do here: the user would find it gone tomorrow with no idea why.
     announce(`${name} could not be saved`);
-    showToast(`couldn’t save “${name}” — it won’t be here next time`);
+    showToast(`couldn’t save “${name}”, so it won’t be here next time`);
   };
 
   // Open the sheet straight into its save field (from the mini-player save tap).
@@ -922,7 +922,7 @@ export default function App() {
                         card's tune button closes it like any other editor. */}
                     <ErrorBoundary
                       key={openEditorSoundId}
-                      fallback={<div className="sb-loading">couldn’t open these controls — the mix keeps playing</div>}
+                      fallback={<div className="sb-loading">couldn’t open these controls; the mix keeps playing</div>}
                     >
                       <Suspense fallback={<div className="sb-loading">opening the controls…</div>}>
                         <LazySoundEditor
@@ -962,7 +962,7 @@ export default function App() {
             <span className={`net-badge${online ? '' : ' offline'}`}>
               <span className="net-dot" aria-hidden="true" />
               {online ? 'online' : 'offline'}
-              {!online && <span className="sr-only"> — everything still works</span>}
+              {!online && <span className="sr-only">, everything still works</span>}
             </span>
             <span className="footer-sep" aria-hidden="true">·</span>
             <a

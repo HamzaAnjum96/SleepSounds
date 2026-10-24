@@ -116,9 +116,17 @@ names, the sheet title, and the drift-mode clock.
 | (serif) | 22px | Section headings, sheet title |
 | (serif) | 15–18px | Scene/mix names, mini-player title, greeting |
 | `--fs-lead` | `0.8125rem` (13px) | Footer line, emphasis |
-| `--fs-body` | `0.75rem` (12px) | Sound names, inputs, list rows |
-| `--fs-control` | `0.6875rem` (11px) | Chips, buttons, secondary controls |
-| `--fs-eyebrow` | `0.625rem` (10px) | Uppercase tracked labels, numeric readouts |
+| `--fs-body` | `0.75rem` (12px) | Sound names, inputs, list rows, and every sentence someone reads: scene moods, notes, the player subtitle |
+| `--fs-control` | `0.6875rem` (11px) | Chips, buttons, numeric readouts (percentages, the timer value) |
+| `--fs-eyebrow` | `0.625rem` (10px) | Short uppercase tracked labels, and nothing else |
+
+**Reading text is never label-sized.** The 10px step is for a few tracked
+uppercase words. It had spread to sentences and readouts: scene moods, the
+sheet's fade note, and the mini-player subtitle (which carries the sleep-timer
+countdown) were all 10px, and the scene layer count was an off-scale 9px. For
+someone half-asleep holding a phone in the dark, that is where legibility
+failed first. Secondary prose now sits at body size and steps back through
+colour and weight rather than by shrinking.
 
 **Text is sized in rem, icons in px.** The scale is anchored to the reader's
 own font size, not to 16px: in px, none of it moved when someone raised their
@@ -176,11 +184,19 @@ so the language doesn't drift back toward capsules.
 |---|---|---|
 | `--glow-accent` | `0 0 24px var(--accent-glow)` | Active card / focused card halo |
 
-Glass surfaces (scene & mix cards, mini player, now-playing sheet, cookie
-notice) share one material: a translucent tint over `backdrop-filter: blur()
+The floating surfaces (mini player, now-playing sheet, toast, cookie notice)
+share one frosted material: a translucent tint over `backdrop-filter: blur()
 saturate(1.2)`, a light-catching `inset 0 1px 0` top hairline, and a soft drop
-shadow. The preset cards add their colour gradient as the tint and a top-left
-sheen, so they read as tinted glass rather than flat tiles.
+shadow. The scene and mix cards are glass by tint alone (their colour gradient,
+a top-left sheen and the same hairline, with no blur), so they read as tinted
+glass rather than flat tiles without blurring the sky behind a whole shelf.
+
+**Write `-webkit-backdrop-filter` before `backdrop-filter`.** Vite 8 minifies
+with Lightning CSS, which treats a property and its `-webkit-` twin as one
+declaration and keeps whichever comes last. Written standard-first, the build
+shipped only the prefixed form, which Chrome and Firefox ignore, so from 0.0.38
+to 0.1.30 nothing blurred and page text read straight through the sheet. The
+same holds for every prefixed pair. An e2e test asserts the computed blur.
 
 ## Motion
 
@@ -232,7 +248,14 @@ the library) plus three layers above it:
 
 **Scenes** are the ten built-in presets presented as gradient-art cards in a
 snap-scrolling shelf (`scenes.ts` holds the mood line + CSS-generated art per
-scene). Tapping plays instantly; tapping the playing scene pauses. A hand-edit
+scene). Card art follows one rule to stay clean: **a warm hue is a concentrated
+core in its own corner, never a wide wash, and the base wash is a cool ink.**
+Dark gold spread thin over the night-blue reads as brown, and where it meets a
+cool glow the two cancel to grey; that is what made Curled Up and Evening Porch
+look muddy (OKLCH chroma 0.011–0.013 against 0.018–0.032 on the clean cards).
+Saved-mix tints (`mixArt`) apply the same rule to their two layer hues. The
+scene card's name is anchored under the icon row with the layer count pinned
+to the bottom, so names line up across a row however the moods wrap. Tapping plays instantly; tapping the playing scene pauses. A hand-edit
 of the mix clears the scene badge so it never lies. **Your mixes** are saved
 presets as warm-bordered glass cards, each tinted by a gradient derived from
 its own layers' category hues, with the layer icons, a serif name, layer
@@ -422,7 +445,7 @@ Two paths were doing exactly that, and both now report:
   storage refused (private browsing, an exhausted quota, storage switched off)
   the app announced "saved mix X", showed it in the shelf, stored nothing, and
   the mix was gone on the next open with no warning ever given. It now says
-  `couldn't save "X" — it won't be here next time`, and the announcement no
+  `couldn't save "X", so it won't be here next time`, and the announcement no
   longer claims a save. The mix stays live for the session: it plays, and
   dropping it would help nobody.
 - **Starting a sound** (below).

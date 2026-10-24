@@ -67,17 +67,24 @@ const ART: Record<string, { mood: string; art: string }> = {
           radial-gradient(90% 80% at 18% 8%, rgba(45,95,135,0.22) 0%, transparent 64%),
           linear-gradient(165deg, rgba(18,46,60,0.30) 0%, rgba(8,20,28,0.18) 72%)`,
   },
+  // The two cards below pair a warm light with a cool night, which is where
+  // mud comes from: a wide, dim warm wash over the blue-ink sky averages to
+  // brown, and where it meets the cool glow the two cancel to grey (measured:
+  // chroma 0.011-0.013 against 0.018-0.032 on the clean cards, and 16% khaki
+  // pixels on Evening Porch). So the warmth is a concentrated lamp-like core
+  // kept in its own corner, the cool glow keeps the opposite one, and the base
+  // wash is a cool ink rather than brown.
   'builtin-curled-up': {
     mood: 'a warm purr breathing under gentle rain',
-    art: `radial-gradient(110% 95% at 20% 100%, rgba(209,166,114,0.32) 0%, transparent 62%),
-          radial-gradient(90% 80% at 85% 8%, rgba(123,167,232,0.18) 0%, transparent 64%),
-          linear-gradient(160deg, rgba(56,42,28,0.30) 0%, rgba(20,14,10,0.18) 72%)`,
+    art: `radial-gradient(105% 90% at 16% 100%, rgba(232,156,96,0.40) 0%, rgba(232,156,96,0.12) 38%, transparent 62%),
+          radial-gradient(85% 75% at 88% 4%, rgba(123,167,232,0.20) 0%, transparent 56%),
+          linear-gradient(160deg, rgba(48,36,60,0.32) 0%, rgba(16,12,26,0.18) 72%)`,
   },
   'builtin-evening-porch': {
     mood: 'chimes stirring now and then on a night breeze',
-    art: `radial-gradient(120% 90% at 80% 0%, rgba(209,166,114,0.28) 0%, transparent 62%),
-          radial-gradient(95% 90% at 15% 100%, rgba(143,191,154,0.20) 0%, transparent 64%),
-          linear-gradient(150deg, rgba(52,44,30,0.30) 0%, rgba(18,15,10,0.18) 72%)`,
+    art: `radial-gradient(115% 90% at 82% 0%, rgba(118,176,182,0.30) 0%, transparent 60%),
+          radial-gradient(80% 70% at 12% 100%, rgba(230,164,100,0.32) 0%, rgba(230,164,100,0.10) 36%, transparent 56%),
+          linear-gradient(150deg, rgba(26,46,56,0.32) 0%, rgba(10,18,24,0.18) 72%)`,
   },
 };
 

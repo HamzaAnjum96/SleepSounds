@@ -24,12 +24,24 @@ function presetCategories(preset: Preset): string[] {
 }
 
 /** A saved mix's card tint, derived from the hues of its own layers — each
- *  blend gets a quiet color identity, the way scenes carry their art. */
+ *  blend gets a quiet color identity, the way scenes carry their art.
+ *
+ *  Each hue keeps its own corner over a cool ink wash. Blending the two hues
+ *  through each other in one linear gradient went muddy whenever a warm family
+ *  was involved: thinly spread over the night-blue, Cozy gold and Fire ember
+ *  read as brown, and against a cool partner they cancelled to grey (measured
+ *  chroma ~0.010 on "just chimes" or "fire & chimes", against 0.020-0.029 for
+ *  cool blends). A concentrated corner core keeps the warm hues reading as
+ *  light rather than as a stain — the same fix as the scene art. */
 function mixArt(preset: Preset): string {
   const colors = presetCategories(preset).map((cat) => CATEGORY_COLORS[cat] ?? '123,167,232');
   const a = colors[0] ?? '184,154,106';
-  const b = colors[1] ?? a;
-  return `linear-gradient(135deg, rgba(${a},0.16) 0%, rgba(${b},0.09) 52%, rgba(8,12,20,0.25) 100%)`;
+  const b = colors[1];
+  return [
+    `radial-gradient(110% 95% at 0% 0%, rgba(${a},0.26) 0%, rgba(${a},0.08) 42%, transparent 68%)`,
+    ...(b ? [`radial-gradient(95% 90% at 100% 100%, rgba(${b},0.18) 0%, transparent 62%)`] : []),
+    'linear-gradient(135deg, rgba(30,40,62,0.24) 0%, rgba(8,12,20,0.25) 100%)',
+  ].join(', ');
 }
 
 /** Up to three layer glyphs, and the "now playing" bars on the current card. */

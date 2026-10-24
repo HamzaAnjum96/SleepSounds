@@ -305,6 +305,13 @@ test('displaced cards do not keep moving after the drop', async ({ page }) => {
 
 test('a drag that starts with an open editor uses the settled layout', async ({ page }) => {
   await page.waitForTimeout(1600);
+  // Park the grid mid-screen first. Fan sits a row below Rain, and left where
+  // the page happens to put it, it fell inside the 44px bottom edge zone, where
+  // holding still correctly auto-scrolls the list away from the finger.
+  await page.locator('.app').evaluate((app) => {
+    const grid = app.querySelector('.sounds-grid') as HTMLElement;
+    app.scrollTop += grid.getBoundingClientRect().top - 160;
+  });
   await page.locator('[data-sound-id="rain"] .card-editor-icon').click();
   await expect(page.locator('.sb-panel')).toBeVisible();
   const rain = (await page.locator('[data-sound-id="rain"]').boundingBox())!;
@@ -550,6 +557,21 @@ test.skip('muting a layer silences the mix, and unmuting restores it', async ({ 
   await expect.poll(peak, { timeout: 4000 }).toBeLessThan(0.01);
   await mute.click();
   await expect.poll(peak, { timeout: 4000 }).toBeGreaterThan(0.01);
+});
+
+// The floating surfaces are frosted glass. Lightning CSS (Vite 8's minifier)
+// keeps only the last of a property and its -webkit- twin, and with the
+// standard declaration written first it shipped only -webkit-backdrop-filter,
+// which Chrome and Firefox ignore: from 0.0.38 to 0.1.30 nothing blurred, and
+// page text read straight through the sheet. Assert the computed value.
+test('the floating glass surfaces actually blur', async ({ page }) => {
+  await page.locator('.scene-card').first().click();
+  await expect(page.locator('.mini-player')).toBeVisible();
+  const blur = (sel: string) => page.locator(sel).evaluate((el) => getComputedStyle(el).backdropFilter);
+  expect(await blur('.mini-player')).toContain('blur(');
+  await page.locator('.mp-body').click();
+  await expect(page.locator('.sheet')).toBeVisible();
+  expect(await blur('.sheet')).toContain('blur(');
 });
 
 test('sleep-safe is on by default and can be toggled', async ({ page }) => {
